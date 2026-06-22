@@ -1,5 +1,15 @@
 // components/Sidebar.tsx
 import React from 'react';
+import {
+  Eye,
+  Folder,
+  ListTodo,
+  Calendar,
+  Settings,
+  Users,
+  LogOut,
+  Code2
+} from 'lucide-react';
 import './Sidebar.css';
 
 export type ViewMode = 'supervisor' | 'developer';
@@ -26,15 +36,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     'Project Alpha',
     'Project Beta',
     'Service VAS',
-    'TMA',
     ...(view === 'supervisor' ? ['test'] : []),
   ];
 
   const navigationItems = [
-    { id: 'users' as PageType, label: 'Manage Users', icon: '👥' },
-    { id: 'timeline' as PageType, label: 'User Timeline', icon: '📅' },
-    { id: 'settings' as PageType, label: 'Project Settings', icon: '⚙️' },
-    { id: 'tasks' as PageType, label: 'All Tasks', icon: '📋' },
+    { id: 'tasks' as PageType, label: 'All Tasks', icon: ListTodo },
+    { id: 'timeline' as PageType, label: 'User Timeline', icon: Calendar },
+    { id: 'settings' as PageType, label: 'Project Settings', icon: Settings },
+    { id: 'users' as PageType, label: 'Manage Users', icon: Users },
   ];
 
   return (
@@ -42,23 +51,24 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-content">
         {/* View Switcher */}
         <div className="view-switcher">
+          <div className="view-label">Switch to {view === 'supervisor' ? 'Developer' : 'Management'} View</div>
           <button
             className={`view-btn ${view === 'supervisor' ? 'active' : ''}`}
             onClick={() => onViewSwitch('supervisor')}
           >
-            <span className="view-icon">👔</span>
+            <Eye className="view-icon" size={16} />
             Supervisor View
           </button>
           <button
             className={`view-btn ${view === 'developer' ? 'active' : ''}`}
             onClick={() => onViewSwitch('developer')}
           >
-            <span className="view-icon">💻</span>
+            <Code2 className="view-icon" size={16} />
             Developer View
           </button>
         </div>
 
-        {/* Projects Section - Scrollable */}
+        {/* Projects Section */}
         <div className="nav-section projects-section">
           <h3 className="nav-title">PROJECTS</h3>
           <div className="nav-list-wrapper">
@@ -69,34 +79,37 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className={`nav-item ${selectedProject === project ? 'active' : ''}`}
                   onClick={() => onProjectSelect(project)}
                 >
-                  <span className="project-icon">📁</span>
-                  {project}
+                  <Folder className="nav-icon" size={16} />
+                  <span className="nav-label">{project}</span>
                 </li>
               ))}
             </ul>
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation Items */}
         <div className="nav-section">
           <ul className="nav-list">
-            {navigationItems.map((item) => (
-              <li
-                key={item.id}
-                className={`nav-item ${currentPage === item.id ? 'active' : ''}`}
-                onClick={() => onPageChange(item.id)}
-              >
-                <span className="nav-icon">{item.icon}</span>
-                {item.label}
-              </li>
-            ))}
+            {navigationItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li
+                  key={item.id}
+                  className={`nav-item ${currentPage === item.id ? 'active' : ''}`}
+                  onClick={() => onPageChange(item.id)}
+                >
+                  <Icon className="nav-icon" size={16} />
+                  <span className="nav-label">{item.label}</span>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
         {/* Logout */}
         <div className="logout-section">
           <button className="logout-btn">
-            <span className="logout-icon">🚪</span>
+            <LogOut className="logout-icon" size={16} />
             Log Out
           </button>
         </div>
