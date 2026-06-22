@@ -1,0 +1,600 @@
+/* components/ProjectSettings.css */
+/* components/ProjectSettings.css - Add these styles */
+
+/* Project List */
+.project-selector {
+  background: white;
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.project-selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.project-selector-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.add-project-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #4f72e8;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.add-project-btn:hover {
+  background: #3a5cd8;
+  transform: translateY(-1px);
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 250px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.project-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.project-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.project-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+}
+
+.project-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #f8f9fc;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.project-item:hover {
+  background: #f0f1f5;
+}
+
+.project-item.active {
+  border-color: #4f72e8;
+  background: rgba(79, 114, 232, 0.05);
+}
+
+.project-item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.project-item-name {
+  font-weight: 500;
+  color: #1a1a2e;
+  font-size: 14px;
+}
+
+.project-item-hours {
+  font-size: 12px;
+  color: #4f72e8;
+  font-weight: 500;
+  background: rgba(79, 114, 232, 0.1);
+  padding: 2px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.project-item-description {
+  font-size: 12px;
+  color: #8888aa;
+  flex: 1;
+  margin-left: 12px;
+}
+
+.delete-project-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #8888aa;
+  padding: 0 4px;
+  transition: all 0.2s;
+  line-height: 1;
+}
+
+.delete-project-btn:hover {
+  color: #ff4444;
+  transform: scale(1.2);
+}
+
+/* Time Tracking Section */
+.time-tracking-section {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.total-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-label {
+  color: #8888aa;
+  font-size: 14px;
+}
+
+.time-value {
+  font-weight: 600;
+  color: #4f72e8;
+  font-size: 16px;
+}
+
+/* Progress Bar */
+.total-progress-bar {
+  position: relative;
+  height: 20px;
+  background: #f0f0f5;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.total-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f72e8, #6c5ce7);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Sub Projects List */
+.sub-projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sub-project-item {
+  background: #f8f9fc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  border: 1px solid #eef0f5;
+  transition: all 0.2s;
+}
+
+.sub-project-item:hover {
+  border-color: #d0d3e0;
+}
+
+.sub-project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.sub-project-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sub-project-name {
+  font-weight: 500;
+  color: #1a1a2e;
+  font-size: 14px;
+}
+
+.sub-project-time {
+  color: #8888aa;
+  font-size: 13px;
+}
+
+.sub-project-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.time-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #d0d3e0;
+  background: white;
+  color: #1a1a2e;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.time-btn:hover {
+  background: #4f72e8;
+  color: white;
+  border-color: #4f72e8;
+}
+
+.sub-project-progress {
+  position: relative;
+  height: 12px;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.sub-project-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f72e8, #6c5ce7);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.progress-text-small {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 9px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+/* Add Sub-Project Button */
+.add-sub-project-btn {
+  padding: 10px 20px;
+  border: 2px dashed #d0d3e0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8888aa;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  margin-top: 4px;
+}
+
+.add-sub-project-btn:hover {
+  border-color: #4f72e8;
+  color: #4f72e8;
+  background: rgba(79, 114, 232, 0.05);
+}
+
+/* Team Members Section */
+.team-members-section {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.add-member-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #4f72e8;
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.add-member-btn:hover {
+  background: #3a5cd8;
+}
+
+.team-members-table {
+  overflow-x: auto;
+}
+
+.team-members-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.team-members-table th {
+  padding: 12px 12px;
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8888aa;
+  font-weight: 600;
+  border-bottom: 2px solid #eef0f5;
+}
+
+.team-members-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid #f0f1f5;
+  color: #1a1a2e;
+  font-size: 14px;
+}
+
+.team-members-table tbody tr:hover {
+  background: #f8f9fc;
+}
+
+/* Role Badges */
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.role-developer {
+  background: #00b894;
+  color: white;
+}
+
+.role-supervisor {
+  background: #4f72e8;
+  color: white;
+}
+
+.role-admin {
+  background: #e17055;
+  color: white;
+}
+
+.role-designer {
+  background: #fdcb6e;
+  color: #1a1a2e;
+}
+
+.role-manager {
+  background: #6c5ce7;
+  color: white;
+}
+
+.role-guest {
+  background: #b2bec3;
+  color: #1a1a2e;
+}
+
+/* Action Buttons */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.action-btn {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.edit-btn:hover {
+  background: rgba(79, 114, 232, 0.1);
+}
+
+.delete-btn:hover {
+  background: rgba(255, 68, 68, 0.1);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal {
+  background: white;
+  border-radius: 12px;
+  width: 500px;
+  max-width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #eef0f5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 18px;
+  color: #1a1a2e;
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #8888aa;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.close-btn:hover {
+  color: #1a1a2e;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #1a1a2e;
+  font-size: 14px;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #eef0f5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn {
+  padding: 10px 20px;
+  background: #f5f6fa;
+  border: 1px solid #d0d3e0;
+  border-radius: 8px;
+  color: #1a1a2e;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancel-btn:hover {
+  background: #eef0f5;
+}
+
+.create-btn {
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #4f72e8, #6c5ce7);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 114, 232, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .project-selector-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .project-buttons {
+    width: 100%;
+  }
+  
+  .project-btn {
+    flex: 1;
+    text-align: center;
+  }
+  
+  .sub-project-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .sub-project-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}

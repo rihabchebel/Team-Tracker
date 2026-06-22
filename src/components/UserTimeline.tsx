@@ -8,7 +8,7 @@ interface UserTimelineProps {
   project: string;
 }
 
-const UserTimeline: React.FC<UserTimelineProps> = ({ view, project }) => {
+const UserTimeline: React.FC<UserTimelineProps> = ({ /*view*/ project }) => {
   return (
     <div className="page-container">
       <div className="page-header">
@@ -17,6 +17,7 @@ const UserTimeline: React.FC<UserTimelineProps> = ({ view, project }) => {
       </div>
       <div className="content-area">
         <p>User timeline content goes here...</p>
+        {/* You can use view here later */}
       </div>
     </div>
   );

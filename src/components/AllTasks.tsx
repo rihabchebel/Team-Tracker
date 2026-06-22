@@ -4,11 +4,13 @@ import React from 'react';
 export type ViewMode = 'supervisor' | 'developer';
 
 interface AllTasksProps {
-  view: ViewMode;
+  view: ViewMode;  // Keep this if you'll use it later
   project: string;
 }
 
-const AllTasks: React.FC<AllTasksProps> = ({ view, project }) => {
+const AllTasks: React.FC<AllTasksProps> = ({ /*view*/ project }) => {
+ // You can use the view prop later
+  
   return (
     <div className="page-container">
       <div className="page-header">
@@ -17,6 +19,7 @@ const AllTasks: React.FC<AllTasksProps> = ({ view, project }) => {
       </div>
       <div className="content-area">
         <p>All tasks content goes here...</p>
+        {/* You can use view here later */}
       </div>
     </div>
   );

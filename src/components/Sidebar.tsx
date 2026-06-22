@@ -1,10 +1,9 @@
 // components/Sidebar.tsx
 import React from 'react';
-// Option 1: If you have CSS, uncomment this line
-// import './Sidebar.css';
+import './Sidebar.css';
 
 export type ViewMode = 'supervisor' | 'developer';
-export type PageType = 'dashboard' | 'users' | 'timeline' | 'settings' | 'tasks';
+export type PageType = 'users' | 'timeline' | 'settings' | 'tasks';
 
 interface SidebarProps {
   view: ViewMode;
@@ -27,8 +26,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     'Project Alpha',
     'Project Beta',
     'Service VAS',
+    'TMA',
     ...(view === 'supervisor' ? ['test'] : []),
-    'All Tasks'
   ];
 
   const navigationItems = [
@@ -59,23 +58,23 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Projects Section */}
+        {/* Projects Section - Scrollable */}
         <div className="nav-section projects-section">
           <h3 className="nav-title">PROJECTS</h3>
-          <ul className="nav-list">
-            {projects.map((project) => (
-              <li
-                key={project}
-                className={`nav-item ${selectedProject === project ? 'active' : ''}`}
-                onClick={() => onProjectSelect(project)}
-              >
-                <span className="project-icon">
-                  {project === 'All Tasks' ? '📊' : '📁'}
-                </span>
-                {project}
-              </li>
-            ))}
-          </ul>
+          <div className="nav-list-wrapper">
+            <ul className="nav-list">
+              {projects.map((project) => (
+                <li
+                  key={project}
+                  className={`nav-item ${selectedProject === project ? 'active' : ''}`}
+                  onClick={() => onProjectSelect(project)}
+                >
+                  <span className="project-icon">📁</span>
+                  {project}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         {/* Navigation */}

@@ -1,43 +1,48 @@
 /* components/Sidebar.css */
 .sidebar {
-  width: 280px;
+  width: 260px;
   background: #1a1a2e;
-  color: #a0a0b8;
-  padding: 20px 0;
+  color: #8888aa;
+  padding: 0;
   flex-shrink: 0;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 60px);
+  height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
 }
 
 .sidebar-content {
   display: flex;
   flex-direction: column;
   height: 100%;
-  padding: 0 16px;
+  padding: 20px 0;
+  overflow: hidden;
 }
 
 .view-switcher {
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 }
 
 .view-btn {
   width: 100%;
-  padding: 10px 16px;
-  margin-bottom: 8px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
-  color: #a0a0b8;
+  color: #8888aa;
   text-align: left;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   gap: 10px;
+  font-weight: 500;
 }
 
 .view-btn:last-child {
@@ -46,35 +51,80 @@
 
 .view-btn:hover {
   background: rgba(255, 255, 255, 0.05);
-  color: white;
+  color: #ffffff;
 }
 
 .view-btn.active {
-  background: linear-gradient(135deg, rgba(79, 114, 232, 0.2), rgba(108, 92, 231, 0.2));
+  background: rgba(79, 114, 232, 0.15);
   color: #4f72e8;
-  border: 1px solid rgba(79, 114, 232, 0.3);
+  border: 1px solid rgba(79, 114, 232, 0.2);
 }
 
 .view-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
+/* Projects Section - Make it scrollable */
+.projects-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 16px 0;
+  overflow: hidden;
+}
+
+.projects-section .nav-title {
+  flex-shrink: 0;
+  padding: 0 20px;
+  margin-bottom: 8px;
+}
+
+.projects-section .nav-list-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+}
+
+/* Custom scrollbar for projects list */
+.projects-section .nav-list-wrapper::-webkit-scrollbar {
+  width: 4px;
+}
+
+.projects-section .nav-list-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.projects-section .nav-list-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.projects-section .nav-list-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Navigation Section (below projects) */
 .nav-section {
-  margin-bottom: 16px;
+  flex-shrink: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .nav-section:last-of-type {
-  margin-bottom: 0;
+  border-bottom: none;
 }
 
 .nav-title {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: #6a6a8a;
-  padding: 0 12px;
-  margin-bottom: 12px;
-  font-weight: 600;
+  letter-spacing: 1px;
+  color: #555577;
+  padding: 0 20px;
+  margin-bottom: 8px;
+  font-weight: 700;
 }
 
 .nav-list {
@@ -84,75 +134,89 @@
 }
 
 .nav-item {
-  padding: 10px 12px;
-  margin-bottom: 4px;
-  border-radius: 8px;
+  padding: 8px 20px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   font-size: 14px;
   display: flex;
   align-items: center;
   gap: 10px;
+  color: #8888aa;
+  position: relative;
+  white-space: nowrap;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
 }
 
 .nav-item.active {
-  background: rgba(79, 114, 232, 0.15);
+  background: rgba(79, 114, 232, 0.1);
   color: #4f72e8;
 }
 
-.nav-item.active .project-icon,
-.nav-item.active .nav-icon {
-  color: #4f72e8;
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #4f72e8;
+  border-radius: 0 3px 3px 0;
 }
 
 .project-icon,
 .nav-icon {
-  font-size: 16px;
-  width: 24px;
+  font-size: 14px;
+  width: 20px;
   text-align: center;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.nav-item.active .project-icon,
+.nav-item.active .nav-icon {
+  opacity: 1;
 }
 
 .logout-section {
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
 }
 
 .logout-btn {
   width: 100%;
-  padding: 12px;
+  padding: 10px 14px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
-  color: #a0a0b8;
+  color: #8888aa;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 10px;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .logout-btn:hover {
-  background: rgba(255, 68, 68, 0.1);
-  color: #ff4444;
+  background: rgba(255, 68, 68, 0.08);
+  color: #ff6b6b;
 }
 
 .logout-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 @media (max-width: 768px) {
   .sidebar {
     width: 100%;
     min-height: auto;
-    padding: 12px 0;
+    height: auto;
   }
   
   .view-switcher {
@@ -164,5 +228,9 @@
     flex: 1;
     text-align: center;
     justify-content: center;
+  }
+  
+  .projects-section {
+    max-height: 200px;
   }
 }

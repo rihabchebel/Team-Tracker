@@ -1,7 +1,6 @@
 // components/Header.tsx
 import React from 'react';
-// Option 1: If you have CSS, uncomment this line
-// import './Header.css';
+import './Header.css';
 
 interface HeaderProps {
   user: string;
