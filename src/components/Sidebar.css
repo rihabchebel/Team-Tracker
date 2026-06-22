@@ -1,0 +1,168 @@
+/* components/Sidebar.css */
+.sidebar {
+  width: 280px;
+  background: #1a1a2e;
+  color: #a0a0b8;
+  padding: 20px 0;
+  flex-shrink: 0;
+  min-height: calc(100vh - 64px);
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 16px;
+}
+
+.view-switcher {
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.view-btn {
+  width: 100%;
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #a0a0b8;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-btn:last-child {
+  margin-bottom: 0;
+}
+
+.view-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.view-btn.active {
+  background: linear-gradient(135deg, rgba(79, 114, 232, 0.2), rgba(108, 92, 231, 0.2));
+  color: #4f72e8;
+  border: 1px solid rgba(79, 114, 232, 0.3);
+}
+
+.view-icon {
+  font-size: 18px;
+}
+
+.nav-section {
+  margin-bottom: 16px;
+}
+
+.nav-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.nav-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #6a6a8a;
+  padding: 0 12px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.nav-item.active {
+  background: rgba(79, 114, 232, 0.15);
+  color: #4f72e8;
+}
+
+.nav-item.active .project-icon,
+.nav-item.active .nav-icon {
+  color: #4f72e8;
+}
+
+.project-icon,
+.nav-icon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+}
+
+.logout-section {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logout-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #a0a0b8;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 68, 68, 0.1);
+  color: #ff4444;
+}
+
+.logout-icon {
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    padding: 12px 0;
+  }
+  
+  .view-switcher {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .view-btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+}
