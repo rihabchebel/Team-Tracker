@@ -1,8 +1,8 @@
 // components/DeveloperDashboard.tsx
-import React, { useState } from 'react';
-import './DeveloperDashboard.css';
+import React, { useState } from "react";
+import "./DeveloperDashboard.css";
 
-export type ViewMode = 'supervisor' | 'developer';
+export type ViewMode = "supervisor" | "developer";
 
 interface DeveloperDashboardProps {
   view: ViewMode;
@@ -14,32 +14,38 @@ interface Task {
   description: string;
 }
 
-const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ /*view,*/ project }) => {
+const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
+  /*view,*/ project,
+}) => {
   const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
+    new Date().toISOString().split("T")[0],
   );
-  const [status, setStatus] = useState<'full' | 'partial' | 'unavailable'>('full');
+  const [status, setStatus] = useState<"full" | "partial" | "unavailable">(
+    "full",
+  );
   const [hoursWorked, setHoursWorked] = useState<number>(8);
-  const [tasks, setTasks] = useState<Task[]>([]); // Empty array - no default task
-  const [newTask, setNewTask] = useState('');
+  const [partialReason, setPartialReason] = useState<string>("");
+  const [unavailableReason, setUnavailableReason] = useState<string>("");
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [newTask, setNewTask] = useState("");
 
   const handleAddTask = () => {
-    const taskDescription = newTask.trim() || 'Describe task...';
+    const taskDescription = newTask.trim() || "Describe task...";
     const newTaskObj = {
       id: Date.now().toString(),
-      description: taskDescription
+      description: taskDescription,
     };
-    setTasks(prevTasks => [...prevTasks, newTaskObj]);
-    setNewTask('');
-    console.log('Task added:', newTaskObj);
+    setTasks((prevTasks) => [...prevTasks, newTaskObj]);
+    setNewTask("");
+    console.log("Task added:", newTaskObj);
   };
 
   const handleDeleteTask = (taskId: string) => {
-    setTasks(tasks.filter(task => task.id !== taskId));
+    setTasks(tasks.filter((task) => task.id !== taskId));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       handleAddTask();
     }
@@ -47,14 +53,14 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ /*view,*/ proje
 
   const handleSaveLog = () => {
     // Save the log entry
-    console.log('Log saved:', {
+    console.log("Log saved:", {
       project,
       date: selectedDate,
       status,
       hoursWorked,
-      tasks
+      tasks,
     });
-    alert('Log saved successfully!');
+    alert("Log saved successfully!");
   };
 
   return (
@@ -63,7 +69,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ /*view,*/ proje
       <div className="dashboard-header">
         <div className="project-info">
           <h2>{project}</h2>
-          <span className="project-description">Main product development sprint</span>
+          <span className="project-description">
+            Main product development sprint
+          </span>
         </div>
       </div>
 
@@ -72,7 +80,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ /*view,*/ proje
         {/* Log Your Availability Section */}
         <div className="availability-section">
           <h3>Log Your Availability</h3>
-          
+
           <div className="form-group">
             <label>Date</label>
             <input
@@ -88,68 +96,124 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ /*view,*/ proje
             <div className="status-buttons">
               <button
                 type="button"
-                className={`status-btn ${status === 'full' ? 'active full' : ''}`}
-                onClick={() => setStatus('full')}
+                className={`status-btn ${status === "full" ? "active full" : ""}`}
+                onClick={() => setStatus("full")}
               >
                 Full
               </button>
               <button
                 type="button"
-                className={`status-btn ${status === 'partial' ? 'active partial' : ''}`}
-                onClick={() => setStatus('partial')}
+                className={`status-btn ${status === "partial" ? "active partial" : ""}`}
+                onClick={() => setStatus("partial")}
               >
                 Partial
               </button>
               <button
                 type="button"
-                className={`status-btn ${status === 'unavailable' ? 'active unavailable' : ''}`}
-                onClick={() => setStatus('unavailable')}
+                className={`status-btn ${status === "unavailable" ? "active unavailable" : ""}`}
+                onClick={() => setStatus("unavailable")}
               >
                 Unavailable
               </button>
             </div>
           </div>
-
-          <div className="form-group">
-            <label>Hours Worked (max 8)</label>
-            <div className="hours-input-container">
-              <input
-                type="range"
+          {status === "partial" && (
+            <div className="form-group">
+              <div className="reason-input-container">
+                <label>Reason for Partial Availability</label>
+                <input
+                  type="text"
+                  value={partialReason}
+                  onChange={(e) => setPartialReason(e.target.value)}
+                  placeholder="Enter reason..."
+                />
+              </div>
+              <label>Hours Worked (max 8)</label>
+              <div className="hours-input-container">
+                <input
+                type="number"
+                step="0.5"
                 min="0"
                 max="8"
                 value={hoursWorked}
-                onChange={(e) => setHoursWorked(Number(e.target.value))}
-                className="hours-slider"
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (!isNaN(value)) {
+                    const clampedValue = Math.min(Math.max(value, 0), 8);
+                    setHoursWorked(clampedValue);
+                  } else if (e.target.value === "") {
+                  }
+
+                }}
               />
               <span className="hours-value">{hoursWorked}h</span>
             </div>
           </div>
+        )}
+        {status === "full" && (
+            <div className="form-group">
+                <label>Hours Worked</label>
+                <div className="hours-input-container">
+                 <input
+                type="number"
+                step="0.5"
+                min="0"
+                max="8"
+                value={hoursWorked}
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (!isNaN(value)) {
+                    const clampedValue = Math.min(Math.max(value, 0), 8);
+                    setHoursWorked(clampedValue);
+                  } else if (e.target.value === "") {
+                  }
 
-          {/* Tasks Section */}
-          <div className="tasks-section">
-            <h4>Completed Tasks</h4>
-            <div className="task-list">
-              {tasks.length === 0 ? (
-                <div className="empty-tasks-message">
-                  No tasks added yet. Add a task below.
+                }}
+              />
+                <span className="hours-value">{hoursWorked}h</span>
                 </div>
-              ) : (
-                tasks.map((task) => (
-                  <div key={task.id} className="task-item">
-                    <span className="task-description">
-                      {task.description}
-                    </span>
-                    <button
-                      type="button"
-                      className="delete-task-btn"
-                      onClick={() => handleDeleteTask(task.id)}
-                      aria-label="Delete task description"
-                    >
-                      &times;
-                    </button>
+            </div>
+        )}
+        {status === "unavailable" && (
+          <div className="form-group">
+            <label>Reason for Unavailability</label>
+            <input
+              type="text"
+              value={unavailableReason}
+              onChange={(e) => setUnavailableReason(e.target.value)}
+              placeholder="Enter reason..."
+            />
+          </div>
+        )}
+               {/* Tasks Section */}
+          {status !== "unavailable" && (
+            <div className="tasks-section">
+              <h4>Completed Tasks</h4>
+
+              <div className="task-list">
+                {tasks.length === 0 ? (
+                  <div className="empty-tasks-message">
+                    No tasks added yet. Add a task below.
                   </div>
-                ))
-              )}
+                ) : (
+                  tasks.map((task) => (
+                    <div key={task.id} className="task-item">
+                      <span className="task-description">
+                        {task.description}
+                      </span>
+                      <button
+                        type="button"
+                        className="delete-task-btn"
+                        onClick={() => handleDeleteTask(task.id)}
+                        aria-label="Delete task description"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
               <div className="add-task-row">
                 <input
                   type="text"
@@ -168,7 +232,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({ /*view,*/ proje
                 </button>
               </div>
             </div>
-          </div>
+          )}
 
           <button
             type="button"

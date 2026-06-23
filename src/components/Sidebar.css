@@ -5,8 +5,9 @@
   color: #8888aa;
   padding: 0;
   flex-shrink: 0;
-  min-height: calc(100vh - 60px);
-  height: calc(100vh - 60px);
+  min-height: 100%;
+  height: auto;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
   border-right: 1px solid rgba(255, 255, 255, 0.05);

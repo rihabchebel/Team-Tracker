@@ -28,10 +28,40 @@ interface PerformanceDashboardProps {
   project: string;
 }
 
-const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ project }) => {
-  const [activeTab, setActiveTab] = useState<'heatmap' | 'roster' | 'analytics'>('roster');
+interface HeatmapDetailData {
+  noteKey: string;
+  memberName: string;
+  date: string;
+  hoursWorked: number;
+  tasksCompleted: string[];
+  supervisorNotes: string;
+  addedSupervisorNotes: string[];
+  newSupervisorNote: string;
+  status: 'full' | 'partial' | 'unavailable' | 'no-log';
+  role: string;
+}
 
-  // Project data with different members for each project
+const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, project }) => {
+  const [activeTab, setActiveTab] = useState<'heatmap' | 'roster' | 'analytics'>('roster');
+  const [selectedCell, setSelectedCell] = useState<HeatmapDetailData | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [addedSupervisorNotesByCell, setAddedSupervisorNotesByCell] = useState<Record<string, string[]>>({});
+
+  const userManagementTeamMembers: TeamMember[] = [
+    { id: '1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Supervisor', memberSince: 'Apr 14, 2026', activeHours: 32, status: 'Active' },
+    { id: '2', name: 'Bob Smith', email: 'bob@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 80, status: 'Active' },
+    { id: '3', name: 'Carol Davis', email: 'carol@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 63, status: 'Active' },
+    { id: '4', name: 'Dave Wilson', email: 'dave@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 34, status: 'Active' },
+    { id: '5', name: 'Eve Martinez', email: 'eve@example.com', role: 'Supervisor', memberSince: 'Apr 14, 2026', activeHours: 46, status: 'Active' },
+    { id: '6', name: 'Frank Brown', email: 'frank@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 27, status: 'Left' },
+    { id: '7', name: 'Guest', email: 'guest@local', role: 'Developer', memberSince: 'Jun 22, 2026', activeHours: 8, status: 'Active' },
+  ];
+
+  const getTeamMembers = (memberIds: string[]) =>
+    memberIds
+      .map((memberId) => userManagementTeamMembers.find((member) => member.id === memberId))
+      .filter((member): member is TeamMember => Boolean(member));
+
   const projectData: Record<string, ProjectData> = {
     'Project Alpha': {
       id: '1',
@@ -39,13 +69,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
       description: 'Main product development sprint',
       budget: 500,
       hoursSpent: 224,
-      teamMembers: [
-        { id: '1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Supervisor', memberSince: 'Mar 1, 2026', activeHours: 0, status: 'Active' },
-        { id: '2', name: 'Bob Smith', email: 'bob@example.com', role: 'Developer', memberSince: 'Mar 1, 2026', activeHours: 80, status: 'Active' },
-        { id: '3', name: 'Carol Davis', email: 'carol@example.com', role: 'Developer', memberSince: 'Mar 1, 2026', activeHours: 63, status: 'Active' },
-        { id: '4', name: 'Frank Brown', email: 'frank@example.com', role: 'Developer', memberSince: 'Mar 1, 2026', activeHours: 27, status: 'Left' },
-        { id: '5', name: 'Eve Martinez', email: 'eve@example.com', role: 'Developer', memberSince: 'Mar 5, 2026', activeHours: 46, status: 'Active' },
-      ]
+      teamMembers: getTeamMembers(['1', '2', '3', '6'])
     },
     'Project Beta': {
       id: '2',
@@ -53,13 +77,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
       description: 'Client portal redesign',
       budget: 300,
       hoursSpent: 150,
-      teamMembers: [
-        { id: '6', name: 'Dave Wilson', email: 'dave@example.com', role: 'Supervisor', memberSince: 'Mar 10, 2026', activeHours: 0, status: 'Active' },
-        { id: '7', name: 'Grace Lee', email: 'grace@example.com', role: 'Developer', memberSince: 'Mar 15, 2026', activeHours: 45, status: 'Active' },
-        { id: '8', name: 'Henry Kim', email: 'henry@example.com', role: 'Developer', memberSince: 'Mar 20, 2026', activeHours: 32, status: 'Active' },
-        { id: '9', name: 'Ivy Chen', email: 'ivy@example.com', role: 'Developer', memberSince: 'Apr 1, 2026', activeHours: 12, status: 'On Leave' },
-        { id: '10', name: 'Jack Wilson', email: 'jack@example.com', role: 'Developer', memberSince: 'Apr 5, 2026', activeHours: 28, status: 'Active' },
-      ]
+      teamMembers: getTeamMembers(['5', '4', '7'])
     },
     'Service VAS': {
       id: '3',
@@ -67,12 +85,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
       description: 'Test description',
       budget: 300,
       hoursSpent: 89,
-      teamMembers: [
-        { id: '11', name: 'Karen White', email: 'karen@example.com', role: 'Supervisor', memberSince: 'Mar 1, 2026', activeHours: 15, status: 'Active' },
-        { id: '12', name: 'Leo Martinez', email: 'leo@example.com', role: 'Developer', memberSince: 'Mar 5, 2026', activeHours: 34, status: 'Active' },
-        { id: '13', name: 'Mia Thompson', email: 'mia@example.com', role: 'Developer', memberSince: 'Mar 10, 2026', activeHours: 28, status: 'Active' },
-        { id: '14', name: 'Noah Garcia', email: 'noah@example.com', role: 'Developer', memberSince: 'Apr 1, 2026', activeHours: 12, status: 'Active' },
-      ]
+      teamMembers: getTeamMembers(['1', '4', '5', '6'])
     },
     'test': {
       id: '4',
@@ -80,11 +93,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
       description: 'Test project',
       budget: 100,
       hoursSpent: 45,
-      teamMembers: [
-        { id: '15', name: 'Olivia Brown', email: 'olivia@example.com', role: 'Supervisor', memberSince: 'Mar 15, 2026', activeHours: 8, status: 'Active' },
-        { id: '16', name: 'Peter Davis', email: 'peter@example.com', role: 'Developer', memberSince: 'Mar 20, 2026', activeHours: 22, status: 'Active' },
-        { id: '17', name: 'Quinn Smith', email: 'quinn@example.com', role: 'Developer', memberSince: 'Apr 1, 2026', activeHours: 15, status: 'Left' },
-      ]
+      teamMembers: getTeamMembers(['5', '2', '6'])
     },
     'All Tasks': {
       id: '5',
@@ -92,17 +101,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
       description: 'All tasks overview',
       budget: 0,
       hoursSpent: 0,
-      teamMembers: [
-        { id: '18', name: 'Rachel Adams', email: 'rachel@example.com', role: 'Supervisor', memberSince: 'Mar 1, 2026', activeHours: 120, status: 'Active' },
-        { id: '19', name: 'Sam Wilson', email: 'sam@example.com', role: 'Developer', memberSince: 'Mar 1, 2026', activeHours: 95, status: 'Active' },
-        { id: '20', name: 'Tina Chen', email: 'tina@example.com', role: 'Developer', memberSince: 'Mar 15, 2026', activeHours: 67, status: 'Active' },
-        { id: '21', name: 'Umar Khan', email: 'umar@example.com', role: 'Developer', memberSince: 'Apr 1, 2026', activeHours: 34, status: 'Active' },
-        { id: '22', name: 'Guest', email: 'guest@local', role: 'Guest', memberSince: 'Jun 22, 2026', activeHours: 8, status: 'Active' },
-      ]
+      teamMembers: userManagementTeamMembers
     }
   };
 
-  // Get current project data or use Project Beta as fallback
   const currentProject = projectData[project] || projectData['Project Beta'];
   const { teamMembers, budget, hoursSpent } = currentProject;
 
@@ -124,6 +126,208 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
   };
 
   const budgetPercentage = budget > 0 ? Math.round((hoursSpent / budget) * 100) : 0;
+
+  // Deterministic pseudo-random utilities so heatmap doesn't change every render
+  const hashString = (s: string) => {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+      h = (h << 5) - h + s.charCodeAt(i);
+      h |= 0;
+    }
+    return Math.abs(h);
+  };
+
+  const randFromSeed = (seed: number) => {
+    // simple LCG-style transformation, deterministic for the same seed
+    const a = 9301, c = 49297, m = 233280;
+    return ((seed * a + c) % m) / m;
+  };
+
+  // Determine cell status based on member data and deterministic generation
+  const getCellStatus = (member: TeamMember, dayIndex: number): 'full' | 'partial' | 'unavailable' | 'no-log' => {
+    if (member.activeHours === 0 || member.status === 'Left') {
+      return 'no-log';
+    }
+    const seed = hashString(`${member.id}|${dayIndex}|${project}`);
+    const rand = randFromSeed(seed);
+    // Weighted distribution: 40% full, 35% partial, 25% unavailable
+    if (rand < 0.40) {
+      return 'full';
+    } else if (rand < 0.75) {
+      return 'partial';
+    } else {
+      return 'unavailable';
+    }
+  };
+
+  // Get hours based on status (deterministic)
+  const getHoursForStatus = (status: string, member: TeamMember, dayIndex: number): number => {
+    const seed = hashString(`${member.id}|hours|${dayIndex}|${status}|${project}`);
+    const r = randFromSeed(seed);
+    switch (status) {
+      case 'full':
+        return 6 + Math.floor(r * 3); // 6-8 hours
+      case 'partial':
+        return 2 + Math.floor(r * 3); // 2-4 hours
+      case 'unavailable':
+      case 'no-log':
+        return 0;
+      default:
+        return 0;
+    }
+  };
+
+  // Get tasks based on status
+  const getTasksForStatus = (status: string, member: TeamMember, dayIndex: number): string[] => {
+    const mockTasks = [
+      'RTEST',
+      'Feature development',
+      'Bug fixes',
+      'Code review',
+      'Documentation',
+      'Testing',
+      'Deployment',
+      'Meeting',
+      'Design review',
+      'Sprint planning',
+      'Client call',
+      'Code refactoring',
+      'Database optimization',
+      'API development',
+      'UI implementation'
+    ];
+    
+    const seedBase = hashString(`${member.id}|tasks|${dayIndex}|${status}|${project}`);
+    let r = randFromSeed(seedBase);
+    let numTasks = 0;
+    if (status === 'full') {
+      numTasks = 2 + Math.floor(r * 3); // 2-4 tasks
+    } else if (status === 'partial') {
+      numTasks = 1 + Math.floor(r * 2); // 1-2 tasks
+    } else {
+      numTasks = 0;
+    }
+
+    const tasksCompleted: string[] = [];
+    const usedTasks = new Set<string>();
+    for (let i = 0; i < numTasks; i++) {
+      // change seed slightly per pick to avoid duplicates deterministically
+      const pickSeed = seedBase + i * 1315423911;
+      const pickRand = randFromSeed(pickSeed);
+      const idx = Math.floor(pickRand * mockTasks.length);
+      const task = mockTasks[idx];
+      if (!usedTasks.has(task)) {
+        usedTasks.add(task);
+        tasksCompleted.push(task);
+      }
+    }
+    return tasksCompleted;
+  };
+
+  // Get supervisor notes based on status
+  const getSupervisorNotes = (status: string, member: TeamMember, dayIndex: number): string => {
+    const notesMap: Record<string, string[]> = {
+      'full': [
+        'Excellent work, keep it up!',
+        'Great progress on tasks.',
+        'Consistent performance.',
+        'Meeting all deadlines.',
+        'Outstanding contribution.'
+      ],
+      'partial': [
+        'Good effort, try to log more hours.',
+        'Partial availability noted.',
+        'Consider increasing work hours.',
+        'Balancing multiple priorities.',
+        'Productive despite limited hours.'
+      ],
+      'unavailable': [
+        'No work logged for this day.',
+        'Day off or unavailable.',
+        'Please ensure you log your availability.',
+        'No activity recorded.',
+        'Unavailable - please update status.'
+      ],
+      'no-log': [
+        'No logs available for this day.',
+        'Please log your availability.',
+        'Missing data for this date.',
+        'No activity recorded.'
+      ]
+    };
+    const notes = notesMap[status] || notesMap['no-log'];
+    const seed = hashString(`${member.id}|notes|${dayIndex}|${status}|${project}`);
+    const idx = Math.floor(randFromSeed(seed) * notes.length);
+    return notes[idx];
+  };
+
+ const handleCellClick = (
+  member: TeamMember,
+  dayIndex: number,
+  status: 'full' | 'partial' | 'unavailable' | 'no-log'
+) => {
+  const hoursWorked = getHoursForStatus(status, member, dayIndex);
+  const tasksCompleted = getTasksForStatus(status, member, dayIndex);
+  const noteKey = `${project}|${member.id}|${dayIndex}`;
+  const supervisorNotes = getSupervisorNotes(status, member, dayIndex);
+  const addedSupervisorNotes = addedSupervisorNotesByCell[noteKey] ?? [];
+
+  const today = new Date();
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() - (29 - dayIndex));
+
+  const formattedDate = targetDate.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+
+  const detailData: HeatmapDetailData = {
+    noteKey,
+    memberName: member.name,
+    date: formattedDate,
+    hoursWorked,
+    tasksCompleted,
+    supervisorNotes,
+    addedSupervisorNotes,
+    newSupervisorNote: '',
+    status,
+    role: member.role
+  };
+
+  setSelectedCell(detailData);
+  setIsModalOpen(true);
+};
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedCell(null);
+  };
+
+  const handleNewSupervisorNoteChange = (note: string) => {
+    setSelectedCell((current) => current ? { ...current, newSupervisorNote: note } : current);
+  };
+
+  const handleAddSupervisorNote = () => {
+    if (!selectedCell || !selectedCell.newSupervisorNote.trim()) {
+      return;
+    }
+
+    const note = selectedCell.newSupervisorNote.trim();
+    const nextNotes = [...selectedCell.addedSupervisorNotes, note];
+
+    setSelectedCell({
+      ...selectedCell,
+      addedSupervisorNotes: nextNotes,
+      newSupervisorNote: ''
+    });
+    setAddedSupervisorNotesByCell((notes) => ({
+      ...notes,
+      [selectedCell.noteKey]: nextNotes
+    }));
+  };
+  
 
   return (
     <div className="performance-dashboard">
@@ -230,17 +434,30 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
             <h4>Availability Heatmap (Last 30 Working Days)</h4>
             <div className="heatmap-placeholder">
               <div className="heatmap-members">
-                {teamMembers.slice(0, 6).map((member) => (
+                {teamMembers.slice(0, 8).map((member) => (
                   <div key={member.id} className="heatmap-member">
-                    <span className="member-name">{member.name}</span>
+                    <span className="member-name">
+                      <span className="member-name-text">
+                        {member.name}
+                        {member.status === 'Left' && <span className="member-status-left"> (left)</span>}
+                      </span>
+                      {member.role === 'Supervisor' && (
+                        <span className="member-role-badge supervisor-badge">Supervisor</span>
+                      )}
+                    </span>
                     <div className="heatmap-row">
-                      {Array.from({ length: 30 }, (_, i) => (
-                        <div 
-                          key={i} 
-                          className={`heatmap-cell ${Math.random() > 0.6 ? 'full' : Math.random() > 0.3 ? 'partial' : 'unavailable'}`}
-                          title={`Day ${i + 1}`}
-                        />
-                      ))}
+                      {Array.from({ length: 30 }, (_, i) => {
+                        const status = getCellStatus(member, i);
+                        return (
+                          <div 
+                            key={i} 
+                            className={`heatmap-cell ${status}`}
+                            onClick={() => handleCellClick(member, i, status)}
+                            title={`${member.name} - ${status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}`}
+                            style={{ cursor: 'pointer' }}
+                          />
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
@@ -289,6 +506,89 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ /*view,*/ p
           </div>
         )}
       </div>
+
+      {/* Heatmap Detail Modal */}
+      {isModalOpen && selectedCell && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal heatmap-detail-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-header-info">
+                <h3>{selectedCell.memberName}</h3>
+                {selectedCell.role === 'Supervisor' && (
+                  <span className="role-badge-small supervisor-badge">Supervisor</span>
+                )}
+                <span className={`status-badge-small ${selectedCell.status}`}>
+                  {selectedCell.status.charAt(0).toUpperCase() + selectedCell.status.slice(1).replace('-', ' ')}
+                </span>
+              </div>
+              <button className="close-btn" onClick={closeModal}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="detail-item detail-date">
+                <span className="detail-value">{selectedCell.date}</span>
+              </div>
+
+              <div className="detail-item detail-hours">
+                <span className="detail-value hours-value-large">
+                  {selectedCell.hoursWorked}
+                </span>
+                <span className="detail-label">hours worked</span>
+              </div>
+
+              <div className="detail-item detail-tasks">
+                <span className="detail-label">Tasks Completed</span>
+                <div className="task-tags">
+                  {selectedCell.tasksCompleted.map((task, index) => (
+                    <span key={index} className="task-tag">{task}</span>
+                  ))}
+                  {selectedCell.tasksCompleted.length === 0 && (
+                    <span className="no-tasks">No tasks completed</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="detail-item detail-notes">
+                <span className="detail-label">Supervisor Notes</span>
+                <p className="notes-text">{selectedCell.supervisorNotes}</p>
+
+                {selectedCell.addedSupervisorNotes.length > 0 && (
+                  <>
+                    {selectedCell.addedSupervisorNotes.map((note, index) => (
+                      <p key={`${selectedCell.noteKey}-${index}`} className="notes-text added-note-text">
+                        {note}
+                      </p>
+                    ))}
+                  </>
+                )}
+
+                {view === 'supervisor' && (
+                  <>
+                    <textarea
+                      className="notes-text notes-input"
+                      value={selectedCell.newSupervisorNote}
+                      onChange={(e) => handleNewSupervisorNoteChange(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleAddSupervisorNote();
+                        }
+                      }}
+                      placeholder="Write a new supervisor note..."
+                    />
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="mark-read-btn" onClick={closeModal}>
+                Mark as Read
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -52,8 +52,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
     'Project Beta': 'Client portal redesign',
     'Service VAS': 'Test description',
     'test': 'test',
-    'T': 'test',
-    'All Tasks': 'All tasks overview'
+    'T': 'test'
   };
 
   const projects = ['Project Alpha', 'Project Beta', 'Service VAS', 'TMA'];
@@ -247,10 +246,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
                 >
                   <option value="Developer">Developer</option>
                   <option value="Supervisor">Supervisor</option>
-                  <option value="Manager">Manager</option>
-                  <option value="Designer">Designer</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Guest">Guest</option>
                 </select>
               </div>
 

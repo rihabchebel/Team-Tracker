@@ -1,5 +1,6 @@
 // components/UserTimeline.tsx
 import React, { useState } from 'react';
+import { Briefcase, Flag, FileText, Calendar } from 'lucide-react';
 import './UserTimeline.css';
 
 export type ViewMode = 'supervisor' | 'developer';
@@ -162,15 +163,20 @@ const UserTimeline: React.FC<UserTimelineProps> = ({ /*view,*/ project }) => {
   };
 
   const getTypeIcon = (type: string) => {
+    const iconProps = {
+      size: 16,
+      className: "type-icon"
+    };
+    
     switch(type) {
       case 'work':
-        return '💼';
+        return <Briefcase {...iconProps} />;
       case 'leave':
-        return '🏖️';
+        return <Calendar {...iconProps} />;
       case 'milestone':
-        return '🎯';
+        return <Flag {...iconProps} />;
       default:
-        return '📋';
+        return <FileText {...iconProps} />;
     }
   };
 
