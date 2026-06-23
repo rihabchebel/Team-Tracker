@@ -8,12 +8,12 @@ import {
   Settings,
   Users,
   LogOut,
-  Code2
+  Code2  
 } from 'lucide-react';
 import './Sidebar.css';
 
 export type ViewMode = 'supervisor' | 'developer';
-export type PageType = 'users' | 'timeline' | 'settings' | 'tasks';
+export type PageType = 'dashboard' | 'users' | 'timeline' | 'settings' | 'tasks';
 
 interface SidebarProps {
   view: ViewMode;

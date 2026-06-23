@@ -1,5 +1,6 @@
 // components/UserManagement.tsx
 import React, { useState } from 'react';
+import EditUser from './EditUser';
 import './UserManagement.css';
 
 export type ViewMode = 'supervisor' | 'developer';
@@ -21,16 +22,19 @@ interface UserManagementProps {
 
 const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
   const [users, setUsers] = useState<User[]>([
-    { id: '1', name: 'Alice Johnson', email: 'alice@example.com', created: '14/04/2026', role: 'Admin' },
+    { id: '1', name: 'Alice Johnson', email: 'alice@example.com', created: '14/04/2026', role: 'Supervisor' },
     { id: '2', name: 'Bob Smith', email: 'bob@example.com', created: '14/04/2026', role: 'Developer' },
-    { id: '3', name: 'Carol Davis', email: 'carol@example.com', created: '14/04/2026', role: 'Designer' },
+    { id: '3', name: 'Carol Davis', email: 'carol@example.com', created: '14/04/2026', role: 'Developer' },
     { id: '4', name: 'Dave Wilson', email: 'dave@example.com', created: '14/04/2026', role: 'Developer' },
-    { id: '5', name: 'Eve Martinez', email: 'eve@example.com', created: '14/04/2026', role: 'Manager' },
+    { id: '5', name: 'Eve Martinez', email: 'eve@example.com', created: '14/04/2026', role: 'Supervisor' },
     { id: '6', name: 'Frank Brown', email: 'frank@example.com', created: '14/04/2026', role: 'Developer' },
-    { id: '7', name: 'Guest', email: 'guest@local', created: '22/06/2026', role: 'Guest' },
+    { id: '7', name: 'Guest', email: 'guest@local', created: '22/06/2026', role: 'Developer' },
   ]);
-
-  const [showModal, setShowModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',
@@ -39,7 +43,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
     project: ''
   });
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm /*, setSearchTerm*/] = useState('');
+  const isSupervisor = view === 'supervisor';
 
   // Project descriptions mapping
   const projectDescriptions: Record<string, string> = {
@@ -75,8 +80,44 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
       };
       setUsers([...users, user]);
       setNewUser({ name: '', email: '', password: '', role: 'Developer', project: '' });
-      setShowModal(false);
+      setShowCreateModal(false);
     }
+  };
+
+  const handleEditClick = (user: User) => {
+    setSelectedUser(user);
+    setShowEditModal(true);
+  };
+
+  const handleSaveUser = (updatedUser: User) => {
+    setUsers(users.map(user => 
+      user.id === updatedUser.id ? updatedUser : user
+    ));
+    setShowEditModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setSelectedUser(null);
+  };
+
+  const handleDeleteClick = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (userToDelete) {
+      setUsers(users.filter(user => user.id !== userToDelete.id));
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
   };
 
   return (
@@ -87,8 +128,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
             <h2>{project}</h2>
             <span className="project-description">{getProjectDescription(project)}</span>
           </div>
-          {view === 'supervisor' && (
-            <button className="create-user-btn" onClick={() => setShowModal(true)}>
+          {isSupervisor && (
+            <button className="create-user-btn" onClick={() => setShowCreateModal(true)}>
               Create & Invite User
             </button>
           )}
@@ -122,7 +163,24 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
                   <td>{user.email}</td>
                   <td>{user.created}</td>
                   <td>
-                    <button className="action-link">✏️</button>
+                    <div className="action-buttons">
+                      <button 
+                        className="action-link edit-btn" 
+                        onClick={() => handleEditClick(user)}
+                        title="Edit User"
+                      >
+                        ✏️
+                      </button>
+                      {isSupervisor && (
+                        <button 
+                          className="action-link delete-btn" 
+                          onClick={() => handleDeleteClick(user)}
+                          title="Delete User"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -132,12 +190,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
       </div>
 
       {/* Create & Invite User Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create & Invite User</h3>
-              <button className="close-btn" onClick={() => setShowModal(false)}>
+              <button className="close-btn" onClick={() => setShowCreateModal(false)}>
                 ×
               </button>
             </div>
@@ -189,6 +247,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
                 >
                   <option value="Developer">Developer</option>
                   <option value="Supervisor">Supervisor</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Designer">Designer</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Guest">Guest</option>
                 </select>
               </div>
 
@@ -208,7 +270,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowModal(false)}>
+              <button className="cancel-btn" onClick={() => setShowCreateModal(false)}>
                 CANCEL
               </button>
               <button 
@@ -217,6 +279,88 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
                 disabled={!newUser.name || !newUser.email || !newUser.password}
               >
                 Create & Invite
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      <EditUser
+        user={selectedUser}
+        isOpen={showEditModal}
+        onClose={handleCloseEditModal}
+        onSave={handleSaveUser}
+        projects={projects}
+        currentUserRole={view}
+      />
+
+      {/* Delete User Confirmation Modal */}
+      {showDeleteModal && userToDelete && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal delete-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Delete User</h3>
+              <button className="close-btn" onClick={handleCancelDelete}>
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
+                <h4 style={{ margin: '0 0 8px 0', color: '#1a1a2e' }}>
+                  Are you sure you want to delete this user?
+                </h4>
+                <p style={{ color: '#666', margin: '0 0 4px 0' }}>
+                  <strong>{userToDelete.name}</strong>
+                </p>
+                <p style={{ color: '#8888aa', fontSize: '14px', margin: '0' }}>
+                  {userToDelete.email}
+                </p>
+                <div style={{ 
+                  marginTop: '16px', 
+                  padding: '12px', 
+                  background: '#fff3f3', 
+                  borderRadius: '6px',
+                  border: '1px solid #ffcdd2',
+                  color: '#d32f2f',
+                  fontSize: '13px'
+                }}>
+                  This action cannot be undone. All user data will be permanently removed.
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer" style={{ borderTop: '1px solid #eef0f5' }}>
+              <button className="cancel-btn" onClick={handleCancelDelete}>
+                CANCEL
+              </button>
+              <button 
+                className="delete-btn-modal" 
+                onClick={handleConfirmDelete}
+                style={{
+                  padding: '10px 24px',
+                  background: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  letterSpacing: '0.5px'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#c82333';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#dc3545';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                Delete User
               </button>
             </div>
           </div>

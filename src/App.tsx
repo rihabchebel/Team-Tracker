@@ -7,9 +7,11 @@ import UserManagement from './components/UserManagement';
 import ProjectSettings from './components/ProjectSettings';
 import UserTimeline from './components/UserTimeline';
 import AllTasks from './components/AllTasks';
+import PerformanceDashboard from './components/PerformanceDashboard';
+import DeveloperDashboard from './components/DeveloperDashboard';
 
 export type ViewMode = 'supervisor' | 'developer';
-export type PageType = 'users' | 'timeline' | 'settings' | 'tasks';
+export type PageType = 'dashboard' | 'users' | 'timeline' | 'settings' | 'tasks';
 
 interface AppState {
   view: ViewMode;
@@ -20,8 +22,8 @@ interface AppState {
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
     view: 'supervisor',
-    currentPage: 'tasks',
-    selectedProject: 'All Tasks'
+    currentPage: 'dashboard', 
+    selectedProject: 'Project Beta'
   });
 
   const handleViewSwitch = (view: ViewMode) => {
@@ -33,27 +35,33 @@ const App: React.FC = () => {
   };
 
   const handleProjectSelect = (project: string) => {
-    setState({ ...state, selectedProject: project });
-    // Navigate to appropriate page based on project
-    if (project === 'All Tasks') {
-      setState(prev => ({ ...prev, currentPage: 'tasks' }));
-    } else {
-      setState(prev => ({ ...prev, currentPage: 'users' }));
-    }
+    // When a project is clicked, go to dashboard
+    setState({ 
+      ...state, 
+      selectedProject: project,
+      currentPage: 'dashboard'
+    });
   };
 
   const renderPage = () => {
+    // If in developer view and on dashboard, show DeveloperDashboard
+    if (state.view === 'developer' && state.currentPage === 'dashboard') {
+      return <DeveloperDashboard view={state.view} project={state.selectedProject} />;
+    }
+
     switch (state.currentPage) {
+      case 'dashboard':
+        return <PerformanceDashboard view={state.view} project={state.selectedProject} />;
       case 'users':
         return <UserManagement view={state.view} project={state.selectedProject} />;
       case 'timeline':
         return <UserTimeline view={state.view} project={state.selectedProject} />;
       case 'settings':
-        return <ProjectSettings view={state.view} project={state.selectedProject} />;
+        return <ProjectSettings view={state.view} project={''} />;
       case 'tasks':
         return <AllTasks view={state.view} project={state.selectedProject} />;
       default:
-        return <AllTasks view={state.view} project={state.selectedProject} />;
+        return <PerformanceDashboard view={state.view} project={state.selectedProject} />;
     }
   };
 

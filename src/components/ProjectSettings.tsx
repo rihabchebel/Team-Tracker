@@ -29,12 +29,12 @@ interface ProjectData {
 interface TeamMember {
   id: string;
   name: string;
-  role: string;
+   role: 'Developer' | 'Supervisor';
   joined: string;
   left?: string;
 }
 
-const ProjectSettings: React.FC<ProjectSettingsProps> = ({ /*view,*/ project }) => {
+const ProjectSettings: React.FC<ProjectSettingsProps> = ({ /*view, project */}) => {
   // Projects with their total hours and sub-projects
   const [projectsData, setProjectsData] = useState<ProjectData[]>([
     {
@@ -82,7 +82,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({ /*view,*/ project }) 
         { id: 'sp12', name: 'Testing', timeUsed: 0, timeTotal: 70 },
       ],
       teamMembers: [
-        { id: '5', name: 'Eve Martinez', role: 'Manager', joined: '2026-03-15' },
+        { id: '5', name: 'Eve Martinez', role: 'Supervisor', joined: '2026-03-15' },
         { id: '6', name: 'Frank Brown', role: 'Developer', joined: '2026-03-15' },
       ]
     },
@@ -97,7 +97,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({ /*view,*/ project }) 
         { id: 'sp15', name: 'Implementation', timeUsed: 0, timeTotal: 140 },
       ],
       teamMembers: [
-        { id: '7', name: 'Grace Lee', role: 'Designer', joined: '2026-03-15' },
+        { id: '7', name: 'Grace Lee', role: 'Developer', joined: '2026-03-15' },
         { id: '8', name: 'Henry Kim', role: 'Developer', joined: '2026-03-15' },
       ]
     }

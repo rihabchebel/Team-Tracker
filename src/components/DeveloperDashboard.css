@@ -1,0 +1,387 @@
+/* components/DeveloperDashboard.css */
+.developer-dashboard {
+  padding: 24px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eef0f5;
+  flex-shrink: 0;
+}
+
+.project-info h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 4px 0;
+}
+
+.project-description {
+  color: #8888aa;
+  font-size: 14px;
+}
+
+
+.dashboard-content {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+}
+
+.availability-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.availability-section h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 24px 0;
+  flex-shrink: 0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  color: #1a1a2e;
+  margin-bottom: 8px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.date-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+/* Status Buttons */
+.status-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.status-btn {
+  flex: 1;
+  padding: 8px 16px;
+  border: 2px solid #d0d3e0;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  color: #1a1a2e;
+  text-align: center;
+  min-width: 60px;
+}
+
+.status-btn:hover {
+  border-color: #4f72e8;
+  transform: translateY(-2px);
+}
+
+.status-btn.active.full {
+  border-color: #00b894;
+  background: #e8f5e9;
+  color: #00b894;
+}
+
+.status-btn.active.partial {
+  border-color: #fdcb6e;
+  background: #fff8e1;
+  color: #fdcb6e;
+}
+
+.status-btn.active.unavailable {
+  border-color: #e17055;
+  background: #fbe9e7;
+  color: #e17055;
+}
+
+/* Hours Input */
+.hours-input-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.hours-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #d0d3e0;
+  outline: none;
+  transition: background 0.3s;
+}
+
+.hours-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4f72e8;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.hours-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(79, 114, 232, 0.3);
+}
+
+.hours-slider::-moz-range-thumb {
+  -moz-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #4f72e8;
+  cursor: pointer;
+  border: none;
+}
+
+.hours-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #4f72e8;
+  min-width: 40px;
+}
+
+/* Tasks Section - Grows to fill space */
+.tasks-section {
+  flex: 1;
+  margin-top: 8px;
+  padding-top: 24px;
+  border-top: 1px solid #eef0f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.tasks-section h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a2e;
+  margin: 0 0 16px 0;
+  flex-shrink: 0;
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #f8f9fc;
+  border-radius: 6px;
+  transition: background 0.3s;
+}
+
+.task-item:hover {
+  background: #f0f1f5;
+}
+
+.task-description {
+  flex: 1;
+  font-size: 14px;
+  color: #1a1a2e;
+  transition: all 0.3s;
+}
+
+.delete-task-btn {
+  background: none;
+  border: none;
+  color: #8888aa;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0 4px;
+  transition: all 0.3s;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.delete-task-btn:hover {
+  color: #e17055;
+  transform: scale(1.2);
+}
+
+.add-task-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-shrink: 0;
+}
+
+.task-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.3s;
+}
+
+.task-input:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+.add-task-btn {
+  padding: 10px 20px;
+  background: transparent;
+  border: 2px dashed #d0d3e0;
+  border-radius: 6px;
+  color: #8888aa;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.add-task-btn:hover {
+  border-color: #4f72e8;
+  color: #4f72e8;
+}
+
+/* Save Log Button */
+.save-log-btn {
+  width: 100%;
+  padding: 14px;
+  margin-top: 24px;
+  background: linear-gradient(135deg, #4f72e8, #6c5ce7);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.save-log-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 114, 232, 0.4);
+}
+
+.save-log-btn:active {
+  transform: translateY(0);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .developer-dashboard {
+    padding: 16px;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .switch-view-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .dashboard-content {
+    padding: 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .status-buttons {
+    flex-direction: row;
+  }
+
+  .status-btn {
+    flex: 1;
+    text-align: center;
+  }
+
+  .hours-input-container {
+    flex-direction: row;
+  }
+
+  .hours-slider {
+    flex: 1;
+  }
+
+  .add-task-row {
+    flex-direction: column;
+  }
+
+  .add-task-btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .status-buttons {
+    flex-direction: column;
+  }
+
+  .status-btn {
+    width: 100%;
+  }
+}
