@@ -53,3 +53,11 @@ tsconfig.json
 package.json
 package-lock.json
 .env.example
+node_modules/
+.env
+.env.local
+.env.*.local
+package-lock.json
+yarn.lock
+tsconfig.json
+vite.config.ts
