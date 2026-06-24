@@ -392,8 +392,8 @@ const App: React.FC = () => {
     }
   };
 
-  // Get project names for sidebar
-  const projectNames = projectsData.map(p => p.name);
+  // Get project names for sidebar (include All Projects)
+  const projectNames = ['All Projects', ...projectsData.map(p => p.name)];
 
   return (
     <div className="app-container">

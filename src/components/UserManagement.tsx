@@ -31,6 +31,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
   const [searchTerm /*, setSearchTerm*/] = useState('');
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
   const [addRole, setAddRole] = useState<'Developer' | 'Supervisor'>('Developer');
+  const [addTargetProject, setAddTargetProject] = useState<string>('');
 
   const isSupervisor = view === 'supervisor';
 
@@ -179,11 +180,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
     }
   };
 
-  const handleAddUserToProject = (user: User, role: 'Developer' | 'Supervisor') => {
-    if (!project) return;
+  const handleAddUserToProject = (user: User, role: 'Developer' | 'Supervisor', targetProject?: string) => {
+    const projectName = targetProject || project;
+    if (!projectName || projectName === 'All Projects') return;
 
     const updatedProjects = projectsData.map((projectData) => {
-      if (projectData.name !== project) return projectData;
+      if (projectData.name !== projectName) return projectData;
 
       const exists = projectData.teamMembers.some(m => m.id === user.id);
       if (exists) return projectData;
@@ -202,13 +204,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
       };
     });
 
-    // update user's project and role locally
-    const updatedUsers = users.map(u => u.id === user.id ? { ...u, project: project, role } : u);
+    // update user's project and role locally only if empty
+    const updatedUsers = users.map(u => u.id === user.id ? ({ ...u, project: u.project || projectName, role: u.role || role }) : u);
 
     onProjectsUpdate(updatedProjects);
     onUsersUpdate(updatedUsers);
 
     setAddingUserId(null);
+    setAddTargetProject('');
   };
 
   const handleCancelDelete = () => {
@@ -258,6 +261,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
                 const proj = projectsData.find(p => p.name === project);
                 const member = proj?.teamMembers.find(m => m.id === user.id);
 
+                // For 'All Projects' view, compute memberships across all projects
+                const memberships = project === 'All Projects'
+                  ? projectsData.map(pd => ({ projectName: pd.name, member: pd.teamMembers.find(m => m.id === user.id) })).filter(x => x.member)
+                  : [];
+
                 return (
                 <tr key={user.id}>
                   <td className="user-name-cell">
@@ -269,32 +277,77 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
                   <td>{user.email}</td>
                   <td>{user.created}</td>
                   <td>
-                    {member ? (
-                          <span className={`role-badge role-${(member.role || 'Developer').toLowerCase()}`}>{member.role || 'Developer'}</span>
-                        ) : (
-                      <div className="no-access">
-                        <span className="no-access-text">No access</span>
-                        {isSupervisor && (
-                          <div className="add-inline">
-                            {addingUserId === user.id ? (
-                              <>
-                                <select value={addRole} onChange={(e) => setAddRole(e.target.value as 'Developer' | 'Supervisor')}>
-                                  <option value="Developer">Developer</option>
-                                  <option value="Supervisor">Supervisor</option>
-                                </select>
-                                <button className="confirm-add" onClick={() => {
-                                  handleAddUserToProject(user, addRole);
-                                }}>Add</button>
-                                <button className="cancel-add" onClick={() => setAddingUserId(null)}>Cancel</button>
-                              </>
-                            ) : (
-                              <button className="add-icon-btn" onClick={() => { setAddingUserId(user.id); setAddRole('Developer'); }} title="Add to project">
-                                <Plus size={14} />
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                    {project === 'All Projects' ? (
+                      memberships.length > 0 ? (
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {memberships.map(({ projectName, member: m }) => (
+                            <span key={projectName} className={`role-badge role-${(m!.role || 'Developer').toLowerCase()}`} title={projectName}>
+                              {m!.role} · {projectName}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="no-access">
+                          <span className="no-access-text">No access</span>
+                          {isSupervisor && (
+                            <div className="add-inline">
+                              {addingUserId === user.id ? (
+                                <>
+                                  <select value={addTargetProject} onChange={(e) => setAddTargetProject(e.target.value)}>
+                                    <option value="">Select project</option>
+                                    {projects.map(pn => (
+                                      <option key={pn} value={pn}>{pn}</option>
+                                    ))}
+                                  </select>
+
+                                  <select value={addRole} onChange={(e) => setAddRole(e.target.value as 'Developer' | 'Supervisor')}>
+                                    <option value="Developer">Developer</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                  </select>
+
+                                  <button className="confirm-add" onClick={() => {
+                                    handleAddUserToProject(user, addRole, addTargetProject);
+                                  }}>Add</button>
+                                  <button className="cancel-add" onClick={() => { setAddingUserId(null); setAddTargetProject(''); }}>Cancel</button>
+                                </>
+                              ) : (
+                                <button className="add-icon-btn" onClick={() => { setAddingUserId(user.id); setAddRole('Developer'); setAddTargetProject(''); }} title="Add to project">
+                                  <Plus size={14} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    ) : (
+                      member ? (
+                        <span className={`role-badge role-${(member.role || 'Developer').toLowerCase()}`}>{member.role || 'Developer'}</span>
+                      ) : (
+                        <div className="no-access">
+                          <span className="no-access-text">No access</span>
+                          {isSupervisor && (
+                            <div className="add-inline">
+                              {addingUserId === user.id ? (
+                                <>
+                                  <select value={addRole} onChange={(e) => setAddRole(e.target.value as 'Developer' | 'Supervisor')}>
+                                    <option value="Developer">Developer</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                  </select>
+
+                                  <button className="confirm-add" onClick={() => {
+                                    handleAddUserToProject(user, addRole);
+                                  }}>Add</button>
+                                  <button className="cancel-add" onClick={() => setAddingUserId(null)}>Cancel</button>
+                                </>
+                              ) : (
+                                <button className="add-icon-btn" onClick={() => { setAddingUserId(user.id); setAddRole('Developer'); setAddTargetProject(''); }} title="Add to project">
+                                  <Plus size={14} />
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
                     )}
                   </td>
                   <td>

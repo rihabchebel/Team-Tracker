@@ -1,5 +1,5 @@
 // components/PerformanceDashboard.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './PerformanceDashboard.css';
 import { ViewMode, User, Project } from '../types/models';
 import { X } from 'lucide-react';
@@ -45,6 +45,13 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
   const [selectedCell, setSelectedCell] = useState<HeatmapDetailData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addedSupervisorNotesByCell, setAddedSupervisorNotesByCell] = useState<Record<string, string[]>>({});
+  const isAll = project === 'All Projects';
+
+  useEffect(() => {
+    if (isAll) {
+      setActiveTab('roster');
+    }
+  }, [isAll]);
 
   const dashboardProject = projectsData.find((p) => p.name === project);
   const defaultProject = projectsData[0] || null;
@@ -119,6 +126,33 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
     hoursSpent: currentProjectData?.usedHours || 0,
     teamMembers: dashboardTeamMembers,
   };
+
+  // For All Projects, build a combined roster view showing memberships per project
+  let teamMembersAll = dashboardTeamMembers;
+  if (isAll) {
+    // Build unique users from projectsData
+    const map = new Map<string, { id: string; name: string; email: string; memberSince: string; memberships: { projectName: string; role: string }[] }>();
+    users.forEach(u => {
+      map.set(u.id, { id: u.id, name: u.name, email: u.email || '', memberSince: u.created || '', memberships: [] });
+    });
+    projectsData.forEach(p => {
+      p.teamMembers.forEach(m => {
+        const entry = map.get(m.id) || { id: m.id, name: m.name, email: deriveEmail(m.id, m.name), memberSince: deriveMemberSince(m.id, m.joined), memberships: [] };
+        entry.memberships.push({ projectName: p.name, role: m.role || 'Developer' });
+        map.set(m.id, entry);
+      });
+    });
+
+    // Convert map to DashboardMember-like minimal objects for rendering
+    const combined: any[] = [];
+    for (const v of map.values()) {
+      combined.push({ id: v.id, name: v.name, email: v.email, role: v.memberships[0]?.role || 'Developer', memberSince: v.memberSince, activeHours: 0, status: 'Active', memberships: v.memberships });
+    }
+    // Use this combined list for roster rendering when All Projects selected
+    // keep projectData placeholders for header
+    (projectData as any).teamMembers = combined;
+    teamMembersAll = combined as DashboardMember[];
+  }
 
   const { teamMembers, budget, hoursSpent } = projectData;
 
@@ -341,29 +375,31 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
       <div className="dashboard-content">
         <div className="dashboard-header">
           <h3>Performance Dashboard</h3>
-          <div className="dashboard-tabs">
-            <button 
-              className={`tab-btn ${activeTab === 'heatmap' ? 'active' : ''}`}
-              onClick={() => setActiveTab('heatmap')}
-            >
-              Heatmap
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'roster' ? 'active' : ''}`}
-              onClick={() => setActiveTab('roster')}
-            >
-              Team Roster
-            </button>
-            <button 
-              className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-              onClick={() => setActiveTab('analytics')}
-            >
-              Analytics
-            </button>
-          </div>
+          {!isAll && (
+            <div className="dashboard-tabs">
+              <button 
+                className={`tab-btn ${activeTab === 'heatmap' ? 'active' : ''}`}
+                onClick={() => setActiveTab('heatmap')}
+              >
+                Heatmap
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'roster' ? 'active' : ''}`}
+                onClick={() => setActiveTab('roster')}
+              >
+                Team Roster
+              </button>
+              <button 
+                className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
+                onClick={() => setActiveTab('analytics')}
+              >
+                Analytics
+              </button>
+            </div>
+          )}
         </div>
         
-        {activeTab === 'analytics' && (
+        {!isAll && activeTab === 'analytics' && (
           <div className="budget-section">
             <div className="budget-info">
               <span className="budget-label">Budget vs Hours Spent</span>
@@ -408,9 +444,19 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
                       </td>
                       <td>{member.email}</td>
                       <td>
-                        <span className={`role-badge ${member.role === 'Supervisor' ? 'role-supervisor' : 'role-developer'}`}>
-                          {member.role}
-                        </span>
+                        {isAll && (member as any).memberships ? (
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            {(member as any).memberships.map((m: any) => (
+                              <span key={`${member.id}-${m.projectName}`} className={`role-badge role-${m.role === 'Supervisor' ? 'supervisor' : 'developer'}`} title={m.projectName}>
+                                {m.role} · {m.projectName}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className={`role-badge ${member.role === 'Supervisor' ? 'role-supervisor' : 'role-developer'}`}>
+                            {member.role}
+                          </span>
+                        )}
                       </td>
                       <td>{member.memberSince}</td>
                       <td>{member.activeHours}h</td>
@@ -427,7 +473,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
           </div>
         )}
 
-        {activeTab === 'heatmap' && (
+        {!isAll && activeTab === 'heatmap' && (
           <div className="heatmap-section">
             <h4>Availability Heatmap (Last 30 Working Days)</h4>
             <div className="heatmap-placeholder">
@@ -471,7 +517,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
           </div>
         )}
 
-        {activeTab === 'analytics' && (
+        {!isAll && activeTab === 'analytics' && (
           <div className="analytics-section">
             <h4>Developer Stats</h4>
             <div className="stats-grid">
