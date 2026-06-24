@@ -29,7 +29,6 @@
   font-size: 14px;
 }
 
-
 .dashboard-content {
   flex: 1;
   background: white;
@@ -384,5 +383,42 @@
   .status-btn {
     width: 100%;
   }
-  
+
+  .required {
+    color: #e17055;
+    font-weight: 600;
+  }
+
+  .reason-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d0d3e0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.3s;
+    background: white;
+  }
+
+  .reason-input:focus {
+    outline: none;
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+  }
+
+  .reason-input::placeholder {
+    color: #b0b0c0;
+  }
+
+  .reason-input-container {
+    margin-bottom: 16px;
+  }
+
+  .reason-input-container label {
+    display: block;
+    font-weight: 500;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
 }

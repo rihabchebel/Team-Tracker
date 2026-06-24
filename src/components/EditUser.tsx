@@ -126,10 +126,7 @@ const EditUser: React.FC<EditUserProps> = ({
                   >
                     <option value="Developer">Developer</option>
                     <option value="Supervisor">Supervisor</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Designer">Designer</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Guest">Guest</option>
+                   
                   </select>
                 </div>
 
@@ -173,12 +170,6 @@ const EditUser: React.FC<EditUserProps> = ({
                     <span style={{ color: '#666', fontSize: '13px' }}>Role:</span>
                     <span style={{ color: '#1a1a2e', fontSize: '13px', fontWeight: '500' }}>
                       {formData.role || 'Developer'}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#666', fontSize: '13px' }}>Project:</span>
-                    <span style={{ color: '#1a1a2e', fontSize: '13px', fontWeight: '500' }}>
-                      {formData.project || 'None'}
                     </span>
                   </div>
                 </div>

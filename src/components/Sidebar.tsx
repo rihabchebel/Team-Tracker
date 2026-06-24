@@ -19,6 +19,7 @@ interface SidebarProps {
   view: ViewMode;
   currentPage: PageType;
   selectedProject: string;
+  projects: string[]; // Now receives projects from parent
   onViewSwitch: (view: ViewMode) => void;
   onPageChange: (page: PageType) => void;
   onProjectSelect: (project: string) => void;
@@ -28,17 +29,11 @@ const Sidebar: React.FC<SidebarProps> = ({
   view,
   currentPage,
   selectedProject,
+  projects,
   onViewSwitch,
   onPageChange,
   onProjectSelect
 }) => {
-  const projects = [
-    'Project Alpha',
-    'Project Beta',
-    'Service VAS',
-    ...(view === 'supervisor' ? ['test'] : []),
-  ];
-
   const navigationItems = [
     { id: 'tasks' as PageType, label: 'All Tasks', icon: ListTodo },
     { id: 'timeline' as PageType, label: 'User Timeline', icon: Calendar },

@@ -1,18 +1,14 @@
 // components/PerformanceDashboard.tsx
 import React, { useState } from 'react';
 import './PerformanceDashboard.css';
+import { ViewMode, User, Project } from '../types/models';
 
-export type ViewMode = 'supervisor' | 'developer';
-
-interface TeamMember {
-  id: string;
-  name: string;
+type DashboardMember = Project['teamMembers'][number] & {
   email: string;
-  role: string;
   memberSince: string;
   activeHours: number;
   status: 'Active' | 'Left' | 'On Leave';
-}
+};
 
 interface ProjectData {
   id: string;
@@ -20,12 +16,14 @@ interface ProjectData {
   description: string;
   budget: number;
   hoursSpent: number;
-  teamMembers: TeamMember[];
+  teamMembers: DashboardMember[];
 }
 
 interface PerformanceDashboardProps {
   view: ViewMode;
   project: string;
+  users: User[];
+  projectsData: Project[];
 }
 
 interface HeatmapDetailData {
@@ -41,72 +39,87 @@ interface HeatmapDetailData {
   role: string;
 }
 
-const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, project }) => {
+const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, project, users, projectsData }) => {
   const [activeTab, setActiveTab] = useState<'heatmap' | 'roster' | 'analytics'>('roster');
   const [selectedCell, setSelectedCell] = useState<HeatmapDetailData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addedSupervisorNotesByCell, setAddedSupervisorNotesByCell] = useState<Record<string, string[]>>({});
 
-  const userManagementTeamMembers: TeamMember[] = [
-    { id: '1', name: 'Alice Johnson', email: 'alice@example.com', role: 'Supervisor', memberSince: 'Apr 14, 2026', activeHours: 32, status: 'Active' },
-    { id: '2', name: 'Bob Smith', email: 'bob@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 80, status: 'Active' },
-    { id: '3', name: 'Carol Davis', email: 'carol@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 63, status: 'Active' },
-    { id: '4', name: 'Dave Wilson', email: 'dave@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 34, status: 'Active' },
-    { id: '5', name: 'Eve Martinez', email: 'eve@example.com', role: 'Supervisor', memberSince: 'Apr 14, 2026', activeHours: 46, status: 'Active' },
-    { id: '6', name: 'Frank Brown', email: 'frank@example.com', role: 'Developer', memberSince: 'Apr 14, 2026', activeHours: 27, status: 'Left' },
-    { id: '7', name: 'Guest', email: 'guest@local', role: 'Developer', memberSince: 'Jun 22, 2026', activeHours: 8, status: 'Active' },
-  ];
+  const dashboardProject = projectsData.find((p) => p.name === project);
+  const defaultProject = projectsData[0] || null;
+  const currentProjectData = dashboardProject || defaultProject;
 
-  const getTeamMembers = (memberIds: string[]) =>
-    memberIds
-      .map((memberId) => userManagementTeamMembers.find((member) => member.id === memberId))
-      .filter((member): member is TeamMember => Boolean(member));
-
-  const projectData: Record<string, ProjectData> = {
-    'Project Alpha': {
-      id: '1',
-      name: 'Project Alpha',
-      description: 'Main product development sprint',
-      budget: 500,
-      hoursSpent: 224,
-      teamMembers: getTeamMembers(['1', '2', '3', '6'])
-    },
-    'Project Beta': {
-      id: '2',
-      name: 'Project Beta',
-      description: 'Client portal redesign',
-      budget: 300,
-      hoursSpent: 150,
-      teamMembers: getTeamMembers(['5', '4', '7'])
-    },
-    'Service VAS': {
-      id: '3',
-      name: 'Service VAS',
-      description: 'Test description',
-      budget: 300,
-      hoursSpent: 89,
-      teamMembers: getTeamMembers(['1', '4', '5', '6'])
-    },
-    'test': {
-      id: '4',
-      name: 'test',
-      description: 'Test project',
-      budget: 100,
-      hoursSpent: 45,
-      teamMembers: getTeamMembers(['5', '2', '6'])
-    },
-    'All Tasks': {
-      id: '5',
-      name: 'All Tasks',
-      description: 'All tasks overview',
-      budget: 0,
-      hoursSpent: 0,
-      teamMembers: userManagementTeamMembers
-    }
+  const deriveEmail = (memberId: string, memberName: string) => {
+    const user = users.find((u) => u.id === memberId);
+    if (user?.email) return user.email;
+    return `${memberName.toLowerCase().replace(/\s+/g, '.')}@example.com`;
   };
 
-  const currentProject = projectData[project] || projectData['Project Beta'];
-  const { teamMembers, budget, hoursSpent } = currentProject;
+  const deriveMemberSince = (memberId: string, joined: string) => {
+    const user = users.find((u) => u.id === memberId);
+    if (user?.created) return user.created;
+    return joined;
+  };
+
+  const hashString = (s: string) => {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+      h = (h << 5) - h + s.charCodeAt(i);
+      h |= 0;
+    }
+    return Math.abs(h);
+  };
+
+  const randFromSeed = (seed: number) => {
+    const a = 9301, c = 49297, m = 233280;
+    return ((seed * a + c) % m) / m;
+  };
+
+  const deriveStatus = (member: Project['teamMembers'][number]) => {
+    if (member.left) {
+      return 'Left';
+    }
+
+    const seed = hashString(`${member.id}|status|${project}`);
+    const rand = randFromSeed(seed);
+    if (member.role === 'Supervisor') {
+      return rand < 0.15 ? 'On Leave' : 'Active';
+    }
+    if (member.role === 'Developer') {
+      return rand < 0.10 ? 'On Leave' : rand < 0.04 ? 'Left' : 'Active';
+    }
+    return 'Active';
+  };
+
+  const deriveActiveHours = (member: Project['teamMembers'][number], status: string) => {
+    if (status === 'Left' || member.left) return 0;
+    const seed = hashString(`${member.id}|hours|${project}`);
+    const base = member.role === 'Supervisor' ? 36 : 28;
+    const variation = Math.floor(randFromSeed(seed) * 18);
+    return base + variation;
+  };
+
+  const dashboardTeamMembers: DashboardMember[] = (currentProjectData?.teamMembers || []).map((member) => {
+    const status = deriveStatus(member);
+    return {
+      ...member,
+      email: deriveEmail(member.id, member.name),
+      memberSince: deriveMemberSince(member.id, member.joined),
+      activeHours: deriveActiveHours(member, status),
+      status,
+    };
+  });
+
+  const projectData: ProjectData = {
+    id: currentProjectData?.id || '0',
+    name: currentProjectData?.name || 'Unknown Project',
+    description: currentProjectData?.description || 'No description available',
+    budget: currentProjectData?.totalHours || 0,
+    hoursSpent: currentProjectData?.usedHours || 0,
+    teamMembers: dashboardTeamMembers,
+  };
+
+  const { teamMembers, budget, hoursSpent } = projectData;
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
@@ -127,24 +140,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
 
   const budgetPercentage = budget > 0 ? Math.round((hoursSpent / budget) * 100) : 0;
 
-  // Deterministic pseudo-random utilities so heatmap doesn't change every render
-  const hashString = (s: string) => {
-    let h = 0;
-    for (let i = 0; i < s.length; i++) {
-      h = (h << 5) - h + s.charCodeAt(i);
-      h |= 0;
-    }
-    return Math.abs(h);
-  };
-
-  const randFromSeed = (seed: number) => {
-    // simple LCG-style transformation, deterministic for the same seed
-    const a = 9301, c = 49297, m = 233280;
-    return ((seed * a + c) % m) / m;
-  };
-
   // Determine cell status based on member data and deterministic generation
-  const getCellStatus = (member: TeamMember, dayIndex: number): 'full' | 'partial' | 'unavailable' | 'no-log' => {
+  const getCellStatus = (member: DashboardMember, dayIndex: number): 'full' | 'partial' | 'unavailable' | 'no-log' => {
     if (member.activeHours === 0 || member.status === 'Left') {
       return 'no-log';
     }
@@ -161,7 +158,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
   };
 
   // Get hours based on status (deterministic)
-  const getHoursForStatus = (status: string, member: TeamMember, dayIndex: number): number => {
+  const getHoursForStatus = (status: string, member: DashboardMember, dayIndex: number): number => {
     const seed = hashString(`${member.id}|hours|${dayIndex}|${status}|${project}`);
     const r = randFromSeed(seed);
     switch (status) {
@@ -178,7 +175,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
   };
 
   // Get tasks based on status
-  const getTasksForStatus = (status: string, member: TeamMember, dayIndex: number): string[] => {
+  const getTasksForStatus = (status: string, member: DashboardMember, dayIndex: number): string[] => {
     const mockTasks = [
       'RTEST',
       'Feature development',
@@ -225,7 +222,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
   };
 
   // Get supervisor notes based on status
-  const getSupervisorNotes = (status: string, member: TeamMember, dayIndex: number): string => {
+  const getSupervisorNotes = (status: string, member: DashboardMember, dayIndex: number): string => {
     const notesMap: Record<string, string[]> = {
       'full': [
         'Excellent work, keep it up!',
@@ -262,7 +259,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
   };
 
  const handleCellClick = (
-  member: TeamMember,
+  member: DashboardMember,
   dayIndex: number,
   status: 'full' | 'partial' | 'unavailable' | 'no-log'
 ) => {
@@ -335,7 +332,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
         <div className="page-header-content">
           <div>
             <h2>{project}</h2>
-            <span className="project-description">{currentProject.description}</span>
+            <span className="project-description">{projectData.description}</span>
           </div>
         </div>
       </div>

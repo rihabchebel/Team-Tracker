@@ -2,34 +2,18 @@
 import React, { useState } from 'react';
 import EditUser from './EditUser';
 import './UserManagement.css';
-
-export type ViewMode = 'supervisor' | 'developer';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  created: string;
-  role?: string;
-  password?: string;
-  project?: string;
-}
+import { ViewMode, User, Project } from '../types/models';
 
 interface UserManagementProps {
   view: ViewMode;
   project: string;
+  users: User[];
+  projectsData: Project[];
+  onUsersUpdate: (updatedUsers: User[]) => void;
+  onProjectsUpdate: (updatedProjects: Project[]) => void;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', name: 'Alice Johnson', email: 'alice@example.com', created: '14/04/2026', role: 'Supervisor' },
-    { id: '2', name: 'Bob Smith', email: 'bob@example.com', created: '14/04/2026', role: 'Developer' },
-    { id: '3', name: 'Carol Davis', email: 'carol@example.com', created: '14/04/2026', role: 'Developer' },
-    { id: '4', name: 'Dave Wilson', email: 'dave@example.com', created: '14/04/2026', role: 'Developer' },
-    { id: '5', name: 'Eve Martinez', email: 'eve@example.com', created: '14/04/2026', role: 'Supervisor' },
-    { id: '6', name: 'Frank Brown', email: 'frank@example.com', created: '14/04/2026', role: 'Developer' },
-    { id: '7', name: 'Guest', email: 'guest@local', created: '22/06/2026', role: 'Developer' },
-  ]);
+const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, projectsData, onUsersUpdate, onProjectsUpdate }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -44,7 +28,10 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
   });
 
   const [searchTerm /*, setSearchTerm*/] = useState('');
+
   const isSupervisor = view === 'supervisor';
+
+  const projects = projectsData.map((p) => p.name);
 
   // Project descriptions mapping
   const projectDescriptions: Record<string, string> = {
@@ -54,8 +41,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
     'test': 'test',
     'T': 'test'
   };
-
-  const projects = ['Project Alpha', 'Project Beta', 'Service VAS', 'TMA'];
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,7 +62,31 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
         role: newUser.role,
         project: newUser.project || undefined,
       };
-      setUsers([...users, user]);
+
+      const updatedUsers = [...users, user];
+      onUsersUpdate(updatedUsers);
+
+      if (newUser.project) {
+        const updatedProjects = projectsData.map((projectData) => {
+          if (projectData.name === newUser.project) {
+            return {
+              ...projectData,
+              teamMembers: [
+                ...projectData.teamMembers,
+                {
+                  id: user.id,
+                  name: user.name,
+                  role: user.role || 'Developer',
+                  joined: user.created,
+                },
+              ],
+            };
+          }
+          return projectData;
+        });
+        onProjectsUpdate(updatedProjects);
+      }
+
       setNewUser({ name: '', email: '', password: '', role: 'Developer', project: '' });
       setShowCreateModal(false);
     }
@@ -89,9 +98,44 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
   };
 
   const handleSaveUser = (updatedUser: User) => {
-    setUsers(users.map(user => 
+    const updatedUsers = users.map(user => 
       user.id === updatedUser.id ? updatedUser : user
-    ));
+    );
+    onUsersUpdate(updatedUsers);
+
+    const updatedProjects = projectsData.map((projectData) => {
+      const currentlyAssigned = projectData.teamMembers.some(member => member.id === updatedUser.id);
+      let nextTeamMembers = projectData.teamMembers;
+
+      if (projectData.name === updatedUser.project) {
+        if (!currentlyAssigned && updatedUser.project) {
+          nextTeamMembers = [
+            ...projectData.teamMembers,
+            {
+              id: updatedUser.id,
+              name: updatedUser.name,
+              role: updatedUser.role || 'Developer',
+              joined: updatedUser.created,
+            },
+          ];
+        } else {
+          nextTeamMembers = projectData.teamMembers.map((member) =>
+            member.id === updatedUser.id
+              ? { ...member, name: updatedUser.name, role: updatedUser.role || 'Developer' }
+              : member
+          );
+        }
+      } else {
+        nextTeamMembers = projectData.teamMembers.filter(member => member.id !== updatedUser.id);
+      }
+
+      return {
+        ...projectData,
+        teamMembers: nextTeamMembers,
+      };
+    });
+    onProjectsUpdate(updatedProjects);
+
     setShowEditModal(false);
     setSelectedUser(null);
   };
@@ -108,7 +152,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
 
   const handleConfirmDelete = () => {
     if (userToDelete) {
-      setUsers(users.filter(user => user.id !== userToDelete.id));
+      const updatedUsers = users.filter(user => user.id !== userToDelete.id);
+      onUsersUpdate(updatedUsers);
+
+      const updatedProjects = projectsData.map((projectData) => ({
+        ...projectData,
+        teamMembers: projectData.teamMembers.filter(member => member.id !== userToDelete.id),
+      }));
+      onProjectsUpdate(updatedProjects);
+
       setShowDeleteModal(false);
       setUserToDelete(null);
     }
@@ -117,6 +169,11 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
     setUserToDelete(null);
+  };
+
+  const handleCreateUserSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    handleCreateUser();
   };
 
   return (
@@ -192,14 +249,15 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create & Invite User</h3>
-              <button className="close-btn" onClick={() => setShowCreateModal(false)}>
-                ×
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
+            <form onSubmit={handleCreateUserSubmit}>
+              <div className="modal-header">
+                <h3>Create & Invite User</h3>
+                <button className="close-btn" type="button" onClick={() => setShowCreateModal(false)}>
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
                 <label>
                   Full Name <span className="required">*</span>
                 </label>
@@ -265,19 +323,20 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project }) => {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowCreateModal(false)}>
+              <button className="cancel-btn" type="button" onClick={() => setShowCreateModal(false)}>
                 CANCEL
               </button>
               <button 
                 className="create-btn" 
-                onClick={handleCreateUser}
+                type="submit"
                 disabled={!newUser.name || !newUser.email || !newUser.password}
               >
                 Create & Invite
               </button>
             </div>
-          </div>
+          </form>
         </div>
+      </div>
       )}
 
       {/* Edit User Modal */}

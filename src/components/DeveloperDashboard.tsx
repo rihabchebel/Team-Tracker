@@ -1,5 +1,6 @@
 // components/DeveloperDashboard.tsx
 import React, { useState } from "react";
+import { addTaskLog } from "./AllTasks";
 import "./DeveloperDashboard.css";
 
 export type ViewMode = "supervisor" | "developer";
@@ -51,16 +52,61 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
     }
   };
 
+  // Handle Enter key for reason inputs - prevents form submission
+  const handleReasonKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // Move to next focusable element or blur
+      const form = e.currentTarget.form;
+      if (form) {
+        const elements = Array.from(form.elements);
+        const currentIndex = elements.indexOf(e.currentTarget);
+        const nextElement = elements[currentIndex + 1] as HTMLElement;
+        if (nextElement && nextElement.focus) {
+          nextElement.focus();
+        } else {
+          e.currentTarget.blur();
+        }
+      }
+    }
+  };
+
   const handleSaveLog = () => {
-    // Save the log entry
-    console.log("Log saved:", {
-      project,
+    // Validate required fields
+    if (status === "partial" && !partialReason.trim()) {
+      alert("Please provide a reason for partial availability.");
+      return;
+    }
+    if (status === "unavailable" && !unavailableReason.trim()) {
+      alert("Please provide a reason for unavailability.");
+      return;
+    }
+
+    // Save the log entry using the shared addTaskLog function
+    const logData = {
+      project: project,
       date: selectedDate,
-      status,
-      hoursWorked,
-      tasks,
-    });
+      status: status,
+      hoursWorked: status === "unavailable" ? 0 : hoursWorked,
+      tasks: status === "unavailable" ? [] : tasks,
+      partialReason: status === "partial" ? partialReason : undefined,
+      unavailableReason: status === "unavailable" ? unavailableReason : undefined,
+      submittedBy: "Guest", // In a real app, this would be the current user
+    };
+
+    addTaskLog(logData);
+    console.log("Log saved:", logData);
     alert("Log saved successfully!");
+
+    // Reset form
+    setTasks([]);
+    setNewTask("");
+    if (status === "partial") {
+      setPartialReason("");
+    }
+    if (status === "unavailable") {
+      setUnavailableReason("");
+    }
   };
 
   return (
@@ -97,95 +143,116 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
               <button
                 type="button"
                 className={`status-btn ${status === "full" ? "active full" : ""}`}
-                onClick={() => setStatus("full")}
+                onClick={() => {
+                  setStatus("full");
+                  setPartialReason("");
+                  setUnavailableReason("");
+                }}
               >
                 Full
               </button>
               <button
                 type="button"
                 className={`status-btn ${status === "partial" ? "active partial" : ""}`}
-                onClick={() => setStatus("partial")}
+                onClick={() => {
+                  setStatus("partial");
+                  setUnavailableReason("");
+                }}
               >
                 Partial
               </button>
               <button
                 type="button"
                 className={`status-btn ${status === "unavailable" ? "active unavailable" : ""}`}
-                onClick={() => setStatus("unavailable")}
+                onClick={() => {
+                  setStatus("unavailable");
+                  setPartialReason("");
+                  setHoursWorked(0);
+                }}
               >
                 Unavailable
               </button>
             </div>
           </div>
+
           {status === "partial" && (
             <div className="form-group">
               <div className="reason-input-container">
-                <label>Reason for Partial Availability</label>
+                <label>Reason for Partial Availability <span className="required">*</span></label>
                 <input
                   type="text"
                   value={partialReason}
                   onChange={(e) => setPartialReason(e.target.value)}
                   placeholder="Enter reason..."
+                  onKeyDown={handleReasonKeyDown}
+                  className="reason-input"
                 />
               </div>
               <label>Hours Worked (max 8)</label>
               <div className="hours-input-container">
                 <input
-                type="number"
-                step="0.5"
-                min="0"
-                max="8"
-                value={hoursWorked}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value)) {
-                    const clampedValue = Math.min(Math.max(value, 0), 8);
-                    setHoursWorked(clampedValue);
-                  } else if (e.target.value === "") {
-                  }
-
-                }}
-              />
-              <span className="hours-value">{hoursWorked}h</span>
-            </div>
-          </div>
-        )}
-        {status === "full" && (
-            <div className="form-group">
-                <label>Hours Worked</label>
-                <div className="hours-input-container">
-                 <input
-                type="number"
-                step="0.5"
-                min="0"
-                max="8"
-                value={hoursWorked}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value)) {
-                    const clampedValue = Math.min(Math.max(value, 0), 8);
-                    setHoursWorked(clampedValue);
-                  } else if (e.target.value === "") {
-                  }
-
-                }}
-              />
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="8"
+                  value={hoursWorked}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    if (!isNaN(value)) {
+                      const clampedValue = Math.min(Math.max(value, 0), 8);
+                      setHoursWorked(clampedValue);
+                    } else if (e.target.value === "") {
+                      // Allow empty input
+                    }
+                  }}
+                  className="hours-input"
+                />
                 <span className="hours-value">{hoursWorked}h</span>
-                </div>
+              </div>
             </div>
-        )}
-        {status === "unavailable" && (
-          <div className="form-group">
-            <label>Reason for Unavailability</label>
-            <input
-              type="text"
-              value={unavailableReason}
-              onChange={(e) => setUnavailableReason(e.target.value)}
-              placeholder="Enter reason..."
-            />
-          </div>
-        )}
-               {/* Tasks Section */}
+          )}
+
+          {status === "full" && (
+            <div className="form-group">
+              <label>Hours Worked</label>
+              <div className="hours-input-container">
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  max="8"
+                  value={hoursWorked}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    if (!isNaN(value)) {
+                      const clampedValue = Math.min(Math.max(value, 0), 8);
+                      setHoursWorked(clampedValue);
+                    } else if (e.target.value === "") {
+                      // Allow empty input
+                    }
+                  }}
+                  className="hours-input"
+                />
+                <span className="hours-value">{hoursWorked}h</span>
+              </div>
+            </div>
+          )}
+
+          {status === "unavailable" && (
+            <div className="form-group">
+              <label>Reason for Unavailability <span className="required">*</span></label>
+              <input
+                type="text"
+                value={unavailableReason}
+                onChange={(e) => setUnavailableReason(e.target.value)}
+                placeholder="Enter reason..."
+                onKeyDown={handleReasonKeyDown}
+                className="reason-input"
+              />
+            </div>
+          )}
+
+          {/* Tasks Section */}
           {status !== "unavailable" && (
             <div className="tasks-section">
               <h4>Completed Tasks</h4>

@@ -2,8 +2,7 @@
 import React, { useState } from 'react';
 import { Briefcase, Flag, FileText, Calendar } from 'lucide-react';
 import './UserTimeline.css';
-
-export type ViewMode = 'supervisor' | 'developer';
+import { ViewMode, User, Project } from '../types/models';
 
 interface TimelineEvent {
   id: string;
@@ -19,34 +18,21 @@ interface TimelineEvent {
 interface UserTimelineProps {
   view: ViewMode;
   project: string;
+  users: User[];
+  projectsData: Project[];
 }
 
-const UserTimeline: React.FC<UserTimelineProps> = ({ /*view,*/ project }) => {
+const UserTimeline: React.FC<UserTimelineProps> = ({ /*view,*/ project, users, projectsData }) => {
   const [selectedUser, setSelectedUser] = useState<string>('All users');
   const [selectedProject, setSelectedProject] = useState<string>('All projects');
 
-  // Project users mapping - Only users from UserManagement
-  const projectUsers: Record<string, string[]> = {
-    'Project Alpha': ['Alice Johnson', 'Bob Smith', 'Carol Davis', 'Eve Martinez', 'Guest'],
-    'Project Beta': ['Alice Johnson', 'Dave Wilson', 'Eve Martinez', 'Frank Brown', 'Guest'],
-    'Service VAS': ['Bob Smith', 'Carol Davis', 'Dave Wilson', 'Frank Brown', 'Guest'],
-    'test': ['Alice Johnson', 'Bob Smith', 'Carol Davis', 'Dave Wilson', 'Eve Martinez', 'Frank Brown', 'Guest'],
-  };
+  const projectUsers: Record<string, string[]> = projectsData.reduce((acc, projectData) => {
+    acc[projectData.name] = projectData.teamMembers.map(member => member.name);
+    return acc;
+  }, {} as Record<string, string[]>);
 
-  // All users list - Only users from UserManagement
-  const allUsers = [
-    'All users', 
-    'Alice Johnson', 
-    'Bob Smith', 
-    'Carol Davis', 
-    'Dave Wilson', 
-    'Eve Martinez', 
-    'Frank Brown', 
-    'Guest'
-  ];
-
-  // All projects list
-  const allProjects = ['All projects', 'Project Alpha', 'Project Beta', 'Service VAS', 'test'];
+  const allUsers = ['All users', ...Array.from(new Set(users.map(user => user.name)))];
+  const allProjects = ['All projects', ...projectsData.map((p) => p.name)];
 
   // Generate timeline events based on selected project and user
   const getTimelineEvents = (): TimelineEvent[] => {
