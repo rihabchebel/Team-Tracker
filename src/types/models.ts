@@ -40,3 +40,21 @@ export interface Project {
   subProjects: SubProject[];
   teamMembers: TeamMember[];
 }
+
+export interface Task {
+  id: string;
+  description: string;
+}
+
+export interface LogEntry {
+  id: string;
+  project: string;
+  date: string;
+  status: "full" | "partial" | "unavailable";
+  hoursWorked: number;
+  tasks: Task[];
+  partialReason?: string;
+  unavailableReason?: string;
+  submittedBy: string;
+  submittedAt: string;
+}

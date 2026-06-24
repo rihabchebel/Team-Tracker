@@ -1,5 +1,6 @@
 // components/EditUser.tsx
 import React, { useState, useEffect } from 'react';
+import { X } from 'lucide-react';
 import './UserManagement.css';
 
 interface User {
@@ -68,7 +69,7 @@ const EditUser: React.FC<EditUserProps> = ({
         <div className="modal-header">
           <h3>Edit User</h3>
           <button className="close-btn" onClick={onClose}>
-            ×
+            <X size={18} />
           </button>
         </div>
         <form onSubmit={handleSubmit}>

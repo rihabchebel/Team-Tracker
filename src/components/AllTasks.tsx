@@ -1,165 +1,19 @@
 // components/AllTasks.tsx
 import React, { useState, useEffect } from 'react';
 import './AllTasks.css';
-import { /*ViewMode,*/ Project, User } from '../types/models';
+import { /*ViewMode,*/ Project, User, LogEntry } from '../types/models';
 
 export type ViewMode = 'supervisor' | 'developer';
-
-interface Task {
-  id: string;
-  description: string;
-}
-
-interface LogEntry {
-  id: string;
-  project: string;
-  date: string;
-  status: 'full' | 'partial' | 'unavailable';
-  hoursWorked: number;
-  tasks: Task[];
-  partialReason?: string;
-  unavailableReason?: string;
-  submittedBy: string;
-  submittedAt: string;
-}
 
 interface AllTasksProps {
   view: ViewMode;
   project: string;
   projectsData?: Project[];
   usersData?: User[];
+  taskLogs: LogEntry[];
 }
 
-// Global storage for logs - in a real app, this would be an API/database
-// This is shared across components
-const initialTaskLogs: LogEntry[] = [
-  {
-    id: 'log-1',
-    project: 'Project Alpha',
-    date: '2026-06-23',
-    status: 'full',
-    hoursWorked: 7,
-    tasks: [
-      { id: 'task-1', description: 'Finalized UI components' },
-      { id: 'task-2', description: 'Reviewed PRs for dashboard' }
-    ],
-    submittedBy: 'Alice Johnson',
-    submittedAt: '2026-06-23T16:30:00.000Z'
-  },
-  {
-    id: 'log-2',
-    project: 'Project Alpha',
-    date: '2026-06-22',
-    status: 'partial',
-    hoursWorked: 4,
-    tasks: [
-      { id: 'task-3', description: 'Updated user onboarding flows' }
-    ],
-    partialReason: 'Client meeting took longer than expected',
-    submittedBy: 'Alice Johnson',
-    submittedAt: '2026-06-22T15:20:00.000Z'
-  },
-  {
-    id: 'log-3',
-    project: 'Project Beta',
-    date: '2026-06-23',
-    status: 'full',
-    hoursWorked: 8,
-    tasks: [
-      { id: 'task-4', description: 'Implemented backend API endpoint' },
-      { id: 'task-5', description: 'Fixed bug in auth flow' }
-    ],
-    submittedBy: 'Carol Davis',
-    submittedAt: '2026-06-23T17:10:00.000Z'
-  },
-  {
-    id: 'log-4',
-    project: 'Project Beta',
-    date: '2026-06-22',
-    status: 'unavailable',
-    hoursWorked: 0,
-    tasks: [],
-    unavailableReason: 'Out sick',
-    submittedBy: 'Carol Davis',
-    submittedAt: '2026-06-22T09:05:00.000Z'
-  },
-  {
-    id: 'log-5',
-    project: 'Service VAS',
-    date: '2026-06-23',
-    status: 'full',
-    hoursWorked: 7,
-    tasks: [
-      { id: 'task-6', description: 'Completed integration tests' },
-      { id: 'task-7', description: 'Optimized service response time' }
-    ],
-    submittedBy: 'Eve Martinez',
-    submittedAt: '2026-06-23T14:40:00.000Z'
-  },
-  {
-    id: 'log-6',
-    project: 'Service VAS',
-    date: '2026-06-22',
-    status: 'partial',
-    hoursWorked: 3,
-    tasks: [
-      { id: 'task-8', description: 'Reviewed third-party API docs' }
-    ],
-    partialReason: 'Waiting on environment access',
-    submittedBy: 'Eve Martinez',
-    submittedAt: '2026-06-22T15:50:00.000Z'
-  },
-  {
-    id: 'log-7',
-    project: 'TMA',
-    date: '2026-06-23',
-    status: 'full',
-    hoursWorked: 8,
-    tasks: [
-      { id: 'task-9', description: 'Completed prototype testing' },
-      { id: 'task-10', description: 'Documented user feedback' }
-    ],
-    submittedBy: 'Guest',
-    submittedAt: '2026-06-23T18:00:00.000Z'
-  },
-  {
-    id: 'log-8',
-    project: 'TMA',
-    date: '2026-06-22',
-    status: 'partial',
-    hoursWorked: 5,
-    tasks: [
-      { id: 'task-11', description: 'Worked on landing page layout' }],
-    partialReason: 'Design review meeting',
-    submittedBy: 'Guest',
-    submittedAt: '2026-06-22T16:15:00.000Z'
-  }
-];
-
-export const taskLogs: LogEntry[] = [...initialTaskLogs];
-
-// Function to add a log entry (called from DeveloperDashboard)
-export const addTaskLog = (log: Omit<LogEntry, 'id' | 'submittedAt'>) => {
-  const newLog: LogEntry = {
-    ...log,
-    id: Date.now().toString(),
-    submittedAt: new Date().toISOString(),
-  };
-  taskLogs.unshift(newLog); // Add to beginning for newest first
-  return newLog;
-};
-
-// Function to get all logs
-export const getTaskLogs = (): LogEntry[] => {
-  return taskLogs;
-};
-
-// Function to get logs for a specific project
-export const getProjectLogs = (projectName: string): LogEntry[] => {
-  return taskLogs.filter(log => log.project === projectName);
-};
-
-const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, usersData }) => {
+const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, usersData, taskLogs }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>(project || 'All Projects');
@@ -215,7 +69,7 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
     }
 
     setFilteredLogs(filtered);
-  }, [searchTerm, selectedProject, selectedUser]);
+  }, [searchTerm, selectedProject, selectedUser, taskLogs]);
 
   // Get stats
   const totalTasks = filteredLogs.reduce((sum, log) => sum + log.tasks.length, 0);
@@ -260,9 +114,6 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      // Search is reactive via searchTerm state and useEffect,
-      // so Enter simply confirms the current query.
-
     }
   };
 

@@ -1,6 +1,5 @@
 // components/DeveloperDashboard.tsx
 import React, { useState } from "react";
-import { addTaskLog } from "./AllTasks";
 import "./DeveloperDashboard.css";
 
 export type ViewMode = "supervisor" | "developer";
@@ -8,6 +7,26 @@ export type ViewMode = "supervisor" | "developer";
 interface DeveloperDashboardProps {
   view: ViewMode;
   project: string;
+  currentUser: string;
+  onAddTaskLog: (log: Omit<LogEntry, 'id' | 'submittedAt'>) => void;
+}
+
+interface Task {
+  id: string;
+  description: string;
+}
+
+interface LogEntry {
+  id: string;
+  project: string;
+  date: string;
+  status: 'full' | 'partial' | 'unavailable';
+  hoursWorked: number;
+  tasks: Task[];
+  partialReason?: string;
+  unavailableReason?: string;
+  submittedBy: string;
+  submittedAt: string;
 }
 
 interface Task {
@@ -17,6 +36,8 @@ interface Task {
 
 const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
   /*view,*/ project,
+  currentUser,
+  onAddTaskLog,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0],
@@ -82,8 +103,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
       return;
     }
 
-    // Save the log entry using the shared addTaskLog function
-    const logData = {
+    const logData: Omit<LogEntry, 'id' | 'submittedAt'> = {
       project: project,
       date: selectedDate,
       status: status,
@@ -91,10 +111,10 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
       tasks: status === "unavailable" ? [] : tasks,
       partialReason: status === "partial" ? partialReason : undefined,
       unavailableReason: status === "unavailable" ? unavailableReason : undefined,
-      submittedBy: "Guest", // In a real app, this would be the current user
+      submittedBy: currentUser,
     };
 
-    addTaskLog(logData);
+    onAddTaskLog(logData);
     console.log("Log saved:", logData);
     alert("Log saved successfully!");
 

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import './PerformanceDashboard.css';
 import { ViewMode, User, Project } from '../types/models';
+import { X } from 'lucide-react';
 
 type DashboardMember = Project['teamMembers'][number] & {
   email: string;
@@ -519,7 +520,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ view, proje
                 </span>
               </div>
               <button className="close-btn" onClick={closeModal}>
-                ×
+                <X size={18} />
               </button>
             </div>
             <div className="modal-body">

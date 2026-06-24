@@ -9,7 +9,7 @@ import UserTimeline from './components/UserTimeline';
 import AllTasks from './components/AllTasks';
 import PerformanceDashboard from './components/PerformanceDashboard';
 import DeveloperDashboard from './components/DeveloperDashboard';
-import { ViewMode, PageType, User, Project } from './types/models';
+import { ViewMode, PageType, User, Project, LogEntry } from './types/models';
 
 interface AppState {
   view: ViewMode;
@@ -40,7 +40,7 @@ const App: React.FC = () => {
       teamMembers: [
         { id: '1', name: 'Alice Johnson', role: 'Supervisor', joined: '2026-03-15' },
         { id: '2', name: 'Bob Smith', role: 'Developer', joined: '2026-03-15' },
-        { id: '3', name: 'Carol Davis', role: 'Supervisor', joined: '2026-03-15' , left: '2026-05-20' },
+        { id: '3', name: 'Carol Davis', role: 'Developer', joined: '2026-03-15' , left: '2026-05-20' },
       ]
     },
     {
@@ -105,6 +105,184 @@ const App: React.FC = () => {
     { id: '7', name: 'Guest', email: 'guest@local', created: '22/06/2026', role: 'Developer' },
   ]);
 
+  const [taskLogs, setTaskLogs] = useState<LogEntry[]>([
+    {
+      id: 'log-1',
+      project: 'Project Alpha',
+      date: '2026-06-23',
+      status: 'full',
+      hoursWorked: 7,
+      tasks: [
+        { id: 'task-1', description: 'Finalized UI components' },
+        { id: 'task-2', description: 'Reviewed PRs for dashboard' }
+      ],
+      submittedBy: 'Alice Johnson',
+      submittedAt: '2026-06-23T16:30:00.000Z'
+    },
+    {
+      id: 'log-2',
+      project: 'Project Alpha',
+      date: '2026-06-22',
+      status: 'partial',
+      hoursWorked: 4,
+      tasks: [
+        { id: 'task-3', description: 'Updated user onboarding flows' }
+      ],
+      partialReason: 'Client meeting took longer than expected',
+      submittedBy: 'Alice Johnson',
+      submittedAt: '2026-06-22T15:20:00.000Z'
+    },
+    {
+      id: 'log-3',
+      project: 'Project Beta',
+      date: '2026-06-23',
+      status: 'full',
+      hoursWorked: 8,
+      tasks: [
+        { id: 'task-4', description: 'Implemented backend API endpoint' },
+        { id: 'task-5', description: 'Fixed bug in auth flow' }
+      ],
+      submittedBy: 'Carol Davis',
+      submittedAt: '2026-06-23T17:10:00.000Z'
+    },
+    {
+      id: 'log-4',
+      project: 'Project Beta',
+      date: '2026-06-22',
+      status: 'unavailable',
+      hoursWorked: 0,
+      tasks: [],
+      unavailableReason: 'Out sick',
+      submittedBy: 'Carol Davis',
+      submittedAt: '2026-06-22T09:05:00.000Z'
+    },
+    {
+      id: 'log-5',
+      project: 'Service VAS',
+      date: '2026-06-23',
+      status: 'full',
+      hoursWorked: 7,
+      tasks: [
+        { id: 'task-6', description: 'Completed integration tests' },
+        { id: 'task-7', description: 'Optimized service response time' }
+      ],
+      submittedBy: 'Eve Martinez',
+      submittedAt: '2026-06-23T14:40:00.000Z'
+    },
+    {
+      id: 'log-6',
+      project: 'Service VAS',
+      date: '2026-06-22',
+      status: 'partial',
+      hoursWorked: 3,
+      tasks: [
+        { id: 'task-8', description: 'Reviewed third-party API docs' }
+      ],
+      partialReason: 'Waiting on environment access',
+      submittedBy: 'Eve Martinez',
+      submittedAt: '2026-06-22T15:50:00.000Z'
+    },
+    {
+      id: 'log-7',
+      project: 'TMA',
+      date: '2026-06-23',
+      status: 'full',
+      hoursWorked: 8,
+      tasks: [
+        { id: 'task-9', description: 'Completed prototype testing' },
+        { id: 'task-10', description: 'Documented user feedback' }
+      ],
+      submittedBy: 'Guest',
+      submittedAt: '2026-06-23T18:00:00.000Z'
+    },
+    {
+      id: 'log-8',
+      project: 'TMA',
+      date: '2026-06-22',
+      status: 'partial',
+      hoursWorked: 5,
+      tasks: [
+        { id: 'task-11', description: 'Worked on landing page layout' }],
+      partialReason: 'Design review meeting',
+      submittedBy: 'Guest',
+      submittedAt: '2026-06-22T16:15:00.000Z'
+    }
+  ]);
+
+  const currentProjectData = projectsData.find((p) => p.name === state.selectedProject) || projectsData[0];
+
+  // Reconcile helper: ensure `usersData` reflects roles/project assignments in `projectsData`.
+  // Preference order: user's assigned project (`user.project`), then the currently selected project, then any project.
+  const reconcileUsersWithProjects = (projects: Project[], users: User[], preferredProjectName?: string) => {
+    return users.map(u => {
+      // 1) try user's assigned project
+      if (u.project) {
+        const proj = projects.find(p => p.name === u.project);
+        const member = proj?.teamMembers.find(m => m.id === u.id);
+        if (member) return { ...u, role: member.role, project: proj!.name };
+      }
+
+      // 2) try preferredProjectName (e.g., currently selected project)
+      if (preferredProjectName) {
+        const proj = projects.find(p => p.name === preferredProjectName);
+        const member = proj?.teamMembers.find(m => m.id === u.id);
+        if (member) return { ...u, role: member.role, project: proj!.name };
+      }
+
+      // 3) fallback: find any project containing the member
+      for (const proj of projects) {
+        const member = proj.teamMembers.find(m => m.id === u.id);
+        if (member) {
+          return { ...u, role: member.role, project: proj.name };
+        }
+      }
+
+      return u;
+    });
+  };
+
+  // Ensure initial sync on mount
+  React.useEffect(() => {
+    setUsersData(prev => reconcileUsersWithProjects(projectsData, prev, state.selectedProject));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Derive current user based on active view: Developer -> Developer, Supervisor -> Supervisor
+  const deriveCurrentUser = () => {
+    if (!currentProjectData) return { name: 'Guest', email: 'guest@localhost' };
+
+    const preferredRole = state.view === 'supervisor' ? 'Supervisor' : 'Developer';
+    let member = currentProjectData.teamMembers.find((m) => m.role === preferredRole);
+    // Fallback to any team member
+    if (!member) member = currentProjectData.teamMembers[0];
+    const name = member?.name || 'Guest';
+    const email = usersData.find((u) => u.name === name)?.email || 'guest@localhost';
+    return { name, email };
+  };
+
+  const { name: currentUserName, email: currentUserEmail } = deriveCurrentUser();
+
+  const handleAddTaskLog = (log: Omit<LogEntry, 'id' | 'submittedAt'>) => {
+    const newLog: LogEntry = {
+      ...log,
+      id: Date.now().toString(),
+      submittedAt: new Date().toISOString(),
+    };
+
+    setTaskLogs((prevLogs) => [newLog, ...prevLogs]);
+    setProjectsData((prevProjects) => prevProjects.map((projectData) => {
+      if (projectData.name === log.project) {
+        return {
+          ...projectData,
+          usedHours: projectData.usedHours + log.hoursWorked,
+        };
+      }
+      return projectData;
+    }));
+
+    return newLog;
+  };
+
   const handleViewSwitch = (view: ViewMode) => {
     setState({ ...state, view });
   };
@@ -123,6 +301,8 @@ const App: React.FC = () => {
 
   const handleProjectsUpdate = (updatedProjects: Project[]) => {
     setProjectsData(updatedProjects);
+    // Reconcile users with the updated projects, preferring the currently selected project
+    setUsersData(prevUsers => reconcileUsersWithProjects(updatedProjects, prevUsers, state.selectedProject));
     // If the selected project was deleted, select the first one
     const stillExists = updatedProjects.some(p => p.name === state.selectedProject);
     if (!stillExists && updatedProjects.length > 0) {
@@ -131,13 +311,48 @@ const App: React.FC = () => {
   };
 
   const handleUsersUpdate = (updatedUsers: User[]) => {
-    setUsersData(updatedUsers);
+    // Detect name changes and propagate to task logs and project members
+    const renames: { id: string; oldName: string; newName: string }[] = [];
+    updatedUsers.forEach((u) => {
+      const prev = usersData.find(p => p.id === u.id);
+      if (prev && prev.name !== u.name) {
+        renames.push({ id: u.id, oldName: prev.name, newName: u.name });
+      }
+    });
+
+    // Reconcile updatedUsers against current projects, preferring each user's assigned project
+    const reconciled = reconcileUsersWithProjects(projectsData, updatedUsers, state.selectedProject);
+    setUsersData(reconciled);
+
+    if (renames.length > 0) {
+      // Update task logs (match by previous displayed name)
+      setTaskLogs(prevLogs => prevLogs.map(log => {
+        const found = renames.find(r => r.oldName === log.submittedBy);
+        return found ? { ...log, submittedBy: found.newName } : log;
+      }));
+
+      // Ensure project team member names also reflect the change (id-based)
+      setProjectsData(prevProjects => prevProjects.map(project => ({
+        ...project,
+        teamMembers: project.teamMembers.map(m => {
+          const r = renames.find(rr => rr.id === m.id);
+          return r ? { ...m, name: r.newName } : m;
+        })
+      })));
+    }
   };
 
   const renderPage = () => {
     // If in developer view and on dashboard, show DeveloperDashboard
     if (state.view === 'developer' && state.currentPage === 'dashboard') {
-      return <DeveloperDashboard view={state.view} project={state.selectedProject} />;
+      return (
+        <DeveloperDashboard
+          view={state.view}
+          project={state.selectedProject}
+          currentUser={currentUserName}
+          onAddTaskLog={handleAddTaskLog}
+        />
+      );
     }
 
     switch (state.currentPage) {
@@ -171,7 +386,7 @@ const App: React.FC = () => {
           onProjectsUpdate={handleProjectsUpdate}
         />;
       case 'tasks':
-        return <AllTasks view={state.view} project={state.selectedProject} projectsData={projectsData} usersData={usersData} />;
+        return <AllTasks view={state.view} project={state.selectedProject} projectsData={projectsData} usersData={usersData} taskLogs={taskLogs} />;
       default:
         return <PerformanceDashboard view={state.view} project={state.selectedProject} users={usersData} projectsData={projectsData} />;
     }
@@ -182,7 +397,7 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
-      <Header user="Guest" email="guest@localhost" />
+      <Header user={currentUserName} email={currentUserEmail} />
       <div className="main-layout">
         <Sidebar
           view={state.view}

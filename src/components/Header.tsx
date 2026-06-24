@@ -1,5 +1,6 @@
 // components/Header.tsx
 import React from 'react';
+import { User } from 'lucide-react';
 import './Header.css';
 
 interface HeaderProps {
@@ -18,6 +19,7 @@ const Header: React.FC<HeaderProps> = ({ user, email }) => {
       </div>
       <div className="header-right">
         <div className="user-info">
+          <User size={16} className="user-icon" />
           <span className="user-name">{user}</span>
           <span className="user-email">{email}</span>
         </div>

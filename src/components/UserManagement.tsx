@@ -1,5 +1,6 @@
 // components/UserManagement.tsx
 import React, { useState } from 'react';
+import { Edit3, Trash2, X, Plus } from 'lucide-react';
 import EditUser from './EditUser';
 import './UserManagement.css';
 import { ViewMode, User, Project } from '../types/models';
@@ -28,6 +29,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
   });
 
   const [searchTerm /*, setSearchTerm*/] = useState('');
+  const [addingUserId, setAddingUserId] = useState<string | null>(null);
+  const [addRole, setAddRole] = useState<'Developer' | 'Supervisor'>('Developer');
 
   const isSupervisor = view === 'supervisor';
 
@@ -97,36 +100,46 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
     setShowEditModal(true);
   };
 
+  // Keep selectedUser object in sync if `users` prop updates externally
+  React.useEffect(() => {
+    if (!selectedUser) return;
+    const latest = users.find(u => u.id === selectedUser.id);
+    if (latest && (latest.name !== selectedUser.name || latest.email !== selectedUser.email || latest.role !== selectedUser.role || latest.project !== selectedUser.project)) {
+      setSelectedUser(latest);
+    }
+  }, [users, selectedUser]);
+
   const handleSaveUser = (updatedUser: User) => {
     const updatedUsers = users.map(user => 
       user.id === updatedUser.id ? updatedUser : user
     );
     onUsersUpdate(updatedUsers);
 
+    // Update team members in-place across projects. If the user was previously a member,
+    // update their name/role. If the user is assigned to a new project (updatedUser.project)
+    // and wasn't previously assigned, add them to that project.
     const updatedProjects = projectsData.map((projectData) => {
-      const currentlyAssigned = projectData.teamMembers.some(member => member.id === updatedUser.id);
+      const hasMember = projectData.teamMembers.some(member => member.id === updatedUser.id);
       let nextTeamMembers = projectData.teamMembers;
 
-      if (projectData.name === updatedUser.project) {
-        if (!currentlyAssigned && updatedUser.project) {
-          nextTeamMembers = [
-            ...projectData.teamMembers,
-            {
-              id: updatedUser.id,
-              name: updatedUser.name,
-              role: updatedUser.role || 'Developer',
-              joined: updatedUser.created,
-            },
-          ];
-        } else {
-          nextTeamMembers = projectData.teamMembers.map((member) =>
-            member.id === updatedUser.id
-              ? { ...member, name: updatedUser.name, role: updatedUser.role || 'Developer' }
-              : member
-          );
-        }
-      } else {
-        nextTeamMembers = projectData.teamMembers.filter(member => member.id !== updatedUser.id);
+      if (hasMember) {
+        // Update existing member in-place
+        nextTeamMembers = projectData.teamMembers.map(member =>
+          member.id === updatedUser.id
+            ? { ...member, name: updatedUser.name, role: updatedUser.role || 'Developer' }
+            : member
+        );
+      } else if (projectData.name === updatedUser.project && updatedUser.project) {
+        // Add to new project if assigned and not already present
+        nextTeamMembers = [
+          ...projectData.teamMembers,
+          {
+            id: updatedUser.id,
+            name: updatedUser.name,
+            role: updatedUser.role || 'Developer',
+            joined: updatedUser.created,
+          },
+        ];
       }
 
       return {
@@ -166,12 +179,44 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
     }
   };
 
+  const handleAddUserToProject = (user: User, role: 'Developer' | 'Supervisor') => {
+    if (!project) return;
+
+    const updatedProjects = projectsData.map((projectData) => {
+      if (projectData.name !== project) return projectData;
+
+      const exists = projectData.teamMembers.some(m => m.id === user.id);
+      if (exists) return projectData;
+
+      return {
+        ...projectData,
+        teamMembers: [
+          ...projectData.teamMembers,
+          {
+            id: user.id,
+            name: user.name,
+            role: role,
+            joined: new Date().toLocaleDateString('en-GB'),
+          }
+        ]
+      };
+    });
+
+    // update user's project and role locally
+    const updatedUsers = users.map(u => u.id === user.id ? { ...u, project: project, role } : u);
+
+    onProjectsUpdate(updatedProjects);
+    onUsersUpdate(updatedUsers);
+
+    setAddingUserId(null);
+  };
+
   const handleCancelDelete = () => {
     setShowDeleteModal(false);
     setUserToDelete(null);
   };
 
-  const handleCreateUserSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateUserSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     handleCreateUser();
   };
@@ -204,11 +249,16 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
                 <th>Name</th>
                 <th>Email</th>
                 <th>Created</th>
+                <th>Project Role / Access</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
+              {filteredUsers.map((user) => {
+                const proj = projectsData.find(p => p.name === project);
+                const member = proj?.teamMembers.find(m => m.id === user.id);
+
+                return (
                 <tr key={user.id}>
                   <td className="user-name-cell">
                     <div className="user-avatar">
@@ -219,13 +269,42 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
                   <td>{user.email}</td>
                   <td>{user.created}</td>
                   <td>
+                    {member ? (
+                          <span className={`role-badge role-${(member.role || 'Developer').toLowerCase()}`}>{member.role || 'Developer'}</span>
+                        ) : (
+                      <div className="no-access">
+                        <span className="no-access-text">No access</span>
+                        {isSupervisor && (
+                          <div className="add-inline">
+                            {addingUserId === user.id ? (
+                              <>
+                                <select value={addRole} onChange={(e) => setAddRole(e.target.value as 'Developer' | 'Supervisor')}>
+                                  <option value="Developer">Developer</option>
+                                  <option value="Supervisor">Supervisor</option>
+                                </select>
+                                <button className="confirm-add" onClick={() => {
+                                  handleAddUserToProject(user, addRole);
+                                }}>Add</button>
+                                <button className="cancel-add" onClick={() => setAddingUserId(null)}>Cancel</button>
+                              </>
+                            ) : (
+                              <button className="add-icon-btn" onClick={() => { setAddingUserId(user.id); setAddRole('Developer'); }} title="Add to project">
+                                <Plus size={14} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </td>
+                  <td>
                     <div className="action-buttons">
                       <button 
                         className="action-link edit-btn" 
                         onClick={() => handleEditClick(user)}
                         title="Edit User"
                       >
-                        ✏️
+                        <Edit3 size={16} />
                       </button>
                       {isSupervisor && (
                         <button 
@@ -233,13 +312,14 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
                           onClick={() => handleDeleteClick(user)}
                           title="Delete User"
                         >
-                          🗑️
+                          <Trash2 size={16} />
                         </button>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -253,7 +333,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
               <div className="modal-header">
                 <h3>Create & Invite User</h3>
                 <button className="close-btn" type="button" onClick={() => setShowCreateModal(false)}>
-                  ×
+                  <X size={18} />
                 </button>
               </div>
               <div className="modal-body">

@@ -1,5 +1,6 @@
 // components/ProjectSettings.tsx
 import React, { useState } from 'react';
+import { Edit3, Trash2, Plus, X } from 'lucide-react';
 import './ProjectSettings.css';
 
 export type ViewMode = 'supervisor' | 'developer';
@@ -192,22 +193,22 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     onProjectsUpdate(updatedProjects);
   };
 
-  const handleAddMemberSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddMemberSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     handleAddTeamMember();
   };
 
-  const handleAddSubProjectSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddSubProjectSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     handleAddSubProject();
   };
 
-  const handleEditSubProjectSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEditSubProjectSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setEditingSubProject(null);
   };
 
-  const handleAddProjectSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddProjectSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     handleAddProject();
   };
@@ -265,7 +266,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   }}
                   title="Delete project"
                 >
-                  ×
+                  <X size={18} />
                 </button>
               </div>
               <div className="project-item-description">{p.description}</div>
@@ -323,14 +324,14 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                     onClick={() => setEditingSubProject(subProject.id)}
                     title="Edit sub-project"
                   >
-                    ✏️
+                    <Edit3 size={16} />
                   </button>
                   <button 
                     className="action-btn delete-btn"
                     onClick={() => handleDeleteSubProject(subProject.id)}
                     title="Delete sub-project"
                   >
-                    🗑️
+                    <Trash2 size={16} />
                   </button>
                 </div>
               </div>
@@ -350,7 +351,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             className="add-sub-project-btn"
             onClick={() => setShowAddSubProject(true)}
           >
-            + Add Sub-Project
+            <Plus size={16} /> Add Sub-Project
           </button>
         </div>
       </div>
@@ -359,7 +360,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       <div className="team-members-section">
         <div className="section-header">
           <h3>Team Members</h3>
-          <button className="add-member-btn" onClick={() => setShowAddMember(true)}>+ Add Member</button>
+          <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
+            <Plus size={16} /> Add Member
+          </button>
         </div>
 
         <div className="team-members-table">
@@ -382,13 +385,15 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   <td>{member.left || '—'}</td>
                   <td>
                     <div className="action-buttons">
-                      <button className="action-btn edit-btn" title="Edit member">✏️</button>
+                      <button className="action-btn edit-btn" title="Edit member">
+                        <Edit3 size={16} />
+                      </button>
                       <button
                         className="action-btn delete-btn"
                         title="Remove member"
                         onClick={() => handleDeleteTeamMember(member.id)}
                       >
-                        🗑️
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
@@ -406,7 +411,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <form onSubmit={handleAddMemberSubmit}>
               <div className="modal-header">
                 <h3>Add Team Member</h3>
-                <button className="close-btn" type="button" onClick={() => setShowAddMember(false)}>×</button>
+                <button className="close-btn" type="button" onClick={() => setShowAddMember(false)}>
+                  <X size={18} />
+                </button>
               </div>
               <div className="modal-body">
                 <div className="form-group">
@@ -445,7 +452,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <form onSubmit={handleAddSubProjectSubmit}>
               <div className="modal-header">
                 <h3>Add Sub-Project</h3>
-                <button className="close-btn" type="button" onClick={() => setShowAddSubProject(false)}>×</button>
+                <button className="close-btn" type="button" onClick={() => setShowAddSubProject(false)}>
+                  <X size={18} />
+                </button>
               </div>
               <div className="modal-body">
                 <div className="form-group">
@@ -484,7 +493,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <form onSubmit={handleEditSubProjectSubmit}>
               <div className="modal-header">
                 <h3>Edit Sub-Project</h3>
-                <button className="close-btn" type="button" onClick={() => setEditingSubProject(null)}>×</button>
+                <button className="close-btn" type="button" onClick={() => setEditingSubProject(null)}>
+                  <X size={18} />
+                </button>
               </div>
               <div className="modal-body">
                 {selectedProject.subProjects.map(sp => {
@@ -542,7 +553,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <form onSubmit={handleAddProjectSubmit}>
               <div className="modal-header">
                 <h3>Create New Project</h3>
-                <button className="close-btn" type="button" onClick={() => setShowAddProject(false)}>×</button>
+                <button className="close-btn" type="button" onClick={() => setShowAddProject(false)}>
+                  <X size={18} />
+                </button>
               </div>
               <div className="modal-body">
                 <div className="form-group">
