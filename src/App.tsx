@@ -1,17 +1,17 @@
 // App.tsx
-import React, { useState, useEffect } from 'react';
-import './App.css';
-import Header from './components/Header';
-import Sidebar from './components/Sidebar';
-import UserManagement from './components/UserManagement';
-import ProjectSettings from './components/ProjectSettings';
-import UserTimeline from './components/UserTimeline';
-import AllTasks from './components/AllTasks';
-import PerformanceDashboard from './components/PerformanceDashboard';
-import DeveloperDashboard from './components/DeveloperDashboard';
-import { ViewMode, PageType, User, Project, LogEntry } from './types/models';
-import { dataService } from './lib/dataService';
-import DebugPanel from './components/DebugPanel';
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
+import UserManagement from "./components/UserManagement";
+import ProjectSettings from "./components/ProjectSettings";
+import UserTimeline from "./components/UserTimeline";
+import AllTasks from "./components/AllTasks";
+import PerformanceDashboard from "./components/PerformanceDashboard";
+import DeveloperDashboard from "./components/DeveloperDashboard";
+import { ViewMode, PageType, User, Project, LogEntry } from "./types/models";
+import { dataService } from "./lib/dataService";
+import DebugPanel from "./components/DebugPanel";
 
 interface AppState {
   view: ViewMode;
@@ -21,9 +21,9 @@ interface AppState {
 
 const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
-    view: 'supervisor',
-    currentPage: 'dashboard', 
-    selectedProject: 'All Projects'
+    view: "supervisor",
+    currentPage: "dashboard",
+    selectedProject: "All Projects", // Dashboard view
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -31,17 +31,23 @@ const App: React.FC = () => {
   const [usersData, setUsersData] = useState<User[]>([]);
   const [taskLogs, setTaskLogs] = useState<LogEntry[]>([]);
 
-  // Load data from service
+  // Load data from Supabase
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
+        console.log("🔄 Loading data from Supabase...");
         const { users, projects, logs } = await dataService.getAllData();
+        console.log("✅ Data loaded:", {
+          users: users.length,
+          projects: projects.length,
+          logs: logs.length,
+        });
         setUsersData(users);
         setProjectsData(projects);
         setTaskLogs(logs);
       } catch (error) {
-        console.error('Error loading data:', error);
+        console.error("❌ Error loading data:", error);
       } finally {
         setIsLoading(false);
       }
@@ -49,25 +55,31 @@ const App: React.FC = () => {
     loadData();
   }, []);
 
-  const currentProjectData = projectsData.find((p) => p.name === state.selectedProject) || projectsData[0];
+  const currentProjectData =
+    projectsData.find((p) => p.name === state.selectedProject) ||
+    projectsData[0];
 
-  // Reconcile helper: ensure `usersData` reflects roles/project assignments in `projectsData`
-  const reconcileUsersWithProjects = (projects: Project[], users: User[], preferredProjectName?: string) => {
-    return users.map(u => {
+  // Reconcile users with projects
+  const reconcileUsersWithProjects = (
+    projects: Project[],
+    users: User[],
+    preferredProjectName?: string,
+  ) => {
+    return users.map((u) => {
       if (u.project) {
-        const proj = projects.find(p => p.name === u.project);
-        const member = proj?.teamMembers.find(m => m.id === u.id);
+        const proj = projects.find((p) => p.name === u.project);
+        const member = proj?.teamMembers.find((m) => m.id === u.id);
         if (member) return { ...u, role: member.role, project: proj!.name };
       }
 
       if (preferredProjectName) {
-        const proj = projects.find(p => p.name === preferredProjectName);
-        const member = proj?.teamMembers.find(m => m.id === u.id);
+        const proj = projects.find((p) => p.name === preferredProjectName);
+        const member = proj?.teamMembers.find((m) => m.id === u.id);
         if (member) return { ...u, role: member.role, project: proj!.name };
       }
 
       for (const proj of projects) {
-        const member = proj.teamMembers.find(m => m.id === u.id);
+        const member = proj.teamMembers.find((m) => m.id === u.id);
         if (member) {
           return { ...u, role: member.role, project: proj.name };
         }
@@ -80,25 +92,34 @@ const App: React.FC = () => {
   // Sync users when projects change
   useEffect(() => {
     if (projectsData.length > 0 && usersData.length > 0) {
-      setUsersData(prev => reconcileUsersWithProjects(projectsData, prev, state.selectedProject));
+      setUsersData((prev) =>
+        reconcileUsersWithProjects(projectsData, prev, state.selectedProject),
+      );
     }
   }, [projectsData, state.selectedProject]);
 
-  // Derive current user based on active view
+  // Derive current user
   const deriveCurrentUser = () => {
-    if (!currentProjectData || isLoading) return { name: 'Guest', email: 'guest@localhost' };
+    if (!currentProjectData || isLoading)
+      return { name: "Guest", email: "guest@localhost" };
 
-    const preferredRole = state.view === 'supervisor' ? 'Supervisor' : 'Developer';
-    let member = currentProjectData.teamMembers.find((m) => m.role === preferredRole);
+    const preferredRole =
+      state.view === "supervisor" ? "Supervisor" : "Developer";
+    let member = currentProjectData.teamMembers.find(
+      (m) => m.role === preferredRole,
+    );
     if (!member) member = currentProjectData.teamMembers[0];
-    const name = member?.name || 'Guest';
-    const email = usersData.find((u) => u.name === name)?.email || 'guest@localhost';
+    const name = member?.name || "Guest";
+    const email =
+      usersData.find((u) => u.name === name)?.email || "guest@localhost";
     return { name, email };
   };
 
-  const { name: currentUserName, email: currentUserEmail } = deriveCurrentUser();
+  const { name: currentUserName, email: currentUserEmail } =
+    deriveCurrentUser();
 
-  const handleAddTaskLog = (log: Omit<LogEntry, 'id' | 'submittedAt'>) => {
+  // Handlers
+  const handleAddTaskLog = (log: Omit<LogEntry, "id" | "submittedAt">) => {
     const newLog: LogEntry = {
       ...log,
       id: Date.now().toString(),
@@ -106,20 +127,24 @@ const App: React.FC = () => {
     };
 
     setTaskLogs((prevLogs) => [newLog, ...prevLogs]);
-    setProjectsData((prevProjects) => prevProjects.map((projectData) => {
-      if (projectData.name === log.project) {
-        return {
-          ...projectData,
-          usedHours: projectData.usedHours + log.hoursWorked,
-        };
-      }
-      return projectData;
-    }));
+    setProjectsData((prevProjects) =>
+      prevProjects.map((projectData) => {
+        if (projectData.name === log.project) {
+          return {
+            ...projectData,
+            usedHours: projectData.usedHours + log.hoursWorked,
+          };
+        }
+        return projectData;
+      }),
+    );
 
-    dataService.createLog({
-      ...log,
-      submittedById: '1',
-    }).catch(console.error);
+    dataService
+      .createLog({
+        ...log,
+        submittedById: "1",
+      })
+      .catch(console.error);
 
     return newLog;
   };
@@ -133,47 +158,63 @@ const App: React.FC = () => {
   };
 
   const handleProjectSelect = (project: string) => {
-    setState({ 
-      ...state, 
+    setState({
+      ...state,
       selectedProject: project,
-      currentPage: 'dashboard'
+      currentPage: "dashboard",
     });
   };
 
   const handleProjectsUpdate = (updatedProjects: Project[]) => {
     setProjectsData(updatedProjects);
-    setUsersData(prevUsers => reconcileUsersWithProjects(updatedProjects, prevUsers, state.selectedProject));
-    const stillExists = updatedProjects.some(p => p.name === state.selectedProject);
+    setUsersData((prevUsers) =>
+      reconcileUsersWithProjects(
+        updatedProjects,
+        prevUsers,
+        state.selectedProject,
+      ),
+    );
+    const stillExists = updatedProjects.some(
+      (p) => p.name === state.selectedProject,
+    );
     if (!stillExists && updatedProjects.length > 0) {
-      setState({ ...state, selectedProject: 'All Projects' });
+      setState({ ...state, selectedProject: "All Projects" });
     }
   };
 
   const handleUsersUpdate = (updatedUsers: User[]) => {
     const renames: { id: string; oldName: string; newName: string }[] = [];
     updatedUsers.forEach((u) => {
-      const prev = usersData.find(p => p.id === u.id);
+      const prev = usersData.find((p) => p.id === u.id);
       if (prev && prev.name !== u.name) {
         renames.push({ id: u.id, oldName: prev.name, newName: u.name });
       }
     });
 
-    const reconciled = reconcileUsersWithProjects(projectsData, updatedUsers, state.selectedProject);
+    const reconciled = reconcileUsersWithProjects(
+      projectsData,
+      updatedUsers,
+      state.selectedProject,
+    );
     setUsersData(reconciled);
 
     if (renames.length > 0) {
-      setTaskLogs(prevLogs => prevLogs.map(log => {
-        const found = renames.find(r => r.oldName === log.submittedBy);
-        return found ? { ...log, submittedBy: found.newName } : log;
-      }));
+      setTaskLogs((prevLogs) =>
+        prevLogs.map((log) => {
+          const found = renames.find((r) => r.oldName === log.submittedBy);
+          return found ? { ...log, submittedBy: found.newName } : log;
+        }),
+      );
 
-      setProjectsData(prevProjects => prevProjects.map(project => ({
-        ...project,
-        teamMembers: project.teamMembers.map(m => {
-          const r = renames.find(rr => rr.id === m.id);
-          return r ? { ...m, name: r.newName } : m;
-        })
-      })));
+      setProjectsData((prevProjects) =>
+        prevProjects.map((project) => ({
+          ...project,
+          teamMembers: project.teamMembers.map((m) => {
+            const r = renames.find((rr) => rr.id === m.id);
+            return r ? { ...m, name: r.newName } : m;
+          }),
+        })),
+      );
     }
 
     updatedUsers.forEach(async (user) => {
@@ -181,17 +222,19 @@ const App: React.FC = () => {
     });
   };
 
+  // Render page based on current state
   const renderPage = () => {
     if (isLoading) {
       return <div className="loading">Loading...</div>;
     }
 
-    // If in developer view and on dashboard, show DeveloperDashboard
-    if (state.view === 'developer' && state.currentPage === 'dashboard') {
-      const effectiveProject = state.selectedProject === 'All Projects' 
-        ? (projectsData[0]?.name || '') 
-        : state.selectedProject;
-        
+    // Developer view shows DeveloperDashboard
+    if (state.view === "developer" && state.currentPage === "dashboard") {
+      const effectiveProject =
+        state.selectedProject === "All Projects"
+          ? projectsData[0]?.name || ""
+          : state.selectedProject;
+
       return (
         <DeveloperDashboard
           view={state.view}
@@ -202,17 +245,20 @@ const App: React.FC = () => {
       );
     }
 
+    // All other pages
     switch (state.currentPage) {
-      case 'dashboard':
+      case "dashboard":
         return (
-          <PerformanceDashboard 
-            view={state.view} 
+          <PerformanceDashboard
+            view={state.view}
             project={state.selectedProject}
             users={usersData}
             projectsData={projectsData}
+            onProjectsUpdate={handleProjectsUpdate}
+            onProjectSelect={handleProjectSelect}
           />
         );
-      case 'users':
+      case "users":
         return (
           <UserManagement
             view={state.view}
@@ -223,7 +269,7 @@ const App: React.FC = () => {
             onProjectsUpdate={handleProjectsUpdate}
           />
         );
-      case 'timeline':
+      case "timeline":
         return (
           <UserTimeline
             view={state.view}
@@ -232,29 +278,42 @@ const App: React.FC = () => {
             projectsData={projectsData}
           />
         );
-      case 'settings':
-        return <ProjectSettings 
-          view={state.view} 
-          project={state.selectedProject}
-          projectsData={projectsData}
-          onProjectsUpdate={handleProjectsUpdate}
-        />;
-      case 'tasks':
-        return <AllTasks view={state.view} project={state.selectedProject} projectsData={projectsData} usersData={usersData} taskLogs={taskLogs} />;
+      case "settings":
+        return (
+          <ProjectSettings
+            view={state.view}
+            project={state.selectedProject}
+            projectsData={projectsData}
+            onProjectsUpdate={handleProjectsUpdate}
+            onProjectSelect={handleProjectSelect}
+          />
+        );
+      case "tasks":
+        return (
+          <AllTasks
+            view={state.view}
+            project={state.selectedProject}
+            projectsData={projectsData}
+            usersData={usersData}
+            taskLogs={taskLogs}
+          />
+        );
       default:
         return (
-          <PerformanceDashboard 
-            view={state.view} 
+          <PerformanceDashboard
+            view={state.view}
             project={state.selectedProject}
             users={usersData}
             projectsData={projectsData}
+            onProjectsUpdate={handleProjectsUpdate}
+            onProjectSelect={handleProjectSelect}
           />
         );
     }
   };
 
-  // Get project names for sidebar
-  const projectNames = ['All Projects', ...projectsData.map(p => p.name)];
+  // Project names for sidebar - EXCLUDE "All Projects"
+  const projectNames = projectsData.map((p) => p.name);
 
   return (
     <div className="app-container">
@@ -269,12 +328,9 @@ const App: React.FC = () => {
           onPageChange={handlePageChange}
           onProjectSelect={handleProjectSelect}
         />
-        <main className="main-content">
-          {renderPage()}
-          <div className="lovable-credit">Edit with Lovable</div>
-        </main>
+        <main className="main-content">{renderPage()}</main>
       </div>
-       <DebugPanel />
+      <DebugPanel />
     </div>
   );
 };

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Edit3, Trash2, X, Plus } from 'lucide-react';
 import EditUser from './EditUser';
+import { formatDate } from '../utils/dateUtils';
 import './UserManagement.css';
 import { ViewMode, User, Project } from '../types/models';
 
@@ -275,7 +276,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
                     {user.name}
                   </td>
                   <td>{user.email}</td>
-                  <td>{user.created}</td>
+                 <td>{formatDate(user.created)}</td>
                   <td>
                     {project === 'All Projects' ? (
                       memberships.length > 0 ? (

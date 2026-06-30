@@ -1,5 +1,6 @@
 // components/UserTimeline.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { formatDate } from '../utils/dateUtils';
 import { Briefcase, Flag, FileText, Calendar } from 'lucide-react';
 import './UserTimeline.css';
 import { ViewMode, User, Project } from '../types/models';
@@ -22,10 +23,26 @@ interface UserTimelineProps {
   projectsData: Project[];
 }
 
-const UserTimeline: React.FC<UserTimelineProps> = ({ /*view,*/ project, users, projectsData }) => {
+const UserTimeline: React.FC<UserTimelineProps> = ({ 
+  project, 
+  users, 
+  projectsData 
+}) => {
   const [selectedUser, setSelectedUser] = useState<string>('All users');
-  const [selectedProject, setSelectedProject] = useState<string>('All projects');
+  const [selectedProject, setSelectedProject] = useState<string>(
+    project === 'All Projects' ? 'All projects' : project
+  );
 
+  // Update when project prop changes from App
+  useEffect(() => {
+    if (project === 'All Projects') {
+      setSelectedProject('All projects');
+    } else {
+      setSelectedProject(project);
+    }
+  }, [project]);
+
+  // Build project users mapping
   const projectUsers: Record<string, string[]> = projectsData.reduce((acc, projectData) => {
     acc[projectData.name] = projectData.teamMembers.map(member => member.name);
     return acc;
@@ -34,6 +51,7 @@ const UserTimeline: React.FC<UserTimelineProps> = ({ /*view,*/ project, users, p
   const allUsers = ['All users', ...Array.from(new Set(users.map(user => user.name)))];
   const allProjects = ['All projects', ...projectsData.map((p) => p.name)];
 
+ 
   // Generate timeline events based on selected project and user
   const getTimelineEvents = (): TimelineEvent[] => {
     const events: TimelineEvent[] = [];
@@ -53,27 +71,27 @@ const UserTimeline: React.FC<UserTimelineProps> = ({ /*view,*/ project, users, p
     ];
 
     // Get users for the selected project
-    let users: string[] = [];
+    let usersList: string[] = [];
     if (selectedProject === 'All projects') {
       // Get all users from all projects
       Object.values(projectUsers).forEach((projectUserList) => {
         projectUserList.forEach((user) => {
-          if (!users.includes(user)) {
-            users.push(user);
+          if (!usersList.includes(user)) {
+            usersList.push(user);
           }
         });
       });
     } else if (projectUsers[selectedProject]) {
-      users = projectUsers[selectedProject];
+      usersList = projectUsers[selectedProject];
     }
 
     // Filter by user
     if (selectedUser !== 'All users') {
-      users = users.filter(u => u === selectedUser);
+      usersList = usersList.filter(u => u === selectedUser);
     }
 
     // Generate events for each user
-    users.forEach((user) => {
+    usersList.forEach((user) => {
       const numEvents = 3 + Math.floor(Math.random() * 4);
       for (let i = 0; i < numEvents; i++) {
         const monthIndex = Math.floor(Math.random() * months.length);
@@ -263,7 +281,7 @@ const UserTimeline: React.FC<UserTimelineProps> = ({ /*view,*/ project, users, p
                       <div className="event-card">
                         <div className="event-header">
                           <span className="event-user">{event.user}</span>
-                          <span className="event-date">{event.date}</span>
+                          <span className="event-date">{formatDate(event.date)}</span>
                         </div>
                         <div className="event-body">
                           <span className="event-icon">{getTypeIcon(event.type)}</span>

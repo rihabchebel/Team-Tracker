@@ -7,11 +7,14 @@ import {
   Users,
   BarChart3,
   X,
+  UserPlus,
+  Clock,
   Calendar
 } from 'lucide-react';
-
 import './PerformanceDashboard.css';
 import { ViewMode, User, Project } from '../types/models';
+import { formatDate, formatDateLong } from '../utils/dateUtils';
+import { dataService } from '../lib/dataService';
 
 type MemberStatus = 'Active' | 'Left' | 'On Leave';
 
@@ -42,6 +45,8 @@ interface PerformanceDashboardProps {
   project: string;
   users: User[];
   projectsData: Project[];
+  onProjectsUpdate?: (projects: Project[]) => void;
+  onProjectSelect?: (project: string) => void; // Add this
 }
 
 interface HeatmapDetailData {
@@ -61,7 +66,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   view, 
   project, 
   users, 
-  projectsData 
+  projectsData,
+  onProjectsUpdate,
+  onProjectSelect // Receive the callback
 }) => {
   const [activeTab, setActiveTab] = useState<'heatmap' | 'roster' | 'analytics'>('roster');
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,6 +81,13 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const [selectedCell, setSelectedCell] = useState<HeatmapDetailData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addedSupervisorNotesByCell, setAddedSupervisorNotesByCell] = useState<Record<string, string[]>>({});
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMember, setNewMember] = useState({
+    name: '',
+    email: '',
+    role: 'Developer'
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   const isAll = project === 'All Projects';
 
@@ -83,7 +97,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     }
   }, [isAll]);
 
-  // Helper functions
+  // Helper functions (hashString, randFromSeed, deriveEmail, etc.)
   const hashString = (s: string) => {
     let h = 0;
     for (let i = 0; i < s.length; i++) {
@@ -144,7 +158,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   if (isAll) {
-    // Build combined view for All Projects
     const map = new Map<string, { 
       id: string; 
       name: string; 
@@ -228,7 +241,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   const { teamMembers, budget, hoursSpent } = projectData;
 
-  // Get available users and projects for filters
   const getAvailableUsers = () => {
     const userSet = new Set(teamMembers.map(m => m.name));
     return ['All Users', ...Array.from(userSet)];
@@ -241,7 +253,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return ['All Projects', project];
   };
 
-  // Filter members - working logic
   const filteredMembers = teamMembers
     .filter(member => {
       const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -391,12 +402,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() - (29 - dayIndex));
 
-    const formattedDate = targetDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+    const formattedDate = formatDateLong(targetDate.toISOString());
 
     const detailData: HeatmapDetailData = {
       noteKey,
@@ -439,6 +445,64 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     }));
   };
 
+  // Add Member Handler
+  const handleAddMember = async () => {
+    if (!newMember.name.trim() || !newMember.email.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const currentProject = projectsData.find(p => p.name === project);
+      if (!currentProject) {
+        alert('Project not found');
+        return;
+      }
+
+      const updatedProject = {
+        ...currentProject,
+        teamMembers: [
+          ...currentProject.teamMembers,
+          {
+            id: Date.now().toString(),
+            name: newMember.name,
+            role: newMember.role,
+            joined: new Date().toLocaleDateString('en-GB'),
+          }
+        ]
+      };
+
+      const updatedProjects = projectsData.map(p => 
+        p.id === currentProject.id ? updatedProject : p
+      );
+
+      if (onProjectsUpdate) {
+        onProjectsUpdate(updatedProjects);
+      }
+
+      setNewMember({ name: '', email: '', role: 'Developer' });
+      setShowAddMember(false);
+      
+      const freshData = await dataService.getProjects();
+      if (onProjectsUpdate) {
+        onProjectsUpdate(freshData);
+      }
+    } catch (error) {
+      console.error('Error adding member:', error);
+      alert('Failed to add member. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle project selection from within the dashboard (e.g., clicking a project name)
+  const handleProjectNameClick = (projectName: string) => {
+    if (onProjectSelect) {
+      onProjectSelect(projectName);
+    }
+  };
+
   if (!currentProjectData && !isAll) {
     return (
       <div className="performance-dashboard">
@@ -462,9 +526,26 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       <div className="page-header">
         <div className="page-header-content">
           <div>
-            <h2>{project}</h2>
+            <h2 
+              style={{ cursor: onProjectSelect ? 'pointer' : 'default' }}
+              onClick={() => {
+                // If it's not "All Projects" and onProjectSelect exists, allow clicking to navigate
+                if (!isAll && onProjectSelect) {
+                  handleProjectNameClick(project);
+                }
+              }}
+            >
+              {project}
+            
+            </h2>
             <span className="project-description">{projectData.description}</span>
           </div>
+          {view === 'supervisor' && !isAll && (
+            <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
+              <UserPlus size={16} />
+              Add Member
+            </button>
+          )}
         </div>
       </div>
 
@@ -477,7 +558,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 className={`tab-btn ${activeTab === 'heatmap' ? 'active' : ''}`}
                 onClick={() => setActiveTab('heatmap')}
               >
-                <Calendar size={14} />
+                <BarChart3 size={14} />
                 Heatmap
               </button>
               <button 
@@ -500,7 +581,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
         {activeTab === 'roster' && (
           <div className="roster-section">
-            {/* Filters */}
             <div className="timeline-filters">
               <div className="filter-group">
                 <label>User</label>
@@ -612,7 +692,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                           </span>
                         )}
                       </td>
-                      <td>{member.memberSince}</td>
+                      <td>{formatDate(member.memberSince)}</td>
                       <td>{member.activeHours}h</td>
                       <td>
                         <span className={`status-badge ${getStatusBadgeClass(member.status)}`}>
@@ -706,8 +786,18 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   </div>
                   <div className="stat-details">
                     <div className="stat-item">
-                      <span className="stat-label">Hours</span>
+                      <span className="stat-label">
+                        <Clock size={12} />
+                        Hours
+                      </span>
                       <span className="stat-value">{member.activeHours}h</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="stat-label">
+                        <Calendar size={12} />
+                        Since
+                      </span>
+                      <span className="stat-value">{formatDate(member.memberSince)}</span>
                     </div>
                     <div className="stat-item">
                       <span className="stat-label">Status</span>
@@ -799,6 +889,67 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             <div className="modal-footer">
               <button className="mark-read-btn" onClick={closeModal}>
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Member Modal - Centered Popup */}
+      {showAddMember && (
+        <div className="modal-overlay" onClick={() => setShowAddMember(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Member to {project}</h3>
+              <button className="close-btn" onClick={() => setShowAddMember(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>
+                  Member Name <span className="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newMember.name}
+                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                  placeholder="Enter member name"
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  Email <span className="required">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={newMember.email}
+                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  placeholder="Enter email address"
+                />
+              </div>
+              <div className="form-group">
+                <label>Role</label>
+                <select
+                  value={newMember.role}
+                  onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                  className="form-select"
+                >
+                  <option value="Developer">Developer</option>
+                  <option value="Supervisor">Supervisor</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => setShowAddMember(false)}>
+                Cancel
+              </button>
+              <button 
+                className="create-btn" 
+                onClick={handleAddMember}
+                disabled={!newMember.name || !newMember.email || isLoading}
+              >
+                {isLoading ? 'Adding...' : 'Add Member'}
               </button>
             </div>
           </div>

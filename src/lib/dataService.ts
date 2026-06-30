@@ -1,141 +1,141 @@
 // src/lib/dataService.ts
+import { supabaseClient, isSupabaseConfigured } from './supabaseClient';
 import { testDB } from './testDB';
 import { User, Project, LogEntry, TeamMember, SubProject } from '../types/models';
 
-// Always use mock with localStorage for now
-const USE_LOCAL_STORAGE = true;
+// Determine which data source to use
+const shouldUseSupabase = () => {
+  const useSupabase = import.meta.env.VITE_USE_SUPABASE === 'true';
+  return useSupabase && isSupabaseConfigured();
+};
 
 export const dataService = {
   // ============ USERS ============
   getUsers: async (): Promise<User[]> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.getUsers();
+    if (shouldUseSupabase()) {
+      return await supabaseClient.getUsers();
     }
-    // Supabase code (for future)
-    return [];
+    return await testDB.getUsers();
   },
 
   createUser: async (user: Omit<User, 'id'>): Promise<User> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.createUser(user);
+    if (shouldUseSupabase()) {
+      return await supabaseClient.createUser(user);
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.createUser(user);
   },
 
   updateUser: async (id: string, updates: Partial<User>): Promise<User> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.updateUser(id, updates);
+    if (shouldUseSupabase()) {
+      return await supabaseClient.updateUser(id, updates);
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.updateUser(id, updates);
   },
 
   deleteUser: async (id: string): Promise<void> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.deleteUser(id);
+    if (shouldUseSupabase()) {
+      return await supabaseClient.deleteUser(id);
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.deleteUser(id);
   },
 
   // ============ PROJECTS ============
   getProjects: async (): Promise<Project[]> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.getProjects();
+    if (shouldUseSupabase()) {
+      return await supabaseClient.getProjects();
     }
-    return [];
+    return await testDB.getProjects();
   },
 
   getProjectByName: async (name: string): Promise<Project | null> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.getProjectByName(name);
+    if (shouldUseSupabase()) {
+      const projects = await supabaseClient.getProjects();
+      return projects.find(p => p.name === name) || null;
     }
-    return null;
+    return await testDB.getProjectByName(name);
   },
 
   createProject: async (project: Omit<Project, 'id'>): Promise<Project> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.createProject(project);
+    if (shouldUseSupabase()) {
+      return await supabaseClient.createProject(project);
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.createProject(project);
   },
 
   updateProject: async (id: string, updates: Partial<Project>): Promise<Project> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.updateProject(id, updates);
+    if (shouldUseSupabase()) {
+      return await supabaseClient.updateProject(id, updates);
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.updateProject(id, updates);
   },
 
   deleteProject: async (id: string): Promise<void> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.deleteProject(id);
+    if (shouldUseSupabase()) {
+      return await supabaseClient.deleteProject(id);
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.deleteProject(id);
   },
 
   // ============ SUB-PROJECTS ============
   addSubProject: async (projectId: string, subProject: Omit<SubProject, 'id'>): Promise<Project> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.addSubProject(projectId, subProject);
+    if (shouldUseSupabase()) {
+      await supabaseClient.addSubProject(projectId, subProject);
+      const projects = await supabaseClient.getProjects();
+      return projects.find(p => p.id === projectId)!;
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.addSubProject(projectId, subProject);
   },
 
   updateSubProject: async (projectId: string, subProjectId: string, updates: Partial<SubProject>): Promise<Project> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.updateSubProject(projectId, subProjectId, updates);
+    if (shouldUseSupabase()) {
+      await supabaseClient.updateSubProject(subProjectId, updates);
+      const projects = await supabaseClient.getProjects();
+      return projects.find(p => p.id === projectId)!;
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.updateSubProject(projectId, subProjectId, updates);
   },
 
   deleteSubProject: async (projectId: string, subProjectId: string): Promise<Project> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.deleteSubProject(projectId, subProjectId);
+    if (shouldUseSupabase()) {
+      await supabaseClient.deleteSubProject(subProjectId);
+      const projects = await supabaseClient.getProjects();
+      return projects.find(p => p.id === projectId)!;
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.deleteSubProject(projectId, subProjectId);
   },
 
   // ============ TEAM MEMBERS ============
   addTeamMember: async (projectId: string, member: TeamMember): Promise<Project> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.addTeamMember(projectId, member);
+    if (shouldUseSupabase()) {
+      await supabaseClient.addTeamMember(projectId, member.id, member.role);
+      const projects = await supabaseClient.getProjects();
+      return projects.find(p => p.id === projectId)!;
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.addTeamMember(projectId, member);
   },
 
   removeTeamMember: async (projectId: string, memberId: string): Promise<Project> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.removeTeamMember(projectId, memberId);
+    if (shouldUseSupabase()) {
+      await supabaseClient.removeTeamMember(projectId, memberId);
+      const projects = await supabaseClient.getProjects();
+      return projects.find(p => p.id === projectId)!;
     }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.removeTeamMember(projectId, memberId);
   },
 
   // ============ TASK LOGS ============
   getLogs: async (): Promise<LogEntry[]> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.getLogs();
+    if (shouldUseSupabase()) {
+      return await supabaseClient.getLogs();
     }
-    return [];
+    return await testDB.getLogs();
   },
 
   createLog: async (log: Omit<LogEntry, 'id' | 'submittedAt'>): Promise<LogEntry> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.createLog(log);
+    if (shouldUseSupabase()) {
+      return await supabaseClient.createLog(log);
     }
-    throw new Error('Supabase not implemented yet');
-  },
-
-  updateLog: async (id: string, updates: Partial<LogEntry>): Promise<LogEntry> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.updateLog(id, updates);
-    }
-    throw new Error('Supabase not implemented yet');
-  },
-
-  deleteLog: async (id: string): Promise<void> => {
-    if (USE_LOCAL_STORAGE) {
-      return await testDB.deleteLog(id);
-    }
-    throw new Error('Supabase not implemented yet');
+    return await testDB.createLog(log);
   },
 
   // ============ SYNC HELPERS ============
@@ -149,19 +149,53 @@ export const dataService = {
   },
 
   clearAllData: (): void => {
-    if (USE_LOCAL_STORAGE) {
+    if (!shouldUseSupabase()) {
       testDB.clearAllData();
+    } else {
+      console.warn('Cannot clear data from Supabase via this method');
     }
   },
 
   syncUserMemberships: async (userId: string): Promise<User> => {
-    if (USE_LOCAL_STORAGE) {
-      const users = await testDB.getUsers();
+    if (shouldUseSupabase()) {
+      const users = await supabaseClient.getUsers();
       const user = users.find(u => u.id === userId);
       if (!user) throw new Error('User not found');
       return user;
     }
-    throw new Error('Supabase not implemented yet');
+    const users = await testDB.getUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) throw new Error('User not found');
+    return user;
+  },
+
+  getUserById: async (userId: string): Promise<User | null> => {
+    if (shouldUseSupabase()) {
+      const users = await supabaseClient.getUsers();
+      return users.find(u => u.id === userId) || null;
+    }
+    const users = await testDB.getUsers();
+    return users.find(u => u.id === userId) || null;
+  },
+
+  getProjectMembers: async (projectId: string): Promise<TeamMember[]> => {
+    if (shouldUseSupabase()) {
+      const project = await supabaseClient.getProjectById(projectId);
+      return project?.teamMembers || [];
+    }
+    const projects = await testDB.getProjects();
+    const project = projects.find(p => p.id === projectId);
+    return project?.teamMembers || [];
+  },
+
+  getProjectSubProjects: async (projectId: string): Promise<SubProject[]> => {
+    if (shouldUseSupabase()) {
+      const project = await supabaseClient.getProjectById(projectId);
+      return project?.subProjects || [];
+    }
+    const projects = await testDB.getProjects();
+    const project = projects.find(p => p.id === projectId);
+    return project?.subProjects || [];
   },
 };
 

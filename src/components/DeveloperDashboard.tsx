@@ -1,6 +1,7 @@
 // components/DeveloperDashboard.tsx
 import React, { useState } from "react";
 import "./DeveloperDashboard.css";
+import { Plus, Trash2, Calendar, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
 export type ViewMode = "supervisor" | "developer";
 
@@ -29,13 +30,8 @@ interface LogEntry {
   submittedAt: string;
 }
 
-interface Task {
-  id: string;
-  description: string;
-}
-
 const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
-  /*view,*/ project,
+  project,
   currentUser,
   onAddTaskLog,
 }) => {
@@ -50,6 +46,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
   const [unavailableReason, setUnavailableReason] = useState<string>("");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAddTask = () => {
     const taskDescription = newTask.trim() || "Describe task...";
@@ -59,7 +56,6 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
     };
     setTasks((prevTasks) => [...prevTasks, newTaskObj]);
     setNewTask("");
-    console.log("Task added:", newTaskObj);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -73,11 +69,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
     }
   };
 
-  // Handle Enter key for reason inputs - prevents form submission
   const handleReasonKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      // Move to next focusable element or blur
       const form = e.currentTarget.form;
       if (form) {
         const elements = Array.from(form.elements);
@@ -92,8 +86,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
     }
   };
 
-  const handleSaveLog = () => {
-    // Validate required fields
+  const handleSaveLog = async () => {
     if (status === "partial" && !partialReason.trim()) {
       alert("Please provide a reason for partial availability.");
       return;
@@ -102,6 +95,8 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
       alert("Please provide a reason for unavailability.");
       return;
     }
+
+    setIsSubmitting(true);
 
     const logData: Omit<LogEntry, 'id' | 'submittedAt'> = {
       project: project,
@@ -114,47 +109,74 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
       submittedBy: currentUser,
     };
 
-    onAddTaskLog(logData);
-    console.log("Log saved:", logData);
-    alert("Log saved successfully!");
-
-    // Reset form
-    setTasks([]);
-    setNewTask("");
-    if (status === "partial") {
-      setPartialReason("");
+    try {
+      await onAddTaskLog(logData);
+      
+      // Reset form
+      setTasks([]);
+      setNewTask("");
+      if (status === "partial") {
+        setPartialReason("");
+      }
+      if (status === "unavailable") {
+        setUnavailableReason("");
+      }
+      setHoursWorked(8);
+      
+      alert("Log saved successfully!");
+    } catch (error) {
+      console.error("Error saving log:", error);
+      alert("Failed to save log. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
-    if (status === "unavailable") {
-      setUnavailableReason("");
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch(status) {
+      case 'full':
+        return <CheckCircle size={16} />;
+      case 'partial':
+        return <AlertCircle size={16} />;
+      case 'unavailable':
+        return <XCircle size={16} />;
+      default:
+        return null;
     }
   };
 
   return (
     <div className="developer-dashboard">
-      {/* Project Header */}
-      <div className="dashboard-header">
-        <div className="project-info">
-          <h2>{project}</h2>
-          <span className="project-description">
-            Main product development sprint
-          </span>
+      <div className="page-header">
+        <div className="page-header-content">
+          <div>
+            <h2>{project}</h2>
+            <span className="project-description">
+              Log your daily availability and tasks
+            </span>
+          </div>
+          <div className="user-info">
+            <span className="user-name">{currentUser}</span>
+            <span className="user-role">Developer</span>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="dashboard-content">
-        {/* Log Your Availability Section */}
         <div className="availability-section">
           <h3>Log Your Availability</h3>
 
           <div className="form-group">
             <label>Date</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="date-input"
-            />
+            <div className="date-input-wrapper">
+              <Calendar size={16} className="input-icon" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="date-input"
+              />
+            </div>
           </div>
 
           <div className="form-group">
@@ -169,6 +191,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   setUnavailableReason("");
                 }}
               >
+                {getStatusIcon('full')}
                 Full
               </button>
               <button
@@ -179,6 +202,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   setUnavailableReason("");
                 }}
               >
+                {getStatusIcon('partial')}
                 Partial
               </button>
               <button
@@ -190,6 +214,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   setHoursWorked(0);
                 }}
               >
+                {getStatusIcon('unavailable')}
                 Unavailable
               </button>
             </div>
@@ -197,17 +222,15 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
           {status === "partial" && (
             <div className="form-group">
-              <div className="reason-input-container">
-                <label>Reason for Partial Availability <span className="required">*</span></label>
-                <input
-                  type="text"
-                  value={partialReason}
-                  onChange={(e) => setPartialReason(e.target.value)}
-                  placeholder="Enter reason..."
-                  onKeyDown={handleReasonKeyDown}
-                  className="reason-input"
-                />
-              </div>
+              <label>Reason for Partial Availability <span className="required">*</span></label>
+              <input
+                type="text"
+                value={partialReason}
+                onChange={(e) => setPartialReason(e.target.value)}
+                placeholder="Enter reason..."
+                onKeyDown={handleReasonKeyDown}
+                className="reason-input"
+              />
               <label>Hours Worked (max 8)</label>
               <div className="hours-input-container">
                 <input
@@ -292,9 +315,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                         type="button"
                         className="delete-task-btn"
                         onClick={() => handleDeleteTask(task.id)}
-                        aria-label="Delete task description"
+                        aria-label="Delete task"
                       >
-                        &times;
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   ))
@@ -315,7 +338,8 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   className="add-task-btn"
                   onClick={handleAddTask}
                 >
-                  + Add Task
+                  <Plus size={16} />
+                  Add Task
                 </button>
               </div>
             </div>
@@ -325,8 +349,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
             type="button"
             className="save-log-btn"
             onClick={handleSaveLog}
+            disabled={isSubmitting}
           >
-            Save Log
+            {isSubmitting ? 'Saving...' : 'Save Log'}
           </button>
         </div>
       </div>

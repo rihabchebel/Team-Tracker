@@ -1,9 +1,8 @@
 // components/AllTasks.tsx
 import React, { useState, useEffect } from 'react';
 import './AllTasks.css';
-import { /*ViewMode,*/ Project, User, LogEntry } from '../types/models';
-
-export type ViewMode = 'supervisor' | 'developer';
+import { ViewMode, Project, User, LogEntry } from '../types/models';
+import { formatDate, formatTime } from '../utils/dateUtils';
 
 interface AllTasksProps {
   view: ViewMode;
@@ -13,18 +12,29 @@ interface AllTasksProps {
   taskLogs: LogEntry[];
 }
 
-const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, usersData, taskLogs }) => {
+const AllTasks: React.FC<AllTasksProps> = ({ 
+  project, 
+  projectsData, 
+  usersData, 
+  taskLogs 
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
-  const [selectedProject, setSelectedProject] = useState<string>(project || 'All Projects');
+  const [selectedProject, setSelectedProject] = useState<string>(
+    project === 'All Projects' ? 'All Projects' : project
+  );
   const [selectedUser, setSelectedUser] = useState<string>('All Users');
 
-  // Sync selectedProject when parent project prop changes
+  // Update when project prop changes from App
   useEffect(() => {
-    if (project) setSelectedProject(project);
+    if (project === 'All Projects') {
+      setSelectedProject('All Projects');
+    } else {
+      setSelectedProject(project);
+    }
   }, [project]);
 
-  // Get all unique users (prefer usersData if provided)
+  
   const getUniqueUsers = () => {
     if (usersData && usersData.length > 0) {
       return ['All Users', ...usersData.map(u => u.name)];
@@ -34,7 +44,6 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
     return ['All Users', ...Array.from(users)];
   };
 
-  // Get all unique projects (prefer projectsData if provided)
   const getUniqueProjects = () => {
     if (projectsData && projectsData.length > 0) {
       return ['All Projects', ...projectsData.map(p => p.name)];
@@ -44,21 +53,17 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
     return ['All Projects', ...Array.from(projects)];
   };
 
-  // Filter logs based on search, project, and user
   useEffect(() => {
     let filtered = taskLogs;
 
-    // Filter by project
     if (selectedProject && selectedProject !== 'All Projects') {
       filtered = filtered.filter(log => log.project === selectedProject);
     }
 
-    // Filter by user
     if (selectedUser && selectedUser !== 'All Users') {
       filtered = filtered.filter(log => log.submittedBy === selectedUser);
     }
 
-    // Filter by search term (search in task descriptions)
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(log => 
@@ -71,7 +76,6 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
     setFilteredLogs(filtered);
   }, [searchTerm, selectedProject, selectedUser, taskLogs]);
 
-  // Get stats
   const totalTasks = filteredLogs.reduce((sum, log) => sum + log.tasks.length, 0);
   const totalHours = filteredLogs.reduce((sum, log) => sum + log.hoursWorked, 0);
   const totalEntries = filteredLogs.length;
@@ -93,29 +97,13 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
     }
   };
+
+  //const canLogAvailability = view === 'supervisor';
 
   return (
     <div className="all-tasks">
@@ -127,11 +115,13 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
               A unified view of every task logged across projects
             </span>
           </div>
+         
+          
+          
         </div>
       </div>
 
       <div className="all-tasks-content">
-        {/* Stats Cards */}
         <div className="stats-cards">
           <div className="stat-card">
             <div className="stat-number">{totalEntries}</div>
@@ -147,7 +137,6 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
           </div>
         </div>
 
-        {/* Filters */}
         <div className="filters-section">
           <div className="filter-group">
             <label>Project</label>
@@ -186,7 +175,6 @@ const AllTasks: React.FC<AllTasksProps> = ({ /*view,*/ project, projectsData, us
           </div>
         </div>
 
-        {/* Log Entries */}
         <div className="logs-container">
           {filteredLogs.length === 0 ? (
             <div className="empty-state">
