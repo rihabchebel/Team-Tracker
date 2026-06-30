@@ -11,6 +11,7 @@ import PerformanceDashboard from './components/PerformanceDashboard';
 import DeveloperDashboard from './components/DeveloperDashboard';
 import { ViewMode, PageType, User, Project, LogEntry } from './types/models';
 import { dataService } from './lib/dataService';
+import DebugPanel from './components/DebugPanel';
 
 interface AppState {
   view: ViewMode;
@@ -273,6 +274,7 @@ const App: React.FC = () => {
           <div className="lovable-credit">Edit with Lovable</div>
         </main>
       </div>
+       <DebugPanel />
     </div>
   );
 };

@@ -6,8 +6,10 @@ import {
   ChevronUp,
   Users,
   BarChart3,
-  X
+  X,
+  Calendar
 } from 'lucide-react';
+
 import './PerformanceDashboard.css';
 import { ViewMode, User, Project } from '../types/models';
 
@@ -475,7 +477,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 className={`tab-btn ${activeTab === 'heatmap' ? 'active' : ''}`}
                 onClick={() => setActiveTab('heatmap')}
               >
-                <BarChart3 size={14} />
+                <Calendar size={14} />
                 Heatmap
               </button>
               <button 

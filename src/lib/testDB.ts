@@ -1,8 +1,15 @@
 // src/lib/testDB.ts
 import { User, Project, LogEntry } from '../types/models';
 
-// Mock data for development
-let mockUsers: User[] = [
+// Storage keys
+const STORAGE_KEYS = {
+  USERS: 'teamtracker_users',
+  PROJECTS: 'teamtracker_projects',
+  LOGS: 'teamtracker_logs',
+};
+
+// Initialize with default data if empty
+const getDefaultUsers = (): User[] => [
   { id: '1', name: 'Alice Johnson', email: 'alice@example.com', created: '14/04/2026', role: 'Supervisor', project: 'Project Alpha' },
   { id: '2', name: 'Bob Smith', email: 'bob@example.com', created: '14/04/2026', role: 'Developer', project: 'Project Alpha' },
   { id: '3', name: 'Carol Davis', email: 'carol@example.com', created: '14/04/2026', role: 'Developer', project: 'Project Beta' },
@@ -12,7 +19,7 @@ let mockUsers: User[] = [
   { id: '7', name: 'Guest', email: 'guest@local', created: '22/06/2026', role: 'Developer' },
 ];
 
-let mockProjects: Project[] = [
+const getDefaultProjects = (): Project[] => [
   {
     id: '1',
     name: 'Project Alpha',
@@ -82,7 +89,7 @@ let mockProjects: Project[] = [
   }
 ];
 
-let mockLogs: LogEntry[] = [
+const getDefaultLogs = (): LogEntry[] => [
   {
     id: 'log-1',
     project: 'Project Alpha',
@@ -161,10 +168,49 @@ let mockLogs: LogEntry[] = [
   }
 ];
 
-// Data service with mock implementation
+// Storage helpers
+const loadFromStorage = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const stored = localStorage.getItem(key);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return defaultValue;
+  } catch (error) {
+    console.error(`Error loading ${key} from localStorage:`, error);
+    return defaultValue;
+  }
+};
+
+const saveToStorage = <T,>(key: string, data: T): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
+};
+
+// Initialize data
+let mockUsers: User[] = loadFromStorage(STORAGE_KEYS.USERS, getDefaultUsers());
+let mockProjects: Project[] = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
+let mockLogs: LogEntry[] = loadFromStorage(STORAGE_KEYS.LOGS, getDefaultLogs());
+
+// Save initial data if not exists
+if (!localStorage.getItem(STORAGE_KEYS.USERS)) {
+  saveToStorage(STORAGE_KEYS.USERS, mockUsers);
+}
+if (!localStorage.getItem(STORAGE_KEYS.PROJECTS)) {
+  saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
+}
+if (!localStorage.getItem(STORAGE_KEYS.LOGS)) {
+  saveToStorage(STORAGE_KEYS.LOGS, mockLogs);
+}
+
+// Mock Supabase service with localStorage
 export const testDB = {
-  // Users
+  // ============ USERS ============
   getUsers: async (): Promise<User[]> => {
+    mockUsers = loadFromStorage(STORAGE_KEYS.USERS, getDefaultUsers());
     return new Promise((resolve) => {
       setTimeout(() => resolve([...mockUsers]), 100);
     });
@@ -173,6 +219,7 @@ export const testDB = {
   createUser: async (user: Omit<User, 'id'>): Promise<User> => {
     const newUser = { ...user, id: Date.now().toString() };
     mockUsers.push(newUser);
+    saveToStorage(STORAGE_KEYS.USERS, mockUsers);
     return new Promise((resolve) => {
       setTimeout(() => resolve(newUser), 100);
     });
@@ -182,6 +229,7 @@ export const testDB = {
     const index = mockUsers.findIndex(u => u.id === id);
     if (index !== -1) {
       mockUsers[index] = { ...mockUsers[index], ...updates };
+      saveToStorage(STORAGE_KEYS.USERS, mockUsers);
     }
     return new Promise((resolve) => {
       setTimeout(() => resolve(mockUsers[index]), 100);
@@ -189,23 +237,23 @@ export const testDB = {
   },
 
   deleteUser: async (id: string): Promise<void> => {
-    const index = mockUsers.findIndex(u => u.id === id);
-    if (index !== -1) {
-      mockUsers.splice(index, 1);
-    }
+    mockUsers = mockUsers.filter(u => u.id !== id);
+    saveToStorage(STORAGE_KEYS.USERS, mockUsers);
     return new Promise((resolve) => {
       setTimeout(() => resolve(), 100);
     });
   },
 
-  // Projects
+  // ============ PROJECTS ============
   getProjects: async (): Promise<Project[]> => {
+    mockProjects = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
     return new Promise((resolve) => {
       setTimeout(() => resolve([...mockProjects]), 100);
     });
   },
 
   getProjectByName: async (name: string): Promise<Project | null> => {
+    mockProjects = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
     const project = mockProjects.find(p => p.name === name);
     return new Promise((resolve) => {
       setTimeout(() => resolve(project ? { ...project } : null), 100);
@@ -215,6 +263,7 @@ export const testDB = {
   createProject: async (project: Omit<Project, 'id'>): Promise<Project> => {
     const newProject = { ...project, id: Date.now().toString() };
     mockProjects.push(newProject);
+    saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
     return new Promise((resolve) => {
       setTimeout(() => resolve(newProject), 100);
     });
@@ -224,6 +273,7 @@ export const testDB = {
     const index = mockProjects.findIndex(p => p.id === id);
     if (index !== -1) {
       mockProjects[index] = { ...mockProjects[index], ...updates };
+      saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
     }
     return new Promise((resolve) => {
       setTimeout(() => resolve(mockProjects[index]), 100);
@@ -231,17 +281,16 @@ export const testDB = {
   },
 
   deleteProject: async (id: string): Promise<void> => {
-    const index = mockProjects.findIndex(p => p.id === id);
-    if (index !== -1) {
-      mockProjects.splice(index, 1);
-    }
+    mockProjects = mockProjects.filter(p => p.id !== id);
+    saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
     return new Promise((resolve) => {
       setTimeout(() => resolve(), 100);
     });
   },
 
-  // Logs
+  // ============ LOGS ============
   getLogs: async (): Promise<LogEntry[]> => {
+    mockLogs = loadFromStorage(STORAGE_KEYS.LOGS, getDefaultLogs());
     return new Promise((resolve) => {
       setTimeout(() => resolve([...mockLogs]), 100);
     });
@@ -254,16 +303,38 @@ export const testDB = {
       submittedAt: new Date().toISOString(),
     };
     mockLogs.unshift(newLog);
+    saveToStorage(STORAGE_KEYS.LOGS, mockLogs);
     return new Promise((resolve) => {
       setTimeout(() => resolve(newLog), 100);
     });
   },
 
-  // Team Members
+  updateLog: async (id: string, updates: Partial<LogEntry>): Promise<LogEntry> => {
+    const index = mockLogs.findIndex(l => l.id === id);
+    if (index !== -1) {
+      mockLogs[index] = { ...mockLogs[index], ...updates };
+      saveToStorage(STORAGE_KEYS.LOGS, mockLogs);
+    }
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(mockLogs[index]), 100);
+    });
+  },
+
+  deleteLog: async (id: string): Promise<void> => {
+    mockLogs = mockLogs.filter(l => l.id !== id);
+    saveToStorage(STORAGE_KEYS.LOGS, mockLogs);
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(), 100);
+    });
+  },
+
+  // ============ TEAM MEMBERS ============
   addTeamMember: async (projectId: string, member: any): Promise<Project> => {
+    mockProjects = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
     const project = mockProjects.find(p => p.id === projectId);
     if (project) {
       project.teamMembers.push(member);
+      saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
     }
     return new Promise((resolve) => {
       setTimeout(() => resolve(project!), 100);
@@ -271,21 +342,25 @@ export const testDB = {
   },
 
   removeTeamMember: async (projectId: string, memberId: string): Promise<Project> => {
+    mockProjects = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
     const project = mockProjects.find(p => p.id === projectId);
     if (project) {
       project.teamMembers = project.teamMembers.filter(m => m.id !== memberId);
+      saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
     }
     return new Promise((resolve) => {
       setTimeout(() => resolve(project!), 100);
     });
   },
 
-  // Sub Projects
+  // ============ SUB-PROJECTS ============
   addSubProject: async (projectId: string, subProject: any): Promise<Project> => {
+    mockProjects = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
     const project = mockProjects.find(p => p.id === projectId);
     if (project) {
       project.subProjects.push(subProject);
       project.totalHours += subProject.timeTotal;
+      saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
     }
     return new Promise((resolve) => {
       setTimeout(() => resolve(project!), 100);
@@ -293,6 +368,7 @@ export const testDB = {
   },
 
   updateSubProject: async (projectId: string, subProjectId: string, updates: any): Promise<Project> => {
+    mockProjects = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
     const project = mockProjects.find(p => p.id === projectId);
     if (project) {
       const subProject = project.subProjects.find(sp => sp.id === subProjectId);
@@ -301,6 +377,7 @@ export const testDB = {
         Object.assign(subProject, updates);
         project.totalHours = project.totalHours - oldTotal + subProject.timeTotal;
         project.usedHours = project.subProjects.reduce((sum, sp) => sum + sp.timeUsed, 0);
+        saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
       }
     }
     return new Promise((resolve) => {
@@ -309,6 +386,7 @@ export const testDB = {
   },
 
   deleteSubProject: async (projectId: string, subProjectId: string): Promise<Project> => {
+    mockProjects = loadFromStorage(STORAGE_KEYS.PROJECTS, getDefaultProjects());
     const project = mockProjects.find(p => p.id === projectId);
     if (project) {
       const subProject = project.subProjects.find(sp => sp.id === subProjectId);
@@ -316,12 +394,29 @@ export const testDB = {
         project.totalHours -= subProject.timeTotal;
         project.usedHours -= subProject.timeUsed;
         project.subProjects = project.subProjects.filter(sp => sp.id !== subProjectId);
+        saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
       }
     }
     return new Promise((resolve) => {
       setTimeout(() => resolve(project!), 100);
     });
   },
+
+  // ============ UTILITY ============
+  clearAllData: (): void => {
+    localStorage.removeItem(STORAGE_KEYS.USERS);
+    localStorage.removeItem(STORAGE_KEYS.PROJECTS);
+    localStorage.removeItem(STORAGE_KEYS.LOGS);
+    mockUsers = getDefaultUsers();
+    mockProjects = getDefaultProjects();
+    mockLogs = getDefaultLogs();
+    saveToStorage(STORAGE_KEYS.USERS, mockUsers);
+    saveToStorage(STORAGE_KEYS.PROJECTS, mockProjects);
+    saveToStorage(STORAGE_KEYS.LOGS, mockLogs);
+  },
+
+  // Export storage keys for debugging
+  STORAGE_KEYS,
 };
 
 // Export a hook for using the test database
