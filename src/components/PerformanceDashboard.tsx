@@ -1,22 +1,23 @@
 // components/PerformanceDashboard.tsx
-import React, { useState, useEffect } from 'react';
-import { 
-  Search, 
-  ChevronDown, 
+import React, { useState, useEffect } from "react";
+import {
+  Search,
+  ChevronDown,
   ChevronUp,
   Users,
   BarChart3,
   X,
   UserPlus,
   Clock,
-  Calendar
-} from 'lucide-react';
-import './PerformanceDashboard.css';
-import { ViewMode, User, Project } from '../types/models';
-import { formatDate, formatDateLong } from '../utils/dateUtils';
-import { dataService } from '../lib/dataService';
+  Calendar,
+} from "lucide-react";
+import { dataService, supabase } from '../lib/dataService';
+import "./PerformanceDashboard.css";
+import { ViewMode, User, Project } from "../types/models";
+import { formatDate, formatDateLong } from "../utils/dateUtils";
 
-type MemberStatus = 'Active' | 'Left' | 'On Leave';
+
+type MemberStatus = "Active" | "Left" | "On Leave";
 
 type DashboardMember = {
   id: string;
@@ -58,7 +59,7 @@ interface HeatmapDetailData {
   supervisorNotes: string;
   addedSupervisorNotes: string[];
   newSupervisorNote: string;
-  status: 'full' | 'partial' | 'unavailable' | 'no-log';
+  status: "full" | "partial" | "unavailable" | "no-log";
   role: string;
 }
 
@@ -67,32 +68,32 @@ interface HeatmapDetailData {
 // ============================================
 const getRoleBadgeClass = (role: string): string => {
   const roleMap: Record<string, string> = {
-    'supervisor': 'role-supervisor',
-    'developer': 'role-developer',
-    'guest': 'role-guest',
-    'admin': 'role-admin',
-    'project manager': 'role-project-manager',
-    'project-manager': 'role-project-manager',
-    'pm': 'role-pm',
-    'lead': 'role-lead',
-    'team lead': 'role-team-lead',
-    'team-lead': 'role-team-lead',
-    'designer': 'role-designer',
-    'ui/ux': 'role-ui-ux',
-    'ui-ux': 'role-ui-ux',
-    'qa': 'role-qa',
-    'tester': 'role-tester',
-    'devops': 'role-devops',
-    'analyst': 'role-analyst',
-    'business analyst': 'role-business-analyst',
-    'business-analyst': 'role-business-analyst',
-    'contractor': 'role-contractor',
-    'intern': 'role-intern',
-    'consultant': 'role-consultant',
+    supervisor: "role-supervisor",
+    developer: "role-developer",
+    guest: "role-guest",
+    admin: "role-admin",
+    "project manager": "role-project-manager",
+    "project-manager": "role-project-manager",
+    pm: "role-pm",
+    lead: "role-lead",
+    "team lead": "role-team-lead",
+    "team-lead": "role-team-lead",
+    designer: "role-designer",
+    "ui/ux": "role-ui-ux",
+    "ui-ux": "role-ui-ux",
+    qa: "role-qa",
+    tester: "role-tester",
+    devops: "role-devops",
+    analyst: "role-analyst",
+    "business analyst": "role-business-analyst",
+    "business-analyst": "role-business-analyst",
+    contractor: "role-contractor",
+    intern: "role-intern",
+    consultant: "role-consultant",
   };
-  
-  const normalizedRole = role?.toLowerCase() || 'developer';
-  return roleMap[normalizedRole] || 'role-developer';
+
+  const normalizedRole = role?.toLowerCase() || "developer";
+  return roleMap[normalizedRole] || "role-developer";
 };
 
 // ============================================
@@ -100,65 +101,72 @@ const getRoleBadgeClass = (role: string): string => {
 // ============================================
 const getRoleDisplayName = (role: string): string => {
   const displayMap: Record<string, string> = {
-    'supervisor': 'Supervisor',
-    'developer': 'Developer',
-    'guest': 'Guest',
-    'admin': 'Admin',
-    'project manager': 'Project Manager',
-    'project-manager': 'Project Manager',
-    'pm': 'Project Manager',
-    'lead': 'Team Lead',
-    'team lead': 'Team Lead',
-    'team-lead': 'Team Lead',
-    'designer': 'Designer',
-    'ui/ux': 'UI/UX Designer',
-    'ui-ux': 'UI/UX Designer',
-    'qa': 'QA Engineer',
-    'tester': 'Tester',
-    'devops': 'DevOps Engineer',
-    'analyst': 'Analyst',
-    'business analyst': 'Business Analyst',
-    'business-analyst': 'Business Analyst',
-    'contractor': 'Contractor',
-    'intern': 'Intern',
-    'consultant': 'Consultant',
+    supervisor: "Supervisor",
+    developer: "Developer",
+    guest: "Guest",
+    admin: "Admin",
+    "project manager": "Project Manager",
+    "project-manager": "Project Manager",
+    pm: "Project Manager",
+    lead: "Team Lead",
+    "team lead": "Team Lead",
+    "team-lead": "Team Lead",
+    designer: "Designer",
+    "ui/ux": "UI/UX Designer",
+    "ui-ux": "UI/UX Designer",
+    qa: "QA Engineer",
+    tester: "Tester",
+    devops: "DevOps Engineer",
+    analyst: "Analyst",
+    "business analyst": "Business Analyst",
+    "business-analyst": "Business Analyst",
+    contractor: "Contractor",
+    intern: "Intern",
+    consultant: "Consultant",
   };
-  
-  const normalizedRole = role?.toLowerCase() || 'developer';
-  return displayMap[normalizedRole] || role || 'Developer';
+
+  const normalizedRole = role?.toLowerCase() || "developer";
+  return displayMap[normalizedRole] || role || "Developer";
 };
 
-const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ 
-  view, 
-  project, 
-  users, 
+const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
+  view,
+  project,
+  users,
   projectsData,
   onProjectsUpdate,
-  onProjectSelect
+  onProjectSelect,
 }) => {
-  const [activeTab, setActiveTab] = useState<'heatmap' | 'roster' | 'analytics'>('roster');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState<string>('All Users');
-  const [selectedProjectFilter, setSelectedProjectFilter] = useState<string>('All Projects');
-  const [roleFilter, setRoleFilter] = useState<string>('All');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
-  const [sortField, setSortField] = useState<keyof DashboardMember>('name');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [selectedCell, setSelectedCell] = useState<HeatmapDetailData | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    "heatmap" | "roster" | "analytics"
+  >("roster");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUser, setSelectedUser] = useState<string>("All Users");
+  const [selectedProjectFilter, setSelectedProjectFilter] =
+    useState<string>("All Projects");
+  const [roleFilter, setRoleFilter] = useState<string>("All");
+  const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [sortField, setSortField] = useState<keyof DashboardMember>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const [selectedCell, setSelectedCell] = useState<HeatmapDetailData | null>(
+    null,
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [addedSupervisorNotesByCell, setAddedSupervisorNotesByCell] = useState<Record<string, string[]>>({});
+  const [addedSupervisorNotesByCell, setAddedSupervisorNotesByCell] = useState<
+    Record<string, string[]>
+  >({});
   const [showAddMember, setShowAddMember] = useState(false);
   const [newMember, setNewMember] = useState({
-    name: '',
-    email: '',
-    role: 'Developer'
+    name: "",
+    email: "",
+    role: "Developer",
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const isAll = project === 'All Projects';
+  const isAll = project === "All Projects";
 
   useEffect(() => {
-    console.log('PerformanceDashboard: Project changed to:', project);
+    console.log("PerformanceDashboard: Project changed to:", project);
   }, [project]);
 
   // Helper functions
@@ -172,14 +180,16 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   const randFromSeed = (seed: number) => {
-    const a = 9301, c = 49297, m = 233280;
+    const a = 9301,
+      c = 49297,
+      m = 233280;
     return ((seed * a + c) % m) / m;
   };
 
   const deriveEmail = (memberId: string, memberName: string) => {
     const user = users.find((u) => u.id === memberId);
     if (user?.email) return user.email;
-    return `${memberName.toLowerCase().replace(/\s+/g, '.')}@example.com`;
+    return `${memberName.toLowerCase().replace(/\s+/g, ".")}@example.com`;
   };
 
   const deriveMemberSince = (memberId: string, joined: string) => {
@@ -188,20 +198,25 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return joined;
   };
 
-  const deriveStatus = (member: Project['teamMembers'][number]): MemberStatus => {
-    if (member.left) return 'Left';
+  const deriveStatus = (
+    member: Project["teamMembers"][number],
+  ): MemberStatus => {
+    if (member.left) return "Left";
     const seed = hashString(`${member.id}|status|${project}`);
     const rand = randFromSeed(seed);
-    if (member.role === 'Supervisor') {
-      return rand < 0.15 ? 'On Leave' : 'Active';
+    if (member.role === "Supervisor") {
+      return rand < 0.15 ? "On Leave" : "Active";
     }
-    return rand < 0.10 ? 'On Leave' : rand < 0.04 ? 'Left' : 'Active';
+    return rand < 0.1 ? "On Leave" : rand < 0.04 ? "Left" : "Active";
   };
 
-  const deriveActiveHours = (member: Project['teamMembers'][number], status: string) => {
-    if (status === 'Left' || member.left) return 0;
+  const deriveActiveHours = (
+    member: Project["teamMembers"][number],
+    status: string,
+  ) => {
+    if (status === "Left" || member.left) return 0;
     const seed = hashString(`${member.id}|hours|${project}`);
-    const base = member.role === 'Supervisor' ? 36 : 28;
+    const base = member.role === "Supervisor" ? 36 : 28;
     const variation = Math.floor(randFromSeed(seed) * 18);
     return base + variation;
   };
@@ -213,90 +228,99 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   let dashboardTeamMembers: DashboardMember[] = [];
   let projectData: ProjectData = {
-    id: currentProjectData?.id || '0',
-    name: currentProjectData?.name || 'Unknown Project',
-    description: currentProjectData?.description || 'No description available',
+    id: currentProjectData?.id || "0",
+    name: currentProjectData?.name || "Unknown Project",
+    description: currentProjectData?.description || "No description available",
     budget: currentProjectData?.totalHours || 0,
     hoursSpent: currentProjectData?.usedHours || 0,
     teamMembers: [],
   };
 
   if (isAll) {
-    const map = new Map<string, { 
-      id: string; 
-      name: string; 
-      email: string; 
-      memberSince: string; 
-      memberships: { projectName: string; role: string }[] 
-    }>();
+    const map = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        email: string;
+        memberSince: string;
+        memberships: { projectName: string; role: string }[];
+      }
+    >();
 
-    users.forEach(u => {
-      map.set(u.id, { 
-        id: u.id, 
-        name: u.name, 
-        email: u.email || '', 
-        memberSince: u.created || '', 
-        memberships: [] 
+    users.forEach((u) => {
+      map.set(u.id, {
+        id: u.id,
+        name: u.name,
+        email: u.email || "",
+        memberSince: u.created || "",
+        memberships: [],
       });
     });
 
-    projectsData.forEach(p => {
-      p.teamMembers.forEach(m => {
+    projectsData.forEach((p) => {
+      p.teamMembers.forEach((m) => {
         const entry = map.get(m.id);
         if (entry) {
-          entry.memberships.push({ projectName: p.name, role: m.role || 'Developer' });
+          entry.memberships.push({
+            projectName: p.name,
+            role: m.role || "Developer",
+          });
         } else {
           map.set(m.id, {
             id: m.id,
             name: m.name,
             email: deriveEmail(m.id, m.name),
             memberSince: deriveMemberSince(m.id, m.joined),
-            memberships: [{ projectName: p.name, role: m.role || 'Developer' }]
+            memberships: [{ projectName: p.name, role: m.role || "Developer" }],
           });
         }
       });
     });
 
-    dashboardTeamMembers = Array.from(map.values()).map(entry => ({
+    dashboardTeamMembers = Array.from(map.values()).map((entry) => ({
       id: entry.id,
       name: entry.name,
       email: entry.email,
-      role: entry.memberships[0]?.role || 'Developer',
+      role: entry.memberships[0]?.role || "Developer",
       memberSince: entry.memberSince,
       activeHours: 0,
-      status: 'Active' as MemberStatus,
+      status: "Active" as MemberStatus,
       memberships: entry.memberships,
       joined: entry.memberSince,
     }));
 
     projectData = {
-      id: 'all',
-      name: 'All Projects',
-      description: 'Overview of all projects and team members',
+      id: "all",
+      name: "All Projects",
+      description: "Overview of all projects and team members",
       budget: projectsData.reduce((sum, p) => sum + p.totalHours, 0),
       hoursSpent: projectsData.reduce((sum, p) => sum + p.usedHours, 0),
       teamMembers: dashboardTeamMembers,
     };
   } else {
-    dashboardTeamMembers = (currentProjectData?.teamMembers || []).map((member) => {
-      const status = deriveStatus(member);
-      return {
-        id: member.id,
-        name: member.name,
-        email: deriveEmail(member.id, member.name),
-        role: member.role,
-        memberSince: deriveMemberSince(member.id, member.joined),
-        activeHours: deriveActiveHours(member, status),
-        status: status,
-        joined: member.joined,
-        left: member.left,
-      };
-    });
+    dashboardTeamMembers = (currentProjectData?.teamMembers || []).map(
+      (member) => {
+        const status = deriveStatus(member);
+        return {
+          id: member.id,
+          name: member.name,
+          email: deriveEmail(member.id, member.name),
+          role: member.role,
+          memberSince: deriveMemberSince(member.id, member.joined),
+          activeHours: deriveActiveHours(member, status),
+          status: status,
+          joined: member.joined,
+          left: member.left,
+        };
+      },
+    );
 
     projectData = {
-      id: currentProjectData?.id || '0',
-      name: currentProjectData?.name || 'Unknown Project',
-      description: currentProjectData?.description || 'No description available',
+      id: currentProjectData?.id || "0",
+      name: currentProjectData?.name || "Unknown Project",
+      description:
+        currentProjectData?.description || "No description available",
       budget: currentProjectData?.totalHours || 0,
       hoursSpent: currentProjectData?.usedHours || 0,
       teamMembers: dashboardTeamMembers,
@@ -306,71 +330,83 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const { teamMembers, budget, hoursSpent } = projectData;
 
   const getAvailableUsers = () => {
-    const userSet = new Set(teamMembers.map(m => m.name));
-    return ['All Users', ...Array.from(userSet)];
+    const userSet = new Set(teamMembers.map((m) => m.name));
+    return ["All Users", ...Array.from(userSet)];
   };
 
   const getAvailableProjects = () => {
     if (isAll) {
-      return ['All Projects', ...projectsData.map(p => p.name)];
+      return ["All Projects", ...projectsData.map((p) => p.name)];
     }
-    return ['All Projects', project];
+    return ["All Projects", project];
   };
 
   const filteredMembers = teamMembers
-    .filter(member => {
-      const matchesSearch = member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           member.email.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesUser = selectedUser === 'All Users' || member.name === selectedUser;
-      
+    .filter((member) => {
+      const matchesSearch =
+        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesUser =
+        selectedUser === "All Users" || member.name === selectedUser;
+
       let matchesProject = true;
-      if (selectedProjectFilter !== 'All Projects') {
+      if (selectedProjectFilter !== "All Projects") {
         if (isAll) {
-          matchesProject = member.memberships?.some(m => m.projectName === selectedProjectFilter) || false;
+          matchesProject =
+            member.memberships?.some(
+              (m) => m.projectName === selectedProjectFilter,
+            ) || false;
         } else {
           matchesProject = project === selectedProjectFilter;
         }
       }
-      
-      const matchesRole = roleFilter === 'All' || member.role === roleFilter;
-      const matchesStatus = statusFilter === 'All' || member.status === statusFilter;
-      
-      return matchesSearch && matchesUser && matchesProject && matchesRole && matchesStatus;
+
+      const matchesRole = roleFilter === "All" || member.role === roleFilter;
+      const matchesStatus =
+        statusFilter === "All" || member.status === statusFilter;
+
+      return (
+        matchesSearch &&
+        matchesUser &&
+        matchesProject &&
+        matchesRole &&
+        matchesStatus
+      );
     })
     .sort((a, b) => {
-      const aValue = a[sortField as keyof DashboardMember] || '';
-      const bValue = b[sortField as keyof DashboardMember] || '';
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
+      const aValue = a[sortField as keyof DashboardMember] || "";
+      const bValue = b[sortField as keyof DashboardMember] || "";
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortDirection === "asc"
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       }
-      if (typeof aValue === 'number' && typeof bValue === 'number') {
-        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      if (typeof aValue === "number" && typeof bValue === "number") {
+        return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
       return 0;
     });
 
   const handleSort = (field: keyof DashboardMember) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
-      case 'Active':
-        return 'status-active';
-      case 'Left':
-        return 'status-left';
-      case 'On Leave':
-        return 'status-on-leave';
+      case "Active":
+        return "status-active";
+      case "Left":
+        return "status-left";
+      case "On Leave":
+        return "status-on-leave";
       default:
-        return '';
+        return "";
     }
   };
 
@@ -380,48 +416,83 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   const getSortIcon = (field: keyof DashboardMember) => {
     if (sortField !== field) return null;
-    return sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
+    return sortDirection === "asc" ? (
+      <ChevronUp size={14} />
+    ) : (
+      <ChevronDown size={14} />
+    );
   };
 
-  const budgetPercentage = budget > 0 ? Math.round((hoursSpent / budget) * 100) : 0;
+  const budgetPercentage =
+    budget > 0 ? Math.round((hoursSpent / budget) * 100) : 0;
 
   // Heatmap functions
-  const getCellStatus = (member: DashboardMember, dayIndex: number): 'full' | 'partial' | 'unavailable' | 'no-log' => {
-    if (member.activeHours === 0 || member.status === 'Left') {
-      return 'no-log';
+  const getCellStatus = (
+    member: DashboardMember,
+    dayIndex: number,
+  ): "full" | "partial" | "unavailable" | "no-log" => {
+    if (member.activeHours === 0 || member.status === "Left") {
+      return "no-log";
     }
     const seed = hashString(`${member.id}|${dayIndex}|${project}`);
     const rand = randFromSeed(seed);
-    if (rand < 0.40) return 'full';
-    if (rand < 0.75) return 'partial';
-    return 'unavailable';
+    if (rand < 0.4) return "full";
+    if (rand < 0.75) return "partial";
+    return "unavailable";
   };
 
-  const getHoursForStatus = (status: string, member: DashboardMember, dayIndex: number): number => {
-    const seed = hashString(`${member.id}|hours|${dayIndex}|${status}|${project}`);
+  const getHoursForStatus = (
+    status: string,
+    member: DashboardMember,
+    dayIndex: number,
+  ): number => {
+    const seed = hashString(
+      `${member.id}|hours|${dayIndex}|${status}|${project}`,
+    );
     const r = randFromSeed(seed);
     switch (status) {
-      case 'full':
+      case "full":
         return 6 + Math.floor(r * 3);
-      case 'partial':
+      case "partial":
         return 2 + Math.floor(r * 3);
       default:
         return 0;
     }
   };
 
-  const getTasksForStatus = (status: string, member: DashboardMember, dayIndex: number): string[] => {
+  const getTasksForStatus = (
+    status: string,
+    member: DashboardMember,
+    dayIndex: number,
+  ): string[] => {
     const mockTasks = [
-      'RTEST', 'Feature development', 'Bug fixes', 'Code review',
-      'Documentation', 'Testing', 'Deployment', 'Meeting',
-      'Design review', 'Sprint planning', 'Client call',
-      'Code refactoring', 'Database optimization', 'API development',
-      'UI implementation'
+      "RTEST",
+      "Feature development",
+      "Bug fixes",
+      "Code review",
+      "Documentation",
+      "Testing",
+      "Deployment",
+      "Meeting",
+      "Design review",
+      "Sprint planning",
+      "Client call",
+      "Code refactoring",
+      "Database optimization",
+      "API development",
+      "UI implementation",
     ];
-    
-    const seedBase = hashString(`${member.id}|tasks|${dayIndex}|${status}|${project}`);
+
+    const seedBase = hashString(
+      `${member.id}|tasks|${dayIndex}|${status}|${project}`,
+    );
     const r = randFromSeed(seedBase);
-    let numTasks = status === 'full' ? 2 + Math.floor(r * 3) : status === 'partial' ? 1 + Math.floor(r * 2) : 0;
+    let numTasks =
+      status === "full"
+        ? 2 + Math.floor(r * 3)
+        : status === "partial"
+          ? 1 + Math.floor(r * 2)
+          : 0;
 
     const tasksCompleted: string[] = [];
     const usedTasks = new Set<string>();
@@ -438,15 +509,44 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return tasksCompleted;
   };
 
-  const getSupervisorNotes = (status: string, member: DashboardMember, dayIndex: number): string => {
+  const getSupervisorNotes = (
+    status: string,
+    member: DashboardMember,
+    dayIndex: number,
+  ): string => {
     const notesMap: Record<string, string[]> = {
-      'full': ['Excellent work, keep it up!', 'Great progress on tasks.', 'Consistent performance.', 'Meeting all deadlines.', 'Outstanding contribution.'],
-      'partial': ['Good effort, try to log more hours.', 'Partial availability noted.', 'Consider increasing work hours.', 'Balancing multiple priorities.', 'Productive despite limited hours.'],
-      'unavailable': ['No work logged for this day.', 'Day off or unavailable.', 'Please ensure you log your availability.', 'No activity recorded.', 'Unavailable - please update status.'],
-      'no-log': ['No logs available for this day.', 'Please log your availability.', 'Missing data for this date.', 'No activity recorded.']
+      full: [
+        "Excellent work, keep it up!",
+        "Great progress on tasks.",
+        "Consistent performance.",
+        "Meeting all deadlines.",
+        "Outstanding contribution.",
+      ],
+      partial: [
+        "Good effort, try to log more hours.",
+        "Partial availability noted.",
+        "Consider increasing work hours.",
+        "Balancing multiple priorities.",
+        "Productive despite limited hours.",
+      ],
+      unavailable: [
+        "No work logged for this day.",
+        "Day off or unavailable.",
+        "Please ensure you log your availability.",
+        "No activity recorded.",
+        "Unavailable - please update status.",
+      ],
+      "no-log": [
+        "No logs available for this day.",
+        "Please log your availability.",
+        "Missing data for this date.",
+        "No activity recorded.",
+      ],
     };
-    const notes = notesMap[status] || notesMap['no-log'];
-    const seed = hashString(`${member.id}|notes|${dayIndex}|${status}|${project}`);
+    const notes = notesMap[status] || notesMap["no-log"];
+    const seed = hashString(
+      `${member.id}|notes|${dayIndex}|${status}|${project}`,
+    );
     const idx = Math.floor(randFromSeed(seed) * notes.length);
     return notes[idx];
   };
@@ -454,7 +554,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const handleCellClick = (
     member: DashboardMember,
     dayIndex: number,
-    status: 'full' | 'partial' | 'unavailable' | 'no-log'
+    status: "full" | "partial" | "unavailable" | "no-log",
   ) => {
     const hoursWorked = getHoursForStatus(status, member, dayIndex);
     const tasksCompleted = getTasksForStatus(status, member, dayIndex);
@@ -476,9 +576,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       tasksCompleted,
       supervisorNotes,
       addedSupervisorNotes,
-      newSupervisorNote: '',
+      newSupervisorNote: "",
       status,
-      role: member.role
+      role: member.role,
     };
 
     setSelectedCell(detailData);
@@ -491,7 +591,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   const handleNewSupervisorNoteChange = (note: string) => {
-    setSelectedCell((current) => current ? { ...current, newSupervisorNote: note } : current);
+    setSelectedCell((current) =>
+      current ? { ...current, newSupervisorNote: note } : current,
+    );
   };
 
   const handleAddSupervisorNote = () => {
@@ -501,60 +603,62 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     setSelectedCell({
       ...selectedCell,
       addedSupervisorNotes: nextNotes,
-      newSupervisorNote: ''
+      newSupervisorNote: "",
     });
     setAddedSupervisorNotesByCell((notes) => ({
       ...notes,
-      [selectedCell.noteKey]: nextNotes
+      [selectedCell.noteKey]: nextNotes,
     }));
   };
 
   // Add Member Handler
   const handleAddMember = async () => {
     if (!newMember.name.trim() || !newMember.email.trim()) {
-      alert('Please fill in all fields');
+      alert("Please fill in all fields");
       return;
     }
 
     setIsLoading(true);
     try {
-      const currentProject = projectsData.find(p => p.name === project);
+      const currentProject = projectsData.find((p) => p.name === project);
       if (!currentProject) {
-        alert('Project not found');
+        alert("Project not found");
         return;
       }
 
-      const updatedProject = {
-        ...currentProject,
-        teamMembers: [
-          ...currentProject.teamMembers,
-          {
-            id: Date.now().toString(),
-            name: newMember.name,
-            role: newMember.role,
-            joined: new Date().toLocaleDateString('en-GB'),
-          }
-        ]
-      };
+      // Create user profile first
+      const { data: userData, error: userError } = await supabase
+        .from('user_profiles')
+        .insert({
+          full_name: newMember.name,
+          email: newMember.email,
+          role: newMember.role.toLowerCase(),
+        })
+        .select()
+        .single();
 
-      const updatedProjects = projectsData.map(p => 
-        p.id === currentProject.id ? updatedProject : p
+      if (userError) throw userError;
+
+      // Add to project team
+      await dataService.addTeamMember(
+        currentProject.id,
+        userData.id,
+        newMember.role.toLowerCase()
       );
 
+      // Refresh data
+      const refreshedProjects = await dataService.getAllProjects();
       if (onProjectsUpdate) {
-        onProjectsUpdate(updatedProjects);
+        onProjectsUpdate(refreshedProjects);
       }
 
-      setNewMember({ name: '', email: '', role: 'Developer' });
+      setNewMember({ name: "", email: "", role: "Developer" });
       setShowAddMember(false);
       
-      const freshData = await dataService.getProjects();
-      if (onProjectsUpdate) {
-        onProjectsUpdate(freshData);
-      }
+      alert("Member added successfully!");
     } catch (error) {
-      console.error('Error adding member:', error);
-      alert('Failed to add member. Please try again.');
+      console.error("Error adding member:", error);
+      alert("Failed to add member. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -589,8 +693,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       <div className="page-header">
         <div className="page-header-content">
           <div>
-            <h2 
-              style={{ cursor: onProjectSelect ? 'pointer' : 'default' }}
+            <h2
+              style={{ cursor: onProjectSelect ? "pointer" : "default" }}
               onClick={() => {
                 if (!isAll && onProjectSelect) {
                   handleProjectNameClick(project);
@@ -599,10 +703,15 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             >
               {project}
             </h2>
-            <span className="project-description">{projectData.description}</span>
+            <span className="project-description">
+              {projectData.description}
+            </span>
           </div>
-          {view === 'supervisor' && !isAll && (
-            <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
+          {view === "supervisor" && !isAll && (
+            <button
+              className="add-member-btn"
+              onClick={() => setShowAddMember(true)}
+            >
               <UserPlus size={16} />
               Add Member
             </button>
@@ -615,23 +724,23 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           <h3>Performance Dashboard</h3>
           {!isAll && (
             <div className="dashboard-tabs">
-              <button 
-                className={`tab-btn ${activeTab === 'heatmap' ? 'active' : ''}`}
-                onClick={() => setActiveTab('heatmap')}
+              <button
+                className={`tab-btn ${activeTab === "heatmap" ? "active" : ""}`}
+                onClick={() => setActiveTab("heatmap")}
               >
                 <Calendar size={14} />
                 Heatmap
               </button>
-              <button 
-                className={`tab-btn ${activeTab === 'roster' ? 'active' : ''}`}
-                onClick={() => setActiveTab('roster')}
+              <button
+                className={`tab-btn ${activeTab === "roster" ? "active" : ""}`}
+                onClick={() => setActiveTab("roster")}
               >
                 <Users size={14} />
                 Team Roster
               </button>
-              <button 
-                className={`tab-btn ${activeTab === 'analytics' ? 'active' : ''}`}
-                onClick={() => setActiveTab('analytics')}
+              <button
+                className={`tab-btn ${activeTab === "analytics" ? "active" : ""}`}
+                onClick={() => setActiveTab("analytics")}
               >
                 <BarChart3 size={14} />
                 Analytics
@@ -640,37 +749,41 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           )}
         </div>
 
-        {activeTab === 'roster' && (
+        {activeTab === "roster" && (
           <div className="roster-section">
             <div className="timeline-filters">
               <div className="filter-group">
                 <label>User</label>
-                <select 
-                  value={selectedUser} 
+                <select
+                  value={selectedUser}
                   onChange={(e) => setSelectedUser(e.target.value)}
                   className="filter-select"
                 >
                   {getAvailableUsers().map((user) => (
-                    <option key={user} value={user}>{user}</option>
+                    <option key={user} value={user}>
+                      {user}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="filter-group">
                 <label>Project</label>
-                <select 
-                  value={selectedProjectFilter} 
+                <select
+                  value={selectedProjectFilter}
                   onChange={(e) => setSelectedProjectFilter(e.target.value)}
                   className="filter-select"
                 >
                   {getAvailableProjects().map((p) => (
-                    <option key={p} value={p}>{p}</option>
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className="filter-group">
                 <label>Role</label>
-                <select 
-                  value={roleFilter} 
+                <select
+                  value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
                   className="filter-select"
                 >
@@ -681,8 +794,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               </div>
               <div className="filter-group">
                 <label>Status</label>
-                <select 
-                  value={statusFilter} 
+                <select
+                  value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   className="filter-select"
                 >
@@ -710,21 +823,36 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               <table className="roster-table">
                 <thead>
                   <tr>
-                    <th onClick={() => handleSort('name')} className="sortable-header">
-                      Member {getSortIcon('name')}
+                    <th
+                      onClick={() => handleSort("name")}
+                      className="sortable-header"
+                    >
+                      Member {getSortIcon("name")}
                     </th>
-                    <th onClick={() => handleSort('email')} className="sortable-header">
-                      Email {getSortIcon('email')}
+                    <th
+                      onClick={() => handleSort("email")}
+                      className="sortable-header"
+                    >
+                      Email {getSortIcon("email")}
                     </th>
                     <th>Role / Projects</th>
-                    <th onClick={() => handleSort('memberSince')} className="sortable-header">
-                      Member Since {getSortIcon('memberSince')}
+                    <th
+                      onClick={() => handleSort("memberSince")}
+                      className="sortable-header"
+                    >
+                      Member Since {getSortIcon("memberSince")}
                     </th>
-                    <th onClick={() => handleSort('activeHours')} className="sortable-header">
-                      Active Hours {getSortIcon('activeHours')}
+                    <th
+                      onClick={() => handleSort("activeHours")}
+                      className="sortable-header"
+                    >
+                      Active Hours {getSortIcon("activeHours")}
                     </th>
-                    <th onClick={() => handleSort('status')} className="sortable-header">
-                      Status {getSortIcon('status')}
+                    <th
+                      onClick={() => handleSort("status")}
+                      className="sortable-header"
+                    >
+                      Status {getSortIcon("status")}
                     </th>
                   </tr>
                 </thead>
@@ -740,10 +868,16 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                       <td>{member.email}</td>
                       <td>
                         {isAll && member.memberships ? (
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: 8,
+                              flexWrap: "wrap",
+                            }}
+                          >
                             {member.memberships.map((m) => (
-                              <span 
-                                key={`${member.id}-${m.projectName}`} 
+                              <span
+                                key={`${member.id}-${m.projectName}`}
                                 className={`role-badge ${getRoleBadgeClass(m.role)}`}
                               >
                                 {getRoleDisplayName(m.role)} · {m.projectName}
@@ -751,7 +885,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                             ))}
                           </div>
                         ) : (
-                          <span className={`role-badge ${getRoleBadgeClass(member.role)}`}>
+                          <span
+                            className={`role-badge ${getRoleBadgeClass(member.role)}`}
+                          >
                             {getRoleDisplayName(member.role)}
                           </span>
                         )}
@@ -759,7 +895,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                       <td>{formatDate(member.memberSince)}</td>
                       <td>{member.activeHours}h</td>
                       <td>
-                        <span className={`status-badge ${getStatusBadgeClass(member.status)}`}>
+                        <span
+                          className={`status-badge ${getStatusBadgeClass(member.status)}`}
+                        >
                           {member.status}
                         </span>
                       </td>
@@ -771,7 +909,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           </div>
         )}
 
-        {!isAll && activeTab === 'heatmap' && (
+        {!isAll && activeTab === "heatmap" && (
           <div className="heatmap-section">
             <h4>Availability Heatmap (Last 30 Working Days)</h4>
             <div className="heatmap-placeholder">
@@ -781,22 +919,26 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                     <span className="member-name">
                       <span className="member-name-text">
                         {member.name}
-                        {member.status === 'Left' && <span className="member-status-left"> (left)</span>}
+                        {member.status === "Left" && (
+                          <span className="member-status-left"> (left)</span>
+                        )}
                       </span>
-                      {member.role === 'Supervisor' && (
-                        <span className="member-role-badge supervisor-badge">Supervisor</span>
+                      {member.role === "Supervisor" && (
+                        <span className="member-role-badge supervisor-badge">
+                          Supervisor
+                        </span>
                       )}
                     </span>
                     <div className="heatmap-row">
                       {Array.from({ length: 30 }, (_, i) => {
                         const status = getCellStatus(member, i);
                         return (
-                          <div 
-                            key={i} 
+                          <div
+                            key={i}
                             className={`heatmap-cell ${status}`}
                             onClick={() => handleCellClick(member, i, status)}
-                            title={`${member.name} - ${status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}`}
-                            style={{ cursor: 'pointer' }}
+                            title={`${member.name} - ${status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}`}
+                            style={{ cursor: "pointer" }}
                           />
                         );
                       })}
@@ -815,7 +957,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           </div>
         )}
 
-        {!isAll && activeTab === 'analytics' && (
+        {!isAll && activeTab === "analytics" && (
           <div className="analytics-section">
             <div className="budget-section">
               <div className="budget-info">
@@ -824,12 +966,14 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   <span className="hours-spent">{hoursSpent}h</span>
                   <span className="budget-separator">/</span>
                   <span className="budget-total">{budget}h</span>
-                  <span className="budget-percentage">({budgetPercentage}%)</span>
+                  <span className="budget-percentage">
+                    ({budgetPercentage}%)
+                  </span>
                 </span>
               </div>
               <div className="budget-bar">
-                <div 
-                  className="budget-bar-fill" 
+                <div
+                  className="budget-bar-fill"
                   style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                 />
               </div>
@@ -845,7 +989,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                     </div>
                     <div className="stat-info">
                       <span className="stat-name">{member.name}</span>
-                      <span className={`role-badge ${getRoleBadgeClass(member.role)}`} style={{ fontSize: '11px', padding: '2px 10px' }}>
+                      <span
+                        className={`role-badge ${getRoleBadgeClass(member.role)}`}
+                        style={{ fontSize: "11px", padding: "2px 10px" }}
+                      >
                         {getRoleDisplayName(member.role)}
                       </span>
                     </div>
@@ -863,11 +1010,15 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                         <Calendar size={12} />
                         Since
                       </span>
-                      <span className="stat-value">{formatDate(member.memberSince)}</span>
+                      <span className="stat-value">
+                        {formatDate(member.memberSince)}
+                      </span>
                     </div>
                     <div className="stat-item">
                       <span className="stat-label">Status</span>
-                      <span className={`stat-status ${member.status === 'Active' ? 'status-active' : 'status-left'}`}>
+                      <span
+                        className={`stat-status ${member.status === "Active" ? "status-active" : "status-left"}`}
+                      >
                         {member.status}
                       </span>
                     </div>
@@ -882,15 +1033,22 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       {/* Heatmap Detail Modal */}
       {isModalOpen && selectedCell && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal heatmap-detail-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="modal heatmap-detail-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <div className="modal-header-info">
                 <h3>{selectedCell.memberName}</h3>
-                <span className={`role-badge ${getRoleBadgeClass(selectedCell.role)}`} style={{ fontSize: '11px', padding: '2px 12px' }}>
+                <span
+                  className={`role-badge ${getRoleBadgeClass(selectedCell.role)}`}
+                  style={{ fontSize: "11px", padding: "2px 12px" }}
+                >
                   {getRoleDisplayName(selectedCell.role)}
                 </span>
                 <span className={`status-badge-small ${selectedCell.status}`}>
-                  {selectedCell.status.charAt(0).toUpperCase() + selectedCell.status.slice(1).replace('-', ' ')}
+                  {selectedCell.status.charAt(0).toUpperCase() +
+                    selectedCell.status.slice(1).replace("-", " ")}
                 </span>
               </div>
               <button className="close-btn" onClick={closeModal}>
@@ -903,7 +1061,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               </div>
 
               <div className="detail-item detail-hours">
-                <span className="detail-value hours-value-large">{selectedCell.hoursWorked}</span>
+                <span className="detail-value hours-value-large">
+                  {selectedCell.hoursWorked}
+                </span>
                 <span className="detail-label">hours worked</span>
               </div>
 
@@ -911,7 +1071,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 <span className="detail-label">Tasks Completed</span>
                 <div className="task-tags">
                   {selectedCell.tasksCompleted.map((task, index) => (
-                    <span key={index} className="task-tag">{task}</span>
+                    <span key={index} className="task-tag">
+                      {task}
+                    </span>
                   ))}
                   {selectedCell.tasksCompleted.length === 0 && (
                     <span className="no-tasks">No tasks completed</span>
@@ -922,26 +1084,29 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               <div className="detail-item detail-notes">
                 <span className="detail-label">Supervisor Notes</span>
                 <p className="notes-text">{selectedCell.supervisorNotes}</p>
-
                 {selectedCell.addedSupervisorNotes.length > 0 && (
                   <>
                     {selectedCell.addedSupervisorNotes.map((note, index) => (
-                      <p key={`${selectedCell.noteKey}-${index}`} className="notes-text added-note-text">
+                      <p
+                        key={`${selectedCell.noteKey}-${index}`}
+                        className="notes-text added-note-text"
+                      >
                         {note}
                       </p>
                     ))}
                   </>
                 )}
-
-                {view === 'supervisor' && (
+                {view === "supervisor" && (
                   <div className="notes-input-container">
                     <textarea
                       className="notes-input"
                       value={selectedCell.newSupervisorNote}
-                      onChange={(e) => handleNewSupervisorNoteChange(e.target.value)}
+                      onChange={(e) =>
+                        handleNewSupervisorNoteChange(e.target.value)
+                      }
                       placeholder="Write a new supervisor note..."
                     />
-                    <button 
+                    <button
                       className="add-note-btn"
                       onClick={handleAddSupervisorNote}
                       disabled={!selectedCell.newSupervisorNote.trim()}
@@ -961,14 +1126,23 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         </div>
       )}
 
-      {/* Add Member Modal - Centered Popup */}
+      {/* Add Member Modal */}
       {showAddMember && (
-        <div className="modal-overlay" onClick={() => setShowAddMember(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="modal-overlay-centered"
+          onClick={() => setShowAddMember(false)}
+        >
+          <div
+            className="modal-centered"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3>Add Member to {project}</h3>
-              <button className="close-btn" onClick={() => setShowAddMember(false)}>
-                <X size={18} />
+              <button
+                className="close-btn"
+                onClick={() => setShowAddMember(false)}
+              >
+                <X size={20} />
               </button>
             </div>
             <div className="modal-body">
@@ -979,7 +1153,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 <input
                   type="text"
                   value={newMember.name}
-                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      name: e.target.value,
+                    })
+                  }
                   placeholder="Enter member name"
                 />
               </div>
@@ -990,7 +1169,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 <input
                   type="email"
                   value={newMember.email}
-                  onChange={(e) => setNewMember({ ...newMember, email: e.target.value })}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      email: e.target.value,
+                    })
+                  }
                   placeholder="Enter email address"
                 />
               </div>
@@ -998,8 +1182,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 <label>Role</label>
                 <select
                   value={newMember.role}
-                  onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-                  className="form-select"
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      role: e.target.value,
+                    })
+                  }
                 >
                   <option value="Developer">Developer</option>
                   <option value="Supervisor">Supervisor</option>
@@ -1007,15 +1195,20 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               </div>
             </div>
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowAddMember(false)}>
+              <button
+                className="cancel-btn"
+                onClick={() => setShowAddMember(false)}
+              >
                 Cancel
               </button>
-              <button 
-                className="create-btn" 
+              <button
+                className="create-btn"
                 onClick={handleAddMember}
-                disabled={!newMember.name || !newMember.email || isLoading}
+                disabled={
+                  !newMember.name || !newMember.email || isLoading
+                }
               >
-                {isLoading ? 'Adding...' : 'Add Member'}
+                {isLoading ? "Adding..." : "Add Member"}
               </button>
             </div>
           </div>

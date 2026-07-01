@@ -39,6 +39,9 @@ export interface SubProject {
   name: string;
   timeUsed: number;
   timeTotal: number;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Project {
@@ -49,6 +52,8 @@ export interface Project {
   usedHours: number;
   subProjects: SubProject[];
   teamMembers: TeamMember[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Task {

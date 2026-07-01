@@ -1,4 +1,4 @@
-// App.tsx - Fixed version
+// src/App.tsx
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import Header from "./components/Header";
@@ -22,14 +22,8 @@ interface AppState {
 }
 
 const App: React.FC = () => {
-  // ============================================================
-  // ✅ ALL HOOKS MUST BE CALLED AT THE TOP LEVEL
-  // ============================================================
-  
-  // 1. Auth hook
   const { user, loading: authLoading, signOut } = useAuth();
   
-  // 2. State hooks
   const [state, setState] = useState<AppState>({
     view: "supervisor",
     currentPage: "dashboard",
@@ -40,126 +34,102 @@ const App: React.FC = () => {
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [usersData, setUsersData] = useState<User[]>([]);
   const [taskLogs, setTaskLogs] = useState<LogEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  // 3. useEffect for data loading
+  // Load data from Supabase
   useEffect(() => {
     if (!user) return;
     
     const loadData = async () => {
       try {
         setIsLoading(true);
+        setError(null);
         console.log("🔄 Loading data from Supabase...");
+        
         const { users, projects, logs } = await dataService.getAllData();
+        
         console.log("✅ Data loaded:", {
           users: users.length,
           projects: projects.length,
           logs: logs.length,
         });
+        
         setUsersData(users);
         setProjectsData(projects);
         setTaskLogs(logs);
       } catch (error) {
         console.error("❌ Error loading data:", error);
+        setError("Failed to load data. Please refresh the page.");
       } finally {
         setIsLoading(false);
       }
     };
+    
     loadData();
   }, [user]);
 
-  // 4. useEffect for syncing users
-  useEffect(() => {
-    if (projectsData.length > 0 && usersData.length > 0) {
-      // This function needs to be defined before use
-      const reconciled = usersData.map((u) => {
-        if (u.project) {
-          const proj = projectsData.find((p) => p.name === u.project);
-          const member = proj?.teamMembers.find((m) => m.id === u.id);
-          if (member) return { ...u, role: member.role, project: proj!.name };
-        }
-        // ... rest of reconciliation logic
-        return u;
-      });
-      setUsersData(reconciled);
+  // Refresh data function
+  const refreshData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const { users, projects, logs } = await dataService.refreshData();
+      setUsersData(users);
+      setProjectsData(projects);
+      setTaskLogs(logs);
+      console.log("✅ Data refreshed successfully");
+    } catch (error) {
+      console.error("❌ Error refreshing data:", error);
+      setError("Failed to refresh data.");
+    } finally {
+      setIsLoading(false);
     }
-  }, [projectsData, state.selectedProject]);
+  };
 
-  // 5. Helper functions can be defined after hooks
-  // (They're not hooks, so they can be anywhere)
-  const currentProjectData =
-    projectsData.find((p) => p.name === state.selectedProject) ||
-    projectsData[0];
+  // Derive current user info
+  const currentProjectData = projectsData.find((p) => p.name === state.selectedProject) || projectsData[0];
 
   const deriveCurrentUser = () => {
-    if (!currentProjectData || isLoading)
-      return { name: user?.user_metadata?.name || "Guest", email: user?.email || "guest@localhost" };
+    if (!currentProjectData || isLoading) {
+      return { 
+        name: user?.user_metadata?.full_name || user?.user_metadata?.display_name || "Guest", 
+        email: user?.email || "guest@localhost" 
+      };
+    }
 
-    const preferredRole =
-      state.view === "supervisor" ? "Supervisor" : "Developer";
+    const preferredRole = state.view === "supervisor" ? "Supervisor" : "Developer";
     let member = currentProjectData.teamMembers.find(
-      (m) => m.role === preferredRole,
+      (m) => m.role.toLowerCase() === preferredRole.toLowerCase(),
     );
     if (!member) member = currentProjectData.teamMembers[0];
-    const name = member?.name || user?.user_metadata?.name || "Guest";
+    const name = member?.name || user?.user_metadata?.full_name || user?.user_metadata?.display_name || "Guest";
     const email = usersData.find((u) => u.name === name)?.email || user?.email || "guest@localhost";
     return { name, email };
   };
 
-  const { name: currentUserName, email: currentUserEmail } =
-    deriveCurrentUser();
+  const { name: currentUserName, email: currentUserEmail } = deriveCurrentUser();
 
-  // ============================================================
-  // ✅ NOW conditional returns are safe - ALL hooks are already called
-  // ============================================================
-  
-  // Show loading screen while checking auth
-  if (authLoading) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-spinner"></div>
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  // If not authenticated, show login
-  if (!user) {
-    return <Login />;
-  }
-
-  // ============================================================
-  // The rest of the component (event handlers, render logic)
-  // ============================================================
-  
   // Handlers
-  const handleAddTaskLog = (log: Omit<LogEntry, "id" | "submittedAt">) => {
-    const newLog: LogEntry = {
-      ...log,
-      id: Date.now().toString(),
-      submittedAt: new Date().toISOString(),
-    };
-
-    setTaskLogs((prevLogs) => [newLog, ...prevLogs]);
-    setProjectsData((prevProjects) =>
-      prevProjects.map((projectData) => {
-        if (projectData.name === log.project) {
-          return {
-            ...projectData,
-            usedHours: projectData.usedHours + log.hoursWorked,
-          };
-        }
-        return projectData;
-      }),
-    );
-
-    dataService
-      .createLog({
+  const handleAddTaskLog = async (log: Omit<LogEntry, "id" | "submittedAt">) => {
+    try {
+      const newLog = await dataService.createLog({
         ...log,
         submittedById: user?.id || "1",
-      })
-      .catch(console.error);
-
-    return newLog;
+        submittedBy: currentUserName,
+      });
+      
+      setTaskLogs((prevLogs) => [newLog, ...prevLogs]);
+      
+      // Refresh project data to update used hours
+      const refreshedProjects = await dataService.getAllProjects();
+      setProjectsData(refreshedProjects);
+      
+      return newLog;
+    } catch (error) {
+      console.error("Error adding task log:", error);
+      alert("Failed to add task log. Please try again.");
+      throw error;
+    }
   };
 
   const handleViewSwitch = (view: ViewMode) => {
@@ -180,12 +150,12 @@ const App: React.FC = () => {
     });
   };
 
-  const handleProjectsUpdate = (updatedProjects: Project[]) => {
+  const handleProjectsUpdate = async (updatedProjects: Project[]) => {
     setProjectsData(updatedProjects);
-    setUsersData((prevUsers) => {
-      // Reconciliation logic here
-      return prevUsers;
-    });
+    // Update user data based on project changes
+    const refreshedUsers = await dataService.getAllUsers();
+    setUsersData(refreshedUsers);
+    
     const stillExists = updatedProjects.some(
       (p) => p.name === state.selectedProject,
     );
@@ -194,11 +164,16 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUsersUpdate = (updatedUsers: User[]) => {
+  const handleUsersUpdate = async (updatedUsers: User[]) => {
     setUsersData(updatedUsers);
-    updatedUsers.forEach(async (user) => {
-      await dataService.updateUser(user.id, user).catch(console.error);
-    });
+    // Save each user update to Supabase
+    for (const user of updatedUsers) {
+      try {
+        await dataService.updateUser(user.id, user);
+      } catch (error) {
+        console.error(`Error updating user ${user.name}:`, error);
+      }
+    }
   };
 
   const handleLogout = async () => {
@@ -207,6 +182,7 @@ const App: React.FC = () => {
       setProjectsData([]);
       setUsersData([]);
       setTaskLogs([]);
+      setError(null);
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -215,14 +191,22 @@ const App: React.FC = () => {
   // Render page based on current state
   const renderPage = () => {
     if (isLoading) {
-      return <div className="loading">Loading...</div>;
+      return <div className="loading">Loading data from Supabase...</div>;
+    }
+
+    if (error) {
+      return (
+        <div className="error-container">
+          <p className="error-message">⚠️ {error}</p>
+          <button className="retry-btn" onClick={refreshData}>Retry</button>
+        </div>
+      );
     }
 
     if (state.view === "developer" && state.currentPage === "dashboard") {
-      const effectiveProject =
-        state.selectedProject === "All Projects"
-          ? projectsData[0]?.name || ""
-          : state.selectedProject;
+      const effectiveProject = state.selectedProject === "All Projects"
+        ? projectsData[0]?.name || ""
+        : state.selectedProject;
 
       return (
         <DeveloperDashboard
@@ -301,6 +285,21 @@ const App: React.FC = () => {
   };
 
   const projectNames = projectsData.map((p) => p.name);
+
+  // Auth loading
+  if (authLoading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Authenticating...</p>
+      </div>
+    );
+  }
+
+  // Not authenticated
+  if (!user) {
+    return <Login />;
+  }
 
   return (
     <div className="app-container">

@@ -1,6 +1,6 @@
-// src/contexts/AuthContext.tsx
+// src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth, testAuth } from '../lib/supabase';
+import { auth } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -29,12 +29,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Get initial session
     const initAuth = async () => {
       try {
         console.log('🔄 Initializing auth...');
         
-        // Try to get session from localStorage
         const session = await auth.getSession();
         if (session?.user) {
           console.log('✅ Session found for:', session.user.email);
@@ -53,7 +51,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    // Set up auth state change listener
     const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
       console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
       
@@ -66,11 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setLoading(false);
-    });
-
-    // Test auth on mount
-    testAuth().then(() => {
-      console.log('✅ Auth test complete');
     });
 
     return () => {

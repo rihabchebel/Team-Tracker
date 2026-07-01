@@ -52,7 +52,6 @@ export const auth = {
     }
     console.log('✅ Sign in successful:', data);
     
-    // Store session in localStorage for debugging
     if (data.session) {
       localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
     }
@@ -67,7 +66,6 @@ export const auth = {
       console.error('❌ Sign out error:', error);
       throw error;
     }
-    // Clear stored session
     localStorage.removeItem('supabase.auth.token');
     console.log('✅ Sign out successful');
   },
@@ -139,7 +137,6 @@ export const auth = {
     return data;
   },
 
-  // Refresh session - useful for when users are created in the database
   refreshSession: async () => {
     console.log('🔄 Refreshing session...');
     try {
@@ -156,7 +153,6 @@ export const auth = {
     }
   },
 
-  // Check if user is authenticated
   isAuthenticated: async (): Promise<boolean> => {
     const session = await auth.getSession();
     return !!session;
@@ -274,12 +270,10 @@ export type SupabaseClient = typeof supabase;
 // HELPER FUNCTIONS
 // ============================================
 
-// Check if Supabase is configured
 export const isSupabaseConfigured = () => {
   return !!supabaseUrl && !!supabaseAnonKey;
 };
 
-// Get the current user's ID (for RLS policies)
 export const getCurrentUserId = async () => {
   try {
     const { data } = await supabase.auth.getUser();
@@ -290,7 +284,6 @@ export const getCurrentUserId = async () => {
   }
 };
 
-// Get the current user's session
 export const getCurrentSession = async () => {
   try {
     const { data } = await supabase.auth.getSession();
@@ -301,11 +294,10 @@ export const getCurrentSession = async () => {
   }
 };
 
-// Get user profile from public.users table
 export const getUserProfile = async (userId: string) => {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from('user_profiles')
       .select('*')
       .eq('id', userId)
       .single();
@@ -314,6 +306,7 @@ export const getUserProfile = async (userId: string) => {
       console.error('Error getting user profile:', error);
       return null;
     }
+    // Return the data directly, not data.user
     return data;
   } catch (error) {
     console.error('Error getting user profile:', error);
@@ -321,32 +314,28 @@ export const getUserProfile = async (userId: string) => {
   }
 };
 
-// Get current user with profile
 export const getCurrentUserWithProfile = async () => {
   try {
-    const user = await auth.getUser();
-    if (!user) return null;
+    const { data } = await supabase.auth.getUser();
+    if (!data?.user) return null;
     
-    const profile = await getUserProfile(user.id);
-    return { ...user, profile };
+    const profile = await getUserProfile(data.user.id);
+    return { ...data.user, profile };
   } catch (error) {
     console.error('Error getting current user with profile:', error);
     return null;
   }
 };
 
-// Helper to format date for Supabase
 export const formatDateForDB = (date: string | Date): string => {
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toISOString().split('T')[0];
 };
 
-// Helper to get current date in ISO format
 export const getCurrentDateISO = (): string => {
   return new Date().toISOString();
 };
 
-// Helper to get current date in DD/MM/YYYY format
 export const getCurrentDateFormatted = (): string => {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
@@ -359,7 +348,6 @@ export const getCurrentDateFormatted = (): string => {
 // TEST HELPERS
 // ============================================
 
-// Test function to check if auth is working
 export const testAuth = async () => {
   console.log('🧪 Testing auth...');
   try {

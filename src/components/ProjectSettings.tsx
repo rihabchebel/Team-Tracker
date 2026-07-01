@@ -2,9 +2,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ProjectSettings.css';
 import { formatDate } from '../utils/dateUtils';
-import { ViewMode, Project, SubProject } from '../types/models';
-import { dataService } from '../lib/dataService';
-import { Plus, Minus, Edit2, Trash2, X, Clock, Users } from 'lucide-react';
+import { ViewMode, Project, SubProject, TeamMember } from '../types/models';
+import { dataService, supabase } from '../lib/dataService';
+import { Plus, Minus, Edit2, Trash2, X, Clock, Users, AlertTriangle } from 'lucide-react';
 
 interface ProjectSettingsProps {
   view: ViewMode;
@@ -13,6 +13,67 @@ interface ProjectSettingsProps {
   onProjectsUpdate: (projects: Project[]) => void;
   onProjectSelect?: (project: string) => void;
 }
+
+// ============================================
+// DELETE CONFIRMATION MODAL COMPONENT
+// ============================================
+interface DeleteConfirmModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  itemName: string;
+  itemDetail?: string;
+  isLoading?: boolean;
+}
+
+const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  itemName,
+  itemDetail,
+  isLoading = false,
+}) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay-centered" onClick={onClose}>
+      <div className="modal-centered delete-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header delete-header">
+          <div className="delete-icon-wrapper">
+            <AlertTriangle size={24} className="delete-icon" />
+          </div>
+          <h3>{title}</h3>
+          <button className="close-btn" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+        <div className="modal-body delete-body">
+          <p className="delete-message">{message}</p>
+          <div className="delete-item-info">
+            <div className="delete-item-name">{itemName}</div>
+            {itemDetail && <div className="delete-item-detail">{itemDetail}</div>}
+          </div>
+          <p className="delete-warning">
+            This action cannot be undone. All associated data will be permanently removed.
+          </p>
+        </div>
+        <div className="modal-footer delete-footer">
+          <button className="cancel-btn" onClick={onClose} disabled={isLoading}>
+            Cancel
+          </button>
+          <button className="delete-confirm-btn" onClick={onConfirm} disabled={isLoading}>
+            {isLoading ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ProjectSettings: React.FC<ProjectSettingsProps> = ({ 
   view: _view,
@@ -31,6 +92,35 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   const [editSubProjectData, setEditSubProjectData] = useState<SubProject | null>(null);
   const [localProjects, setLocalProjects] = useState<Project[]>(projectsData);
   const isInternalUpdate = useRef(false);
+
+  // ============================================
+  // ADD MEMBER STATE
+  // ============================================
+  const [showAddMember, setShowAddMember] = useState(false);
+  const [newMember, setNewMember] = useState({
+    name: '',
+    email: '',
+    role: 'Developer'
+  });
+  const [isAddingMember, setIsAddingMember] = useState(false);
+
+  // ============================================
+  // DELETE CONFIRMATION STATE
+  // ============================================
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    type: 'project' | 'subproject' | 'member';
+    id: string;
+    name: string;
+    detail?: string;
+  }>({
+    isOpen: false,
+    type: 'project',
+    id: '',
+    name: '',
+    detail: '',
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!isInternalUpdate.current) {
@@ -59,97 +149,90 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     }
   };
 
-  const calculateTotalUsedHours = (subProjects: SubProject[]) => {
-    return subProjects.reduce((sum, sp) => sum + sp.timeUsed, 0);
+  // ============================================
+  // RECALCULATE PROJECT TOTALS IN DATABASE
+  // ============================================
+  const recalculateProjectTotals = async (projectId: string) => {
+    try {
+      // Get all sub-projects for this project
+      const { data: allSubProjects, error: fetchError } = await supabase
+        .from('sub_projects')
+        .select('*')
+        .eq('project_id', projectId);
+
+      if (fetchError) throw fetchError;
+
+      // Calculate totals
+      const totalHours = allSubProjects.reduce((sum: number, sp: any) => sum + (sp.time_total || 0), 0);
+      const totalUsed = allSubProjects.reduce((sum: number, sp: any) => sum + (sp.time_used || 0), 0);
+
+      // Update project totals
+      const { error: updateError } = await supabase
+        .from('projects')
+        .update({
+          total_hours: totalHours,
+          used_hours: totalUsed,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', projectId);
+
+      if (updateError) throw updateError;
+
+      return { totalHours, totalUsed };
+    } catch (error) {
+      console.error('Error recalculating project totals:', error);
+      throw error;
+    }
   };
 
-  const calculateTotalHours = (subProjects: SubProject[]) => {
-    return subProjects.reduce((sum, sp) => sum + sp.timeTotal, 0);
+  // ============================================
+  // REFRESH PROJECTS
+  // ============================================
+  const refreshProjects = async () => {
+    try {
+      const refreshedProjects = await dataService.getAllProjects();
+      setLocalProjects(refreshedProjects);
+      onProjectsUpdate(refreshedProjects);
+    } catch (error) {
+      console.error('Error refreshing projects:', error);
+    }
   };
 
+  // ============================================
+  // SUB-PROJECT CRUD
+  // ============================================
   const handleAddSubProject = async () => {
     if (!currentProject || !newSubProject.name.trim()) return;
     
     setLoading(true);
     try {
-      const updatedProject = await dataService.addSubProject(
-        currentProject.id,
-        {
+      // Add sub-project to database
+      const { data: newSub, error } = await supabase
+        .from('sub_projects')
+        .insert({
+          project_id: currentProject.id,
           name: newSubProject.name,
-          timeUsed: 0,
-          timeTotal: newSubProject.timeTotal,
-        }
-      );
-      
-      const existingSubProjects = currentProject.subProjects;
-      const newSubProjectData = updatedProject.subProjects.find(
-        sp => !existingSubProjects.some(ex => ex.id === sp.id)
-      );
-      
-      const mergedSubProjects = [...existingSubProjects];
-      if (newSubProjectData) {
-        mergedSubProjects.push(newSubProjectData);
-      }
-      
-      const totalHours = calculateTotalHours(mergedSubProjects);
-      const totalUsed = calculateTotalUsedHours(mergedSubProjects);
-      
-      const mergedProject = {
-        ...updatedProject,
-        subProjects: mergedSubProjects,
-        totalHours: totalHours,
-        usedHours: totalUsed,
-      };
-      
-      isInternalUpdate.current = true;
-      const updatedProjects = localProjects.map(p => 
-        p.id === currentProject.id ? mergedProject : p
-      );
-      setLocalProjects(updatedProjects);
-      onProjectsUpdate(updatedProjects);
+          time_used: 0,
+          time_total: newSubProject.timeTotal,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Sub-project created:', newSub);
+
+      // Recalculate project totals
+      await recalculateProjectTotals(currentProject.id);
+
+      // Refresh projects
+      await refreshProjects();
       
       setNewSubProject({ name: '', timeTotal: 50 });
       setShowAddSubProject(false);
     } catch (error) {
       console.error('Error adding sub-project:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteSubProject = async (subProjectId: string) => {
-    if (!currentProject) return;
-    if (!window.confirm('Delete this sub-project?')) return;
-    
-    setLoading(true);
-    try {
-      const updatedProject = await dataService.deleteSubProject(
-        currentProject.id,
-        subProjectId
-      );
-      
-      const remainingSubProjects = currentProject.subProjects.filter(
-        sp => sp.id !== subProjectId
-      );
-      
-      const totalHours = calculateTotalHours(remainingSubProjects);
-      const totalUsed = calculateTotalUsedHours(remainingSubProjects);
-      
-      const mergedProject = {
-        ...updatedProject,
-        subProjects: remainingSubProjects,
-        totalHours: totalHours,
-        usedHours: totalUsed,
-      };
-      
-      isInternalUpdate.current = true;
-      const updatedProjects = localProjects.map(p => 
-        p.id === currentProject.id ? mergedProject : p
-      );
-      setLocalProjects(updatedProjects);
-      onProjectsUpdate(updatedProjects);
-    } catch (error) {
-      console.error('Error deleting sub-project:', error);
+      alert('Failed to add sub-project. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -160,39 +243,58 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     
     setLoading(true);
     try {
-      const updatedProject = await dataService.updateSubProject(
-        currentProject.id,
-        subProjectId,
-        updates
-      );
-      
-      const existingSubProjects = currentProject.subProjects;
-      const updatedSubProjects = existingSubProjects.map(sp => {
-        const updated = updatedProject.subProjects.find(u => u.id === sp.id);
-        return updated || sp;
-      });
-      
-      const totalHours = calculateTotalHours(updatedSubProjects);
-      const totalUsed = calculateTotalUsedHours(updatedSubProjects);
-      
-      const mergedProject = {
-        ...updatedProject,
-        subProjects: updatedSubProjects,
-        totalHours: totalHours,
-        usedHours: totalUsed,
-      };
-      
-      isInternalUpdate.current = true;
-      const updatedProjects = localProjects.map(p => 
-        p.id === currentProject.id ? mergedProject : p
-      );
-      setLocalProjects(updatedProjects);
-      onProjectsUpdate(updatedProjects);
+      // Update sub-project
+      const { error } = await supabase
+        .from('sub_projects')
+        .update({
+          name: updates.name,
+          time_used: updates.timeUsed,
+          time_total: updates.timeTotal,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', subProjectId)
+        .eq('project_id', currentProject.id);
+
+      if (error) throw error;
+
+      // Recalculate project totals
+      await recalculateProjectTotals(currentProject.id);
+
+      // Refresh projects
+      await refreshProjects();
       
       setEditingSubProject(null);
       setEditSubProjectData(null);
     } catch (error) {
       console.error('Error updating sub-project:', error);
+      alert('Failed to update sub-project. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSubProject = async (subProjectId: string) => {
+    if (!currentProject) return;
+    
+    setLoading(true);
+    try {
+      // Delete sub-project
+      const { error } = await supabase
+        .from('sub_projects')
+        .delete()
+        .eq('id', subProjectId)
+        .eq('project_id', currentProject.id);
+
+      if (error) throw error;
+
+      // Recalculate project totals
+      await recalculateProjectTotals(currentProject.id);
+
+      // Refresh projects
+      await refreshProjects();
+    } catch (error) {
+      console.error('Error deleting sub-project:', error);
+      alert('Failed to delete sub-project. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -208,6 +310,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     });
   };
 
+  // ============================================
+  // PROJECT CRUD
+  // ============================================
   const handleAddProject = async () => {
     if (!newProject.name.trim()) return;
     
@@ -222,10 +327,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         teamMembers: [],
       });
       
-      isInternalUpdate.current = true;
-      const updatedProjects = [...localProjects, created];
-      setLocalProjects(updatedProjects);
-      onProjectsUpdate(updatedProjects);
+      await refreshProjects();
       
       setNewProject({ name: '', description: '', totalHours: 300 });
       setShowAddProject(false);
@@ -235,6 +337,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       }
     } catch (error) {
       console.error('Error creating project:', error);
+      alert('Failed to create project. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -245,26 +348,140 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       alert('Cannot delete the last project');
       return;
     }
-    if (!window.confirm('Delete this project?')) return;
     
     setLoading(true);
     try {
       await dataService.deleteProject(projectId);
-      const updatedProjects = localProjects.filter(p => p.id !== projectId);
-      isInternalUpdate.current = true;
-      setLocalProjects(updatedProjects);
-      onProjectsUpdate(updatedProjects);
+      await refreshProjects();
       
-      if (onProjectSelect && updatedProjects.length > 0) {
-        onProjectSelect(updatedProjects[0].name);
+      if (onProjectSelect && localProjects.length > 1) {
+        const remainingProjects = localProjects.filter(p => p.id !== projectId);
+        if (remainingProjects.length > 0) {
+          onProjectSelect(remainingProjects[0].name);
+        }
       }
     } catch (error) {
       console.error('Error deleting project:', error);
+      alert('Failed to delete project. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  // ============================================
+  // DELETE HANDLERS WITH CONFIRMATION
+  // ============================================
+  const confirmDelete = (type: 'project' | 'subproject' | 'member', id: string, name: string, detail?: string) => {
+    setDeleteModal({
+      isOpen: true,
+      type,
+      id,
+      name,
+      detail,
+    });
+  };
+
+  const handleDeleteConfirmed = async () => {
+    const { type, id, name } = deleteModal;
+    setIsDeleting(true);
+
+    try {
+      switch (type) {
+        case 'project':
+          await handleDeleteProject(id);
+          break;
+        case 'subproject':
+          await handleDeleteSubProject(id);
+          break;
+        case 'member':
+          await handleRemoveMember(id);
+          break;
+      }
+      alert(`${name} deleted successfully!`);
+    } catch (error) {
+      console.error(`Error deleting ${type}:`, error);
+      alert(`Failed to delete ${name}. Please try again.`);
+    } finally {
+      setIsDeleting(false);
+      setDeleteModal({ isOpen: false, type: 'project', id: '', name: '', detail: '' });
+    }
+  };
+
+  // ============================================
+  // TEAM MEMBER CRUD
+  // ============================================
+  const handleAddMember = async () => {
+    if (!currentProject) {
+      alert('No project selected');
+      return;
+    }
+    
+    if (!newMember.name.trim() || !newMember.email.trim()) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    const existingMember = currentProject.teamMembers?.find(
+      (m: TeamMember) => m.name.toLowerCase() === newMember.name.toLowerCase()
+    );
+    if (existingMember) {
+      alert('This member already exists in the project.');
+      return;
+    }
+
+    setIsAddingMember(true);
+    try {
+      // First create the user profile
+      const { data: userData, error: userError } = await supabase
+        .from('user_profiles')
+        .insert({
+          full_name: newMember.name,
+          email: newMember.email,
+          role: newMember.role.toLowerCase(),
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      // Add to team members
+      await dataService.addTeamMember(
+        currentProject.id,
+        userData.id,
+        newMember.role.toLowerCase()
+      );
+
+      // Refresh data
+      await refreshProjects();
+
+      setNewMember({ name: '', email: '', role: 'Developer' });
+      setShowAddMember(false);
+      
+      alert('Member added successfully!');
+    } catch (error) {
+      console.error('Error adding member:', error);
+      alert('Failed to add member. Please try again.');
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!currentProject) return;
+
+    try {
+      await dataService.removeTeamMember(currentProject.id, memberId);
+      await refreshProjects();
+    } catch (error) {
+      console.error('Error removing member:', error);
+      throw error;
+    }
+  };
+
+  // ============================================
+  // HELPERS
+  // ============================================
   const getProgressPercentage = (used: number, total: number) => {
     return total > 0 ? Math.round((used / total) * 100) : 0;
   };
@@ -276,19 +493,33 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       : 0;
   };
 
+  const getRoleBadgeClass = (role: string): string => {
+    const normalizedRole = role?.toLowerCase() || 'developer';
+    return normalizedRole === 'supervisor' ? 'role-supervisor' : 'role-developer';
+  };
+
+  const getRoleDisplayName = (role: string): string => {
+    const normalizedRole = role?.toLowerCase() || 'developer';
+    return normalizedRole === 'supervisor' ? 'Supervisor' : 'Developer';
+  };
+
+  // ============================================
+  // RENDER
+  // ============================================
   if (!localProjects || localProjects.length === 0) {
     return (
       <div className="project-settings-container">
-        <div className="page-header">
-          <div className="page-header-content">
-            <div>
-              <h2>Project Settings</h2>
-              <span className="project-description">No projects available</span>
-            </div>
+        <div className="project-selector">
+          <div className="project-selector-header">
+            <h3>Projects</h3>
+            <button className="add-project-btn" onClick={() => setShowAddProject(true)}>
+              <Plus size={16} />
+              New Project
+            </button>
           </div>
-        </div>
-        <div className="dashboard-content">
-          <p>Loading projects...</p>
+          <div className="project-list">
+            <div className="no-projects">No projects available. Create one!</div>
+          </div>
         </div>
       </div>
     );
@@ -297,15 +528,33 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   if (!currentProject) {
     return (
       <div className="project-settings-container">
-        <div className="page-header">
-          <div className="page-header-content">
-            <div>
-              <h2>{project}</h2>
-              <span className="project-description">Project not found</span>
-            </div>
+        <div className="project-selector">
+          <div className="project-selector-header">
+            <h3>Projects</h3>
+            <button className="add-project-btn" onClick={() => setShowAddProject(true)}>
+              <Plus size={16} />
+              New Project
+            </button>
+          </div>
+          <div className="project-list">
+            {localProjects.map((p) => (
+              <div
+                key={p.id}
+                className="project-item"
+                onClick={() => handleProjectClick(p.name)}
+              >
+                <div className="project-item-header">
+                  <div className="project-item-info">
+                    <span className="project-item-name">{p.name}</span>
+                    <span className="project-item-hours">{p.totalHours}h</span>
+                  </div>
+                </div>
+                <div className="project-item-description">{p.description}</div>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="dashboard-content">
+        <div className="time-tracking-section">
           <p>Project not found. Please select a different project.</p>
         </div>
       </div>
@@ -314,6 +563,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
   return (
     <div className="project-settings-container">
+      {/* Project Selector */}
       <div className="project-selector">
         <div className="project-selector-header">
           <h3>Projects</h3>
@@ -335,16 +585,18 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   <span className="project-item-name">{p.name}</span>
                   <span className="project-item-hours">{p.totalHours}h</span>
                 </div>
-                <button 
-                  className="delete-project-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteProject(p.id);
-                  }}
-                  title="Delete project"
-                >
-                  <X size={16} />
-                </button>
+                {localProjects.length > 1 && (
+                  <button 
+                    className="delete-project-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      confirmDelete('project', p.id, p.name, p.description);
+                    }}
+                    title="Delete project"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
               </div>
               <div className="project-item-description">{p.description}</div>
             </div>
@@ -352,6 +604,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
       </div>
 
+      {/* Time Tracking Section */}
       <div className="time-tracking-section">
         <div className="section-header">
           <h3>{currentProject.name} - Time Tracking</h3>
@@ -410,7 +663,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                     </button>
                     <button 
                       className="action-btn delete-btn"
-                      onClick={() => handleDeleteSubProject(subProject.id)}
+                      onClick={() => confirmDelete('subproject', subProject.id, subProject.name, `${subProject.timeUsed}/${subProject.timeTotal}h`)}
                       title="Delete sub-project"
                     >
                       <Trash2 size={14} />
@@ -442,11 +695,14 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
       </div>
 
-      {/* Team Members Section - Updated with supervisor/developer only */}
+      {/* Team Members Section */}
       <div className="team-members-section">
         <div className="section-header">
-          <h3>Team Members</h3>
-          <button className="add-member-btn">
+          <h3>
+            <Users size={16} />
+            Team Members ({currentProject.teamMembers?.length || 0})
+          </h3>
+          <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
             <Users size={16} />
             Add Member
           </button>
@@ -460,27 +716,33 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   <th>Name</th>
                   <th>Role</th>
                   <th>Joined</th>
-                  <th>Left</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {currentProject.teamMembers.map((member) => (
                   <tr key={member.id}>
-                    <td>{member.name}</td>
                     <td>
-                      <span className={`role-badge ${member.role === 'supervisor' ? 'role-supervisor' : 'role-developer'}`}>
-                        {member.role === 'supervisor' ? 'Supervisor' : 'Developer'}
+                      <div className="member-info">
+                        <div className="member-avatar">
+                          {member.name?.charAt(0) || '?'}
+                        </div>
+                        <span>{member.name}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`role-badge ${getRoleBadgeClass(member.role)}`}>
+                        {getRoleDisplayName(member.role)}
                       </span>
                     </td>
                     <td>{formatDate(member.joined)}</td>
-                    <td>{member.left ? formatDate(member.left) : '—'}</td>
                     <td>
                       <div className="action-buttons">
-                        <button className="action-btn edit-btn" title="Edit member">
-                          <Edit2 size={14} />
-                        </button>
-                        <button className="action-btn delete-btn" title="Remove member">
+                        <button 
+                          className="action-btn delete-btn" 
+                          onClick={() => confirmDelete('member', member.id, member.name, member.role)}
+                          title="Remove member"
+                        >
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -494,6 +756,10 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
           )}
         </div>
       </div>
+
+      {/* ============================================
+          MODALS
+          ============================================ */}
 
       {/* Add Sub-Project Modal */}
       {showAddSubProject && (
@@ -513,6 +779,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   value={newSubProject.name}
                   onChange={(e) => setNewSubProject({ ...newSubProject, name: e.target.value })}
                   placeholder="Enter sub-project name"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddSubProject();
+                    }
+                  }}
                 />
               </div>
               <div className="form-group">
@@ -523,6 +795,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   onChange={(e) => setNewSubProject({ ...newSubProject, timeTotal: parseInt(e.target.value) || 0 })}
                   min="1"
                   step="1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddSubProject();
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -559,6 +837,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   type="text"
                   value={editSubProjectData.name}
                   onChange={(e) => setEditSubProjectData({ ...editSubProjectData, name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveEditedSubProject();
+                    }
+                  }}
                 />
               </div>
               <div className="form-group">
@@ -569,6 +853,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   onChange={(e) => setEditSubProjectData({ ...editSubProjectData, timeTotal: parseInt(e.target.value) || 0 })}
                   min="1"
                   step="1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveEditedSubProject();
+                    }
+                  }}
                 />
               </div>
               <div className="form-group">
@@ -580,6 +870,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   min="0"
                   max={editSubProjectData.timeTotal}
                   step="1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveEditedSubProject();
+                    }
+                  }}
                 />
               </div>
             </div>
@@ -645,6 +941,106 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
           </div>
         </div>
       )}
+
+      {/* Add Member Modal */}
+      {showAddMember && (
+        <div className="modal-overlay-centered" onClick={() => setShowAddMember(false)}>
+          <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Member to {currentProject.name}</h3>
+              <button className="close-btn" onClick={() => setShowAddMember(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>
+                  Member Name <span className="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newMember.name}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      name: e.target.value,
+                    })
+                  }
+                  placeholder="Enter member name"
+                />
+              </div>
+              <div className="form-group">
+                <label>
+                  Email <span className="required">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={newMember.email}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      email: e.target.value,
+                    })
+                  }
+                  placeholder="Enter email address"
+                />
+              </div>
+              <div className="form-group">
+                <label>Role</label>
+                <select
+                  value={newMember.role}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      role: e.target.value,
+                    })
+                  }
+                >
+                  <option value="Developer">Developer</option>
+                  <option value="Supervisor">Supervisor</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="cancel-btn"
+                onClick={() => setShowAddMember(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="create-btn"
+                onClick={handleAddMember}
+                disabled={
+                  !newMember.name || !newMember.email || isAddingMember
+                }
+              >
+                {isAddingMember ? 'Adding...' : 'Add Member'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, type: 'project', id: '', name: '', detail: '' })}
+        onConfirm={handleDeleteConfirmed}
+        title={
+          deleteModal.type === 'project' ? 'Delete Project' :
+          deleteModal.type === 'subproject' ? 'Delete Sub-Project' :
+          'Remove Member'
+        }
+        message={
+          deleteModal.type === 'project' ? 'Are you sure you want to delete this project?' :
+          deleteModal.type === 'subproject' ? 'Are you sure you want to delete this sub-project?' :
+          'Are you sure you want to remove this team member?'
+        }
+        itemName={deleteModal.name}
+        itemDetail={deleteModal.detail}
+        isLoading={isDeleting}
+      />
     </div>
   );
 };

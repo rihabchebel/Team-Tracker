@@ -47,7 +47,27 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
     'T': 'test'
   };
 
-  const filteredUsers = users.filter(user =>
+  // Get users that have access to the current project
+  const getProjectUsers = () => {
+    if (project === 'All Projects') {
+      return users;
+    }
+    
+    const currentProject = projectsData.find(p => p.name === project);
+    if (!currentProject) return users;
+    
+    const memberIds = currentProject.teamMembers.map(m => m.id);
+    const projectUsers = users.filter(u => memberIds.includes(u.id));
+    
+    // If no users have access to this project, show all users
+    if (projectUsers.length === 0) {
+      return users.map(u => ({ ...u, project: project }));
+    }
+    
+    return projectUsers;
+  };
+
+  const filteredUsers = getProjectUsers().filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -117,9 +137,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
     );
     onUsersUpdate(updatedUsers);
 
-    // Update team members in-place across projects. If the user was previously a member,
-    // update their name/role. If the user is assigned to a new project (updatedUser.project)
-    // and wasn't previously assigned, add them to that project.
+    // Update team members in-place across projects
     const updatedProjects = projectsData.map((projectData) => {
       const hasMember = projectData.teamMembers.some(member => member.id === updatedUser.id);
       let nextTeamMembers = projectData.teamMembers;
