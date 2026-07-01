@@ -25,16 +25,18 @@ const AllTasks: React.FC<AllTasksProps> = ({
   );
   const [selectedUser, setSelectedUser] = useState<string>('All Users');
 
-  // Update when project prop changes from App
   useEffect(() => {
     if (project === 'All Projects') {
       setSelectedProject('All Projects');
     } else {
       setSelectedProject(project);
     }
-  }, [project]);
+    const filtered = taskLogs.filter(log => 
+      selectedProject === 'All Projects' || log.project === selectedProject
+    );
+    setFilteredLogs(filtered);
+  }, [project, taskLogs]);
 
-  
   const getUniqueUsers = () => {
     if (usersData && usersData.length > 0) {
       return ['All Users', ...usersData.map(u => u.name)];
@@ -103,8 +105,6 @@ const AllTasks: React.FC<AllTasksProps> = ({
     }
   };
 
-  //const canLogAvailability = view === 'supervisor';
-
   return (
     <div className="all-tasks">
       <div className="page-header">
@@ -115,9 +115,6 @@ const AllTasks: React.FC<AllTasksProps> = ({
               A unified view of every task logged across projects
             </span>
           </div>
-         
-          
-          
         </div>
       </div>
 

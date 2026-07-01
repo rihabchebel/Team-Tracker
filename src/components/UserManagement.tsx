@@ -480,7 +480,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
         onClose={handleCloseEditModal}
         onSave={handleSaveUser}
         projects={projects}
-        currentUserRole={view}
       />
 
       {/* Delete User Confirmation Modal */}

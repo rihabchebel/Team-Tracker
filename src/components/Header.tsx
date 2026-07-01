@@ -1,14 +1,15 @@
 // components/Header.tsx
 import React from 'react';
-import { User } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import './Header.css';
 
 interface HeaderProps {
   user: string;
   email: string;
+  onLogout?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ user, email }) => {
+const Header: React.FC<HeaderProps> = ({ user, email, onLogout }) => {
   return (
     <header className="header">
       <div className="header-left">
@@ -19,9 +20,13 @@ const Header: React.FC<HeaderProps> = ({ user, email }) => {
       </div>
       <div className="header-right">
         <div className="user-info">
-          <User size={16} className="user-icon" />
           <span className="user-name">{user}</span>
           <span className="user-email">{email}</span>
+          {onLogout && (
+            <button className="logout-button" onClick={onLogout} title="Logout">
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </div>
     </header>

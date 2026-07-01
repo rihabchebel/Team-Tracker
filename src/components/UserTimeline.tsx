@@ -24,6 +24,7 @@ interface UserTimelineProps {
 }
 
 const UserTimeline: React.FC<UserTimelineProps> = ({ 
+  view: _view,
   project, 
   users, 
   projectsData 
@@ -33,7 +34,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
     project === 'All Projects' ? 'All projects' : project
   );
 
-  // Update when project prop changes from App
   useEffect(() => {
     if (project === 'All Projects') {
       setSelectedProject('All projects');
@@ -42,7 +42,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
     }
   }, [project]);
 
-  // Build project users mapping
   const projectUsers: Record<string, string[]> = projectsData.reduce((acc, projectData) => {
     acc[projectData.name] = projectData.teamMembers.map(member => member.name);
     return acc;
@@ -51,8 +50,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
   const allUsers = ['All users', ...Array.from(new Set(users.map(user => user.name)))];
   const allProjects = ['All projects', ...projectsData.map((p) => p.name)];
 
- 
-  // Generate timeline events based on selected project and user
   const getTimelineEvents = (): TimelineEvent[] => {
     const events: TimelineEvent[] = [];
     const months = ['Mar 26', 'Apr 26', 'May 26', 'Jun 26'];
@@ -70,10 +67,8 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
       'Design review'
     ];
 
-    // Get users for the selected project
     let usersList: string[] = [];
     if (selectedProject === 'All projects') {
-      // Get all users from all projects
       Object.values(projectUsers).forEach((projectUserList) => {
         projectUserList.forEach((user) => {
           if (!usersList.includes(user)) {
@@ -85,12 +80,10 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
       usersList = projectUsers[selectedProject];
     }
 
-    // Filter by user
     if (selectedUser !== 'All users') {
       usersList = usersList.filter(u => u === selectedUser);
     }
 
-    // Generate events for each user
     usersList.forEach((user) => {
       const numEvents = 3 + Math.floor(Math.random() * 4);
       for (let i = 0; i < numEvents; i++) {
@@ -99,10 +92,8 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
         const type = types[Math.floor(Math.random() * types.length)];
         const description = descriptions[Math.floor(Math.random() * descriptions.length)];
         
-        // Determine which project this event belongs to
         let eventProject = selectedProject;
         if (selectedProject === 'All projects') {
-          // Assign to a random project the user is part of
           const userProjects = Object.keys(projectUsers).filter(p => 
             projectUsers[p].includes(user)
           );
@@ -124,7 +115,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
       }
     });
 
-    // Sort by date
     events.sort((a, b) => {
       const dateA = new Date(a.date);
       const dateB = new Date(b.date);
@@ -136,7 +126,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
 
   const timelineEvents = getTimelineEvents();
 
-  // Group events by month
   const groupedEvents: Record<string, TimelineEvent[]> = {};
   timelineEvents.forEach(event => {
     const month = event.date.split(' ')[0] + ' ' + event.date.split(' ')[1];
@@ -146,7 +135,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
     groupedEvents[month].push(event);
   });
 
-  // Get unique users for the selected project
   const getAvailableUsers = () => {
     if (selectedProject === 'All projects') {
       return allUsers;
@@ -154,12 +142,10 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
     return ['All users', ...(projectUsers[selectedProject] || [])];
   };
 
-  // Get unique projects for the selected user
   const getAvailableProjects = () => {
     if (selectedUser === 'All users') {
       return allProjects;
     }
-    // Find which projects the selected user belongs to
     const userProjects = Object.keys(projectUsers).filter(p => 
       projectUsers[p].includes(selectedUser)
     );
@@ -197,7 +183,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
     }
   };
 
-  // Get users for the current selected project (for sidebar display)
   const getProjectUsers = () => {
     if (selectedProject === 'All projects') {
       return [];
@@ -229,7 +214,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
           </p>
         </div>
 
-        {/* Filters */}
         <div className="timeline-filters">
           <div className="filter-group">
             <label>User</label>
@@ -257,7 +241,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
           </div>
         </div>
 
-        {/* Timeline */}
         <div className="timeline-container">
           {Object.keys(groupedEvents).length === 0 ? (
             <div className="no-events">
@@ -303,7 +286,6 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
           )}
         </div>
 
-        {/* Project Users Sidebar */}
         {selectedProject !== 'All projects' && getProjectUsers().length > 0 && (
           <div className="project-users-sidebar">
             <h4>{selectedProject}</h4>

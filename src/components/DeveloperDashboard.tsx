@@ -1,7 +1,7 @@
 // components/DeveloperDashboard.tsx
 import React, { useState } from "react";
 import "./DeveloperDashboard.css";
-import { Plus, Trash2, Calendar, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import { Plus, Trash2, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
 
 export type ViewMode = "supervisor" | "developer";
 
@@ -157,7 +157,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
           </div>
           <div className="user-info">
             <span className="user-name">{currentUser}</span>
-            <span className="user-role">Developer</span>
+            <span className="user-role"></span>
           </div>
         </div>
       </div>
@@ -168,8 +168,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
           <div className="form-group">
             <label>Date</label>
+            
             <div className="date-input-wrapper">
-              <Calendar size={16} className="input-icon" />
+             
               <input
                 type="date"
                 value={selectedDate}

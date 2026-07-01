@@ -24,6 +24,7 @@ interface SidebarProps {
   onViewSwitch: (view: ViewMode) => void;
   onPageChange: (page: PageType) => void;
   onProjectSelect: (project: string) => void;
+  onLogout?: () => void; // Add this
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -33,7 +34,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   projects,
   onViewSwitch,
   onPageChange,
-  onProjectSelect
+  onProjectSelect,
+  onLogout // Add this
 }) => {
   const navigationItems = [
     { id: 'dashboard' as PageType, label: 'All Projects', icon: LayoutDashboard },
@@ -43,9 +45,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'users' as PageType, label: 'Manage Users', icon: Users },
   ];
 
-  // Handle dashboard click - always set to All Projects and dashboard page
   const handleDashboardClick = () => {
-    onProjectSelect('All Projects'); // This will set selectedProject to 'All Projects' and currentPage to 'dashboard'
+    onProjectSelect('All Projects');
   };
 
   return (
@@ -96,7 +97,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <ul className="nav-list">
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              // Check if this nav item is active
               const isActive = item.id === 'dashboard' 
                 ? currentPage === 'dashboard' && selectedProject === 'All Projects'
                 : currentPage === item.id;
@@ -107,7 +107,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                   className={`nav-item ${isActive ? 'active' : ''}`}
                   onClick={() => {
                     if (item.id === 'dashboard') {
-                      // Dashboard always shows All Projects
                       handleDashboardClick();
                     } else {
                       onPageChange(item.id);
@@ -124,7 +123,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Logout */}
         <div className="logout-section">
-          <button className="logout-btn">
+          <button 
+            className="logout-btn" 
+            onClick={onLogout}
+          >
             <LogOut className="logout-icon" size={16} />
             Log Out
           </button>

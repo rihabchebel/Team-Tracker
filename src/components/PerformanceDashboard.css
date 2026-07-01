@@ -196,7 +196,7 @@
 }
 
 /* ============================================
-   ROSTER TABLE
+   ROSTER TABLE - COMPLETE ROLE BADGES
    ============================================ */
 .roster-section {
   overflow-x: auto;
@@ -268,29 +268,102 @@
   flex-shrink: 0;
 }
 
+/* ============================================
+   ROLE BADGES - ALL ROLES COMPLETE
+   ============================================ */
 .role-badge {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
+  text-transform: capitalize;
 }
 
+/* Supervisor roles */
 .role-supervisor {
   background: linear-gradient(135deg, #6c5ce7, #4f72e8);
   color: white;
 }
 
+/* Developer roles */
 .role-developer {
   background: linear-gradient(135deg, #00b894, #00a884);
   color: white;
 }
 
+/* Guest role */
 .role-guest {
-  background: #b2bec3;
+  background: linear-gradient(135deg, #b2bec3, #95a5a6);
   color: white;
 }
 
+/* Admin role */
+.role-admin {
+  background: linear-gradient(135deg, #e17055, #d63031);
+  color: white;
+}
+
+/* Project Manager role */
+.role-project-manager,
+.role-pm {
+  background: linear-gradient(135deg, #0984e3, #6c5ce7);
+  color: white;
+}
+
+/* Lead role */
+.role-lead,
+.role-team-lead {
+  background: linear-gradient(135deg, #fdcb6e, #f39c12);
+  color: #1a1a2e;
+}
+
+/* Designer role */
+.role-designer,
+.role-ui-ux {
+  background: linear-gradient(135deg, #fd79a8, #e84393);
+  color: white;
+}
+
+/* QA / Tester role */
+.role-qa,
+.role-tester {
+  background: linear-gradient(135deg, #74b9ff, #0984e3);
+  color: white;
+}
+
+/* DevOps role */
+.role-devops {
+  background: linear-gradient(135deg, #55efc4, #00b894);
+  color: #1a1a2e;
+}
+
+/* Analyst role */
+.role-analyst,
+.role-business-analyst {
+  background: linear-gradient(135deg, #fdcb6e, #e17055);
+  color: #1a1a2e;
+}
+
+/* Contractor role */
+.role-contractor {
+  background: linear-gradient(135deg, #dfe6e9, #b2bec3);
+  color: #1a1a2e;
+}
+
+/* Intern role */
+.role-intern {
+  background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+  color: white;
+}
+
+/* Consultant role */
+.role-consultant {
+  background: linear-gradient(135deg, #fd79a8, #e84393);
+  color: white;
+}
+
+/* Status badges */
 .status-badge {
   display: inline-block;
   padding: 4px 12px;

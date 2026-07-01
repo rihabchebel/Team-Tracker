@@ -1,5 +1,5 @@
 // components/ProjectSettings.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './ProjectSettings.css';
 import { formatDate } from '../utils/dateUtils';
 import { ViewMode, Project, SubProject } from '../types/models';
@@ -15,7 +15,7 @@ interface ProjectSettingsProps {
 }
 
 const ProjectSettings: React.FC<ProjectSettingsProps> = ({ 
-  view: _view, // Prefix with underscore to indicate intentionally unused
+  view: _view,
   project, 
   projectsData, 
   onProjectsUpdate,
@@ -29,26 +29,42 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   const [newProject, setNewProject] = useState({ name: '', description: '', totalHours: 300 });
   const [loading, setLoading] = useState(false);
   const [editSubProjectData, setEditSubProjectData] = useState<SubProject | null>(null);
+  const [localProjects, setLocalProjects] = useState<Project[]>(projectsData);
+  const isInternalUpdate = useRef(false);
 
-  // Get the current project - updates when project prop changes
-  const currentProject = projectsData?.find(p => p.name === project) || projectsData?.[0] || null;
+  useEffect(() => {
+    if (!isInternalUpdate.current) {
+      setLocalProjects(projectsData);
+    }
+    isInternalUpdate.current = false;
+  }, [projectsData]);
 
-  // Set selected project ID when currentProject changes
+  const currentProject = localProjects?.find(p => p.name === project) || localProjects?.[0] || null;
+
   useEffect(() => {
     if (currentProject) {
       setSelectedProjectId(currentProject.id);
     }
   }, [currentProject]);
 
-  // Handle project click - notify parent App
   const handleProjectClick = (projectName: string) => {
-    const clickedProject = projectsData.find(p => p.name === projectName);
+    if (projectName === project) return;
+    
+    const clickedProject = localProjects.find(p => p.name === projectName);
     if (clickedProject) {
       setSelectedProjectId(clickedProject.id);
       if (onProjectSelect) {
         onProjectSelect(projectName);
       }
     }
+  };
+
+  const calculateTotalUsedHours = (subProjects: SubProject[]) => {
+    return subProjects.reduce((sum, sp) => sum + sp.timeUsed, 0);
+  };
+
+  const calculateTotalHours = (subProjects: SubProject[]) => {
+    return subProjects.reduce((sum, sp) => sum + sp.timeTotal, 0);
   };
 
   const handleAddSubProject = async () => {
@@ -65,9 +81,31 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         }
       );
       
-      const updatedProjects = projectsData.map(p => 
-        p.id === currentProject.id ? updatedProject : p
+      const existingSubProjects = currentProject.subProjects;
+      const newSubProjectData = updatedProject.subProjects.find(
+        sp => !existingSubProjects.some(ex => ex.id === sp.id)
       );
+      
+      const mergedSubProjects = [...existingSubProjects];
+      if (newSubProjectData) {
+        mergedSubProjects.push(newSubProjectData);
+      }
+      
+      const totalHours = calculateTotalHours(mergedSubProjects);
+      const totalUsed = calculateTotalUsedHours(mergedSubProjects);
+      
+      const mergedProject = {
+        ...updatedProject,
+        subProjects: mergedSubProjects,
+        totalHours: totalHours,
+        usedHours: totalUsed,
+      };
+      
+      isInternalUpdate.current = true;
+      const updatedProjects = localProjects.map(p => 
+        p.id === currentProject.id ? mergedProject : p
+      );
+      setLocalProjects(updatedProjects);
       onProjectsUpdate(updatedProjects);
       
       setNewSubProject({ name: '', timeTotal: 50 });
@@ -90,9 +128,25 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         subProjectId
       );
       
-      const updatedProjects = projectsData.map(p => 
-        p.id === currentProject.id ? updatedProject : p
+      const remainingSubProjects = currentProject.subProjects.filter(
+        sp => sp.id !== subProjectId
       );
+      
+      const totalHours = calculateTotalHours(remainingSubProjects);
+      const totalUsed = calculateTotalUsedHours(remainingSubProjects);
+      
+      const mergedProject = {
+        ...updatedProject,
+        subProjects: remainingSubProjects,
+        totalHours: totalHours,
+        usedHours: totalUsed,
+      };
+      
+      isInternalUpdate.current = true;
+      const updatedProjects = localProjects.map(p => 
+        p.id === currentProject.id ? mergedProject : p
+      );
+      setLocalProjects(updatedProjects);
       onProjectsUpdate(updatedProjects);
     } catch (error) {
       console.error('Error deleting sub-project:', error);
@@ -101,7 +155,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     }
   };
 
-  // Fix: handleUpdateSubProject should accept parameters
   const handleUpdateSubProject = async (subProjectId: string, updates: Partial<SubProject>) => {
     if (!currentProject) return;
     
@@ -113,9 +166,27 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         updates
       );
       
-      const updatedProjects = projectsData.map(p => 
-        p.id === currentProject.id ? updatedProject : p
+      const existingSubProjects = currentProject.subProjects;
+      const updatedSubProjects = existingSubProjects.map(sp => {
+        const updated = updatedProject.subProjects.find(u => u.id === sp.id);
+        return updated || sp;
+      });
+      
+      const totalHours = calculateTotalHours(updatedSubProjects);
+      const totalUsed = calculateTotalUsedHours(updatedSubProjects);
+      
+      const mergedProject = {
+        ...updatedProject,
+        subProjects: updatedSubProjects,
+        totalHours: totalHours,
+        usedHours: totalUsed,
+      };
+      
+      isInternalUpdate.current = true;
+      const updatedProjects = localProjects.map(p => 
+        p.id === currentProject.id ? mergedProject : p
       );
+      setLocalProjects(updatedProjects);
       onProjectsUpdate(updatedProjects);
       
       setEditingSubProject(null);
@@ -127,7 +198,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     }
   };
 
-  // Fix: Save edited sub-project
   const handleSaveEditedSubProject = async () => {
     if (!currentProject || !editingSubProject || !editSubProjectData) return;
     
@@ -152,7 +222,11 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         teamMembers: [],
       });
       
-      onProjectsUpdate([...projectsData, created]);
+      isInternalUpdate.current = true;
+      const updatedProjects = [...localProjects, created];
+      setLocalProjects(updatedProjects);
+      onProjectsUpdate(updatedProjects);
+      
       setNewProject({ name: '', description: '', totalHours: 300 });
       setShowAddProject(false);
       
@@ -167,7 +241,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   };
 
   const handleDeleteProject = async (projectId: string) => {
-    if (projectsData.length <= 1) {
+    if (localProjects.length <= 1) {
       alert('Cannot delete the last project');
       return;
     }
@@ -176,7 +250,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     setLoading(true);
     try {
       await dataService.deleteProject(projectId);
-      const updatedProjects = projectsData.filter(p => p.id !== projectId);
+      const updatedProjects = localProjects.filter(p => p.id !== projectId);
+      isInternalUpdate.current = true;
+      setLocalProjects(updatedProjects);
       onProjectsUpdate(updatedProjects);
       
       if (onProjectSelect && updatedProjects.length > 0) {
@@ -200,8 +276,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       : 0;
   };
 
-  // Show loading state if no projects
-  if (!projectsData || projectsData.length === 0) {
+  if (!localProjects || localProjects.length === 0) {
     return (
       <div className="project-settings-container">
         <div className="page-header">
@@ -219,7 +294,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     );
   }
 
-  // If current project is null, show message
   if (!currentProject) {
     return (
       <div className="project-settings-container">
@@ -240,7 +314,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
   return (
     <div className="project-settings-container">
-      {/* Project List */}
       <div className="project-selector">
         <div className="project-selector-header">
           <h3>Projects</h3>
@@ -251,7 +324,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
         
         <div className="project-list">
-          {projectsData.map((p) => (
+          {localProjects.map((p) => (
             <div
               key={p.id}
               className={`project-item ${selectedProjectId === p.id ? 'active' : ''}`}
@@ -279,7 +352,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
       </div>
 
-      {/* Time Tracking Section */}
       <div className="time-tracking-section">
         <div className="section-header">
           <h3>{currentProject.name} - Time Tracking</h3>
@@ -370,7 +442,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
       </div>
 
-      {/* Team Members Section */}
+      {/* Team Members Section - Updated with supervisor/developer only */}
       <div className="team-members-section">
         <div className="section-header">
           <h3>Team Members</h3>
@@ -397,8 +469,8 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                   <tr key={member.id}>
                     <td>{member.name}</td>
                     <td>
-                      <span className={`role-badge ${member.role === 'Supervisor' ? 'role-supervisor' : 'role-developer'}`}>
-                        {member.role}
+                      <span className={`role-badge ${member.role === 'supervisor' ? 'role-supervisor' : 'role-developer'}`}>
+                        {member.role === 'supervisor' ? 'Supervisor' : 'Developer'}
                       </span>
                     </td>
                     <td>{formatDate(member.joined)}</td>

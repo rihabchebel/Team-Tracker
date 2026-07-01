@@ -46,7 +46,7 @@ interface PerformanceDashboardProps {
   users: User[];
   projectsData: Project[];
   onProjectsUpdate?: (projects: Project[]) => void;
-  onProjectSelect?: (project: string) => void; // Add this
+  onProjectSelect?: (project: string) => void;
 }
 
 interface HeatmapDetailData {
@@ -62,13 +62,79 @@ interface HeatmapDetailData {
   role: string;
 }
 
+// ============================================
+// HELPER: Get role badge class
+// ============================================
+const getRoleBadgeClass = (role: string): string => {
+  const roleMap: Record<string, string> = {
+    'supervisor': 'role-supervisor',
+    'developer': 'role-developer',
+    'guest': 'role-guest',
+    'admin': 'role-admin',
+    'project manager': 'role-project-manager',
+    'project-manager': 'role-project-manager',
+    'pm': 'role-pm',
+    'lead': 'role-lead',
+    'team lead': 'role-team-lead',
+    'team-lead': 'role-team-lead',
+    'designer': 'role-designer',
+    'ui/ux': 'role-ui-ux',
+    'ui-ux': 'role-ui-ux',
+    'qa': 'role-qa',
+    'tester': 'role-tester',
+    'devops': 'role-devops',
+    'analyst': 'role-analyst',
+    'business analyst': 'role-business-analyst',
+    'business-analyst': 'role-business-analyst',
+    'contractor': 'role-contractor',
+    'intern': 'role-intern',
+    'consultant': 'role-consultant',
+  };
+  
+  const normalizedRole = role?.toLowerCase() || 'developer';
+  return roleMap[normalizedRole] || 'role-developer';
+};
+
+// ============================================
+// HELPER: Get role display name
+// ============================================
+const getRoleDisplayName = (role: string): string => {
+  const displayMap: Record<string, string> = {
+    'supervisor': 'Supervisor',
+    'developer': 'Developer',
+    'guest': 'Guest',
+    'admin': 'Admin',
+    'project manager': 'Project Manager',
+    'project-manager': 'Project Manager',
+    'pm': 'Project Manager',
+    'lead': 'Team Lead',
+    'team lead': 'Team Lead',
+    'team-lead': 'Team Lead',
+    'designer': 'Designer',
+    'ui/ux': 'UI/UX Designer',
+    'ui-ux': 'UI/UX Designer',
+    'qa': 'QA Engineer',
+    'tester': 'Tester',
+    'devops': 'DevOps Engineer',
+    'analyst': 'Analyst',
+    'business analyst': 'Business Analyst',
+    'business-analyst': 'Business Analyst',
+    'contractor': 'Contractor',
+    'intern': 'Intern',
+    'consultant': 'Consultant',
+  };
+  
+  const normalizedRole = role?.toLowerCase() || 'developer';
+  return displayMap[normalizedRole] || role || 'Developer';
+};
+
 const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ 
   view, 
   project, 
   users, 
   projectsData,
   onProjectsUpdate,
-  onProjectSelect // Receive the callback
+  onProjectSelect
 }) => {
   const [activeTab, setActiveTab] = useState<'heatmap' | 'roster' | 'analytics'>('roster');
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,12 +158,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const isAll = project === 'All Projects';
 
   useEffect(() => {
-    if (isAll) {
-      setActiveTab('roster');
-    }
-  }, [isAll]);
+    console.log('PerformanceDashboard: Project changed to:', project);
+  }, [project]);
 
-  // Helper functions (hashString, randFromSeed, deriveEmail, etc.)
+  // Helper functions
   const hashString = (s: string) => {
     let h = 0;
     for (let i = 0; i < s.length; i++) {
@@ -496,7 +560,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     }
   };
 
-  // Handle project selection from within the dashboard (e.g., clicking a project name)
   const handleProjectNameClick = (projectName: string) => {
     if (onProjectSelect) {
       onProjectSelect(projectName);
@@ -529,14 +592,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             <h2 
               style={{ cursor: onProjectSelect ? 'pointer' : 'default' }}
               onClick={() => {
-                // If it's not "All Projects" and onProjectSelect exists, allow clicking to navigate
                 if (!isAll && onProjectSelect) {
                   handleProjectNameClick(project);
                 }
               }}
             >
               {project}
-            
             </h2>
             <span className="project-description">{projectData.description}</span>
           </div>
@@ -558,7 +619,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 className={`tab-btn ${activeTab === 'heatmap' ? 'active' : ''}`}
                 onClick={() => setActiveTab('heatmap')}
               >
-                <BarChart3 size={14} />
+                <Calendar size={14} />
                 Heatmap
               </button>
               <button 
@@ -681,14 +742,17 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                         {isAll && member.memberships ? (
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             {member.memberships.map((m) => (
-                              <span key={`${member.id}-${m.projectName}`} className={`role-badge ${m.role === 'Supervisor' ? 'role-supervisor' : 'role-developer'}`}>
-                                {m.role} · {m.projectName}
+                              <span 
+                                key={`${member.id}-${m.projectName}`} 
+                                className={`role-badge ${getRoleBadgeClass(m.role)}`}
+                              >
+                                {getRoleDisplayName(m.role)} · {m.projectName}
                               </span>
                             ))}
                           </div>
                         ) : (
-                          <span className={`role-badge ${member.role === 'Supervisor' ? 'role-supervisor' : 'role-developer'}`}>
-                            {member.role}
+                          <span className={`role-badge ${getRoleBadgeClass(member.role)}`}>
+                            {getRoleDisplayName(member.role)}
                           </span>
                         )}
                       </td>
@@ -781,7 +845,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                     </div>
                     <div className="stat-info">
                       <span className="stat-name">{member.name}</span>
-                      <span className="stat-role">{member.role}</span>
+                      <span className={`role-badge ${getRoleBadgeClass(member.role)}`} style={{ fontSize: '11px', padding: '2px 10px' }}>
+                        {getRoleDisplayName(member.role)}
+                      </span>
                     </div>
                   </div>
                   <div className="stat-details">
@@ -820,9 +886,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             <div className="modal-header">
               <div className="modal-header-info">
                 <h3>{selectedCell.memberName}</h3>
-                {selectedCell.role === 'Supervisor' && (
-                  <span className="role-badge-small supervisor-badge">Supervisor</span>
-                )}
+                <span className={`role-badge ${getRoleBadgeClass(selectedCell.role)}`} style={{ fontSize: '11px', padding: '2px 12px' }}>
+                  {getRoleDisplayName(selectedCell.role)}
+                </span>
                 <span className={`status-badge-small ${selectedCell.status}`}>
                   {selectedCell.status.charAt(0).toUpperCase() + selectedCell.status.slice(1).replace('-', ' ')}
                 </span>
