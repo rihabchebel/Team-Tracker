@@ -48,6 +48,7 @@ interface PerformanceDashboardProps {
   projectsData: Project[];
   onProjectsUpdate?: (projects: Project[]) => void;
   onProjectSelect?: (project: string) => void;
+  isAdmin?: boolean;
 }
 
 interface HeatmapDetailData {
@@ -136,6 +137,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   projectsData,
   onProjectsUpdate,
   onProjectSelect,
+  isAdmin = false,
 }) => {
   const [activeTab, setActiveTab] = useState<
     "heatmap" | "roster" | "analytics"
@@ -202,9 +204,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     member: Project["teamMembers"][number],
   ): MemberStatus => {
     if (member.left) return "Left";
+    const role = member.role?.toLowerCase() || "developer";
     const seed = hashString(`${member.id}|status|${project}`);
     const rand = randFromSeed(seed);
-    if (member.role === "Supervisor") {
+    if (role === "supervisor" || role === "admin") {
       return rand < 0.15 ? "On Leave" : "Active";
     }
     return rand < 0.1 ? "On Leave" : rand < 0.04 ? "Left" : "Active";
@@ -215,8 +218,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     status: string,
   ) => {
     if (status === "Left" || member.left) return 0;
+    const role = member.role?.toLowerCase() || "developer";
     const seed = hashString(`${member.id}|hours|${project}`);
-    const base = member.role === "Supervisor" ? 36 : 28;
+    const base = role === "supervisor" || role === "admin" ? 36 : 28;
     const variation = Math.floor(randFromSeed(seed) * 18);
     return base + variation;
   };
@@ -341,6 +345,23 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return ["All Projects", project];
   };
 
+  const rolePriority = (role: string) => {
+    switch (role?.toLowerCase()) {
+      case "admin":
+        return 0;
+      case "supervisor":
+        return 1;
+      case "developer":
+        return 2;
+      default:
+        return 3;
+    }
+  };
+
+  const sortByRolePriority = (a: DashboardMember, b: DashboardMember) => {
+    return rolePriority(a.role) - rolePriority(b.role);
+  };
+
   const filteredMembers = teamMembers
     .filter((member) => {
       const matchesSearch =
@@ -375,6 +396,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       );
     })
     .sort((a, b) => {
+      const roleDiff = sortByRolePriority(a, b);
+      if (roleDiff !== 0) return roleDiff;
+
       const aValue = a[sortField as keyof DashboardMember] || "";
       const bValue = b[sortField as keyof DashboardMember] || "";
       if (typeof aValue === "string" && typeof bValue === "string") {
@@ -613,6 +637,11 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   // Add Member Handler
   const handleAddMember = async () => {
+    if (!isAdmin) {
+      alert("Only admins can add members.");
+      return;
+    }
+
     if (!newMember.name.trim() || !newMember.email.trim()) {
       alert("Please fill in all fields");
       return;
@@ -707,7 +736,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               {projectData.description}
             </span>
           </div>
-          {view === "supervisor" && !isAll && (
+          {isAdmin && !isAll && (
             <button
               className="add-member-btn"
               onClick={() => setShowAddMember(true)}
@@ -790,6 +819,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   <option value="All">All Roles</option>
                   <option value="Supervisor">Supervisor</option>
                   <option value="Developer">Developer</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
               <div className="filter-group">

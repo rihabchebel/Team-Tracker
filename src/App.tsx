@@ -22,13 +22,26 @@ interface AppState {
 }
 
 const App: React.FC = () => {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, loading: authLoading, profile, signOut, isAdmin, supervisorProjects, developerProjects, dashboardMode, setDashboardMode } = useAuth() as any;
   
   const [state, setState] = useState<AppState>({
     view: "supervisor",
     currentPage: "dashboard",
     selectedProject: "All Projects",
   });
+
+  // If user has a dashboard preference from context, initialize view accordingly
+  useEffect(() => {
+    if (!dashboardMode) return;
+    if (dashboardMode === 'admin') {
+      // keep view as supervisor by default for admin
+      setState((s) => ({ ...s, view: 'supervisor' }));
+    } else if (dashboardMode === 'supervisor') {
+      setState((s) => ({ ...s, view: 'supervisor' }));
+    } else if (dashboardMode === 'developer') {
+      setState((s) => ({ ...s, view: 'developer' }));
+    }
+  }, [dashboardMode]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [projectsData, setProjectsData] = useState<Project[]>([]);
@@ -87,24 +100,14 @@ const App: React.FC = () => {
   };
 
   // Derive current user info
-  const currentProjectData = projectsData.find((p) => p.name === state.selectedProject) || projectsData[0];
-
   const deriveCurrentUser = () => {
-    if (!currentProjectData || isLoading) {
-      return { 
-        name: user?.user_metadata?.full_name || user?.user_metadata?.display_name || "Guest", 
-        email: user?.email || "guest@localhost" 
-      };
-    }
+    const currentName = profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.display_name;
+    const currentEmail = profile?.email || user?.email;
 
-    const preferredRole = state.view === "supervisor" ? "Supervisor" : "Developer";
-    let member = currentProjectData.teamMembers.find(
-      (m) => m.role.toLowerCase() === preferredRole.toLowerCase(),
-    );
-    if (!member) member = currentProjectData.teamMembers[0];
-    const name = member?.name || user?.user_metadata?.full_name || user?.user_metadata?.display_name || "Guest";
-    const email = usersData.find((u) => u.name === name)?.email || user?.email || "guest@localhost";
-    return { name, email };
+    return {
+      name: currentName || "Guest",
+      email: currentEmail || "guest@localhost",
+    };
   };
 
   const { name: currentUserName, email: currentUserEmail } = deriveCurrentUser();
@@ -203,6 +206,7 @@ const App: React.FC = () => {
       );
     }
 
+    // Routing guard based on global/project roles
     if (state.view === "developer" && state.currentPage === "dashboard") {
       const effectiveProject = state.selectedProject === "All Projects"
         ? projectsData[0]?.name || ""
@@ -228,6 +232,7 @@ const App: React.FC = () => {
             projectsData={projectsData}
             onProjectsUpdate={handleProjectsUpdate}
             onProjectSelect={handleProjectSelect}
+            isAdmin={!!isAdmin}
           />
         );
       case "users":
@@ -239,6 +244,7 @@ const App: React.FC = () => {
             projectsData={projectsData}
             onUsersUpdate={handleUsersUpdate}
             onProjectsUpdate={handleProjectsUpdate}
+            isAdmin={!!isAdmin}
           />
         );
       case "timeline":
@@ -258,6 +264,7 @@ const App: React.FC = () => {
             projectsData={projectsData}
             onProjectsUpdate={handleProjectsUpdate}
             onProjectSelect={handleProjectSelect}
+            isAdmin={!!isAdmin}
           />
         );
       case "tasks":
@@ -279,6 +286,7 @@ const App: React.FC = () => {
             projectsData={projectsData}
             onProjectsUpdate={handleProjectsUpdate}
             onProjectSelect={handleProjectSelect}
+            isAdmin={!!isAdmin}
           />
         );
     }
@@ -301,6 +309,26 @@ const App: React.FC = () => {
     return <Login />;
   }
 
+  const roleSwitchBanner = dashboardMode === 'both' ? (
+    <div className="role-switch-banner">
+      <p>Choose your active project role for this session:</p>
+      <div className="role-toggle-buttons">
+        <button
+          className={state.view === 'supervisor' ? 'active' : ''}
+          onClick={() => setDashboardMode && setDashboardMode('supervisor')}
+        >
+          Supervisor View
+        </button>
+        <button
+          className={state.view === 'developer' ? 'active' : ''}
+          onClick={() => setDashboardMode && setDashboardMode('developer')}
+        >
+          Developer View
+        </button>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="app-container">
       <Header 
@@ -318,8 +346,14 @@ const App: React.FC = () => {
           onPageChange={handlePageChange}
           onProjectSelect={handleProjectSelect}
           onLogout={handleLogout}
+          isAdmin={!!isAdmin}
+          hasSupervisor={(supervisorProjects || []).length > 0}
+          hasDeveloper={(developerProjects || []).length > 0}
         />
-        <main className="main-content">{renderPage()}</main>
+        <main className="main-content">
+          {roleSwitchBanner}
+          {renderPage()}
+        </main>
       </div>
       <DebugPanel />
     </div>

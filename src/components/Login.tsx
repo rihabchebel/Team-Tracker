@@ -4,13 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
 const Login: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,12 +16,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      if (isLogin) {
-        await signIn(email, password);
-      } else {
-        await signUp(email, password, { name });
-      }
-      // After successful login/signup, App.tsx will handle redirection
+      await signIn(email, password);
     } catch (err: any) {
       console.error('Auth error:', err);
       setError(err.message || 'An error occurred. Please try again.');
@@ -41,20 +34,7 @@ const Login: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
-          <h2>{isLogin ? 'Sign In' : 'Create Account'}</h2>
-
-          {!isLogin && (
-            <div className="form-group">
-              <label>Full Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter your full name"
-                required={!isLogin}
-              />
-            </div>
-          )}
+          <h2>Sign In</h2>
 
           <div className="form-group">
             <label>Email</label>
@@ -81,21 +61,8 @@ const Login: React.FC = () => {
           {error && <div className="error-message">{error}</div>}
 
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Create Account')}
+            {loading ? 'Loading...' : 'Sign In'}
           </button>
-
-          <div className="toggle-mode">
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError(null);
-              }}
-              className="toggle-btn"
-            >
-              {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-            </button>
-          </div>
         </form>
       </div>
     </div>

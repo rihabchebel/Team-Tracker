@@ -25,6 +25,9 @@ interface SidebarProps {
   onPageChange: (page: PageType) => void;
   onProjectSelect: (project: string) => void;
   onLogout?: () => void; // Add this
+  isAdmin?: boolean;
+  hasSupervisor?: boolean;
+  hasDeveloper?: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -36,14 +39,60 @@ const Sidebar: React.FC<SidebarProps> = ({
   onPageChange,
   onProjectSelect,
   onLogout // Add this
+  ,
+  isAdmin = false,
+  hasSupervisor = false,
+  hasDeveloper = false,
 }) => {
-  const navigationItems = [
-    { id: 'dashboard' as PageType, label: 'All Projects', icon: LayoutDashboard },
-    { id: 'tasks' as PageType, label: 'All Tasks', icon: ListTodo },
-    { id: 'timeline' as PageType, label: 'User Timeline', icon: Calendar },
+  const adminLinks = [
+    { id: 'dashboard' as PageType, label: 'Admin Dashboard', icon: LayoutDashboard },
+    { id: 'users' as PageType, label: 'Manage Users', icon: Users },
+    { id: 'settings' as PageType, label: 'Project Settings', icon: Settings },
+  ];
+
+  const supervisorLinks = [
+    { id: 'dashboard' as PageType, label: 'Supervisor Dashboard', icon: LayoutDashboard },
+    { id: 'timeline' as PageType, label: 'Project Timeline', icon: Calendar },
     { id: 'settings' as PageType, label: 'Project Settings', icon: Settings },
     { id: 'users' as PageType, label: 'Manage Users', icon: Users },
   ];
+
+  const developerLinks = [
+    { id: 'dashboard' as PageType, label: 'Developer Dashboard', icon: LayoutDashboard },
+    { id: 'tasks' as PageType, label: 'My Tasks', icon: ListTodo },
+    { id: 'timeline' as PageType, label: 'Project Timeline', icon: Calendar },
+  ];
+
+  const renderNavSection = (title: string, links: typeof adminLinks) => (
+    <div className="nav-section">
+      <h3 className="nav-title">{title}</h3>
+      <ul className="nav-list">
+        {links.map((item) => {
+          const Icon = item.icon;
+          const isActive = item.id === 'dashboard'
+            ? currentPage === 'dashboard' && selectedProject === 'All Projects'
+            : currentPage === item.id;
+
+          return (
+            <li
+              key={item.id}
+              className={`nav-item ${isActive ? 'active' : ''}`}
+              onClick={() => {
+                if (item.id === 'dashboard') {
+                  handleDashboardClick();
+                } else {
+                  onPageChange(item.id);
+                }
+              }}
+            >
+              <Icon className="nav-icon" size={16} />
+              <span className="nav-label">{item.label}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 
   const handleDashboardClick = () => {
     onProjectSelect('All Projects');
@@ -52,23 +101,28 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="sidebar">
       <div className="sidebar-content">
-        {/* View Switcher */}
+        {/* View Switcher - only show role buttons if user has that role */}
         <div className="view-switcher">
-          <div className="view-label">Switch to {view === 'supervisor' ? 'Developer' : 'Management'} View</div>
-          <button
-            className={`view-btn ${view === 'supervisor' ? 'active' : ''}`}
-            onClick={() => onViewSwitch('supervisor')}
-          >
-            <Eye className="view-icon" size={16} />
-            Supervisor View
-          </button>
-          <button
-            className={`view-btn ${view === 'developer' ? 'active' : ''}`}
-            onClick={() => onViewSwitch('developer')}
-          >
-            <Code2 className="view-icon" size={16} />
-            Developer View
-          </button>
+          <div className="view-label">View Mode</div>
+          {hasSupervisor && (
+            <button
+              className={`view-btn ${view === 'supervisor' ? 'active' : ''}`}
+              onClick={() => onViewSwitch('supervisor')}
+            >
+              <Eye className="view-icon" size={16} />
+              Supervisor View
+            </button>
+          )}
+
+          {hasDeveloper && (
+            <button
+              className={`view-btn ${view === 'developer' ? 'active' : ''}`}
+              onClick={() => onViewSwitch('developer')}
+            >
+              <Code2 className="view-icon" size={16} />
+              Developer View
+            </button>
+          )}
         </div>
 
         {/* Projects Section - Only actual projects */}
@@ -93,33 +147,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Navigation Items */}
-        <div className="nav-section">
-          <ul className="nav-list">
-            {navigationItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.id === 'dashboard' 
-                ? currentPage === 'dashboard' && selectedProject === 'All Projects'
-                : currentPage === item.id;
-              
-              return (
-                <li
-                  key={item.id}
-                  className={`nav-item ${isActive ? 'active' : ''}`}
-                  onClick={() => {
-                    if (item.id === 'dashboard') {
-                      handleDashboardClick();
-                    } else {
-                      onPageChange(item.id);
-                    }
-                  }}
-                >
-                  <Icon className="nav-icon" size={16} />
-                  <span className="nav-label">{item.label}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        {isAdmin && renderNavSection('Admin', adminLinks)}
+        {hasSupervisor && renderNavSection('Supervisor', supervisorLinks)}
+        {hasDeveloper && renderNavSection('Developer', developerLinks)}
+        {!isAdmin && !hasSupervisor && !hasDeveloper && (
+          <div className="nav-section">
+            <p className="nav-note">No project role assigned. Contact an admin.</p>
+          </div>
+        )}
 
         {/* Logout */}
         <div className="logout-section">

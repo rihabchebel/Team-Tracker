@@ -5,6 +5,8 @@ import EditUser from './EditUser';
 import { formatDate } from '../utils/dateUtils';
 import './UserManagement.css';
 import { ViewMode, User, Project } from '../types/models';
+import { dataService } from '../lib/dataService';
+import { auth } from '../lib/supabase';
 
 interface UserManagementProps {
   view: ViewMode;
@@ -13,9 +15,10 @@ interface UserManagementProps {
   projectsData: Project[];
   onUsersUpdate: (updatedUsers: User[]) => void;
   onProjectsUpdate: (updatedProjects: Project[]) => void;
+  isAdmin?: boolean;
 }
 
-const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, projectsData, onUsersUpdate, onProjectsUpdate }) => {
+const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, projectsData, onUsersUpdate, onProjectsUpdate, isAdmin = false }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -77,43 +80,66 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
     return projectDescriptions[projectName] || 'No description available';
   };
 
-  const handleCreateUser = () => {
-    if (newUser.name && newUser.email && newUser.password) {
-      const user: User = {
-        id: Date.now().toString(),
+  const handleCreateUser = async () => {
+    if (!isAdmin) {
+      alert('Only admins can create new users.');
+      return;
+    }
+
+    if (!newUser.name || !newUser.email || !newUser.password) {
+      alert('Please complete name, email, and password fields.');
+      return;
+    }
+
+    if (!newUser.project || newUser.project === 'All Projects') {
+      alert('Please select a project for this user.');
+      return;
+    }
+
+    const projectObj = projectsData.find((p) => p.name === newUser.project);
+    if (!projectObj) {
+      alert('Selected project not found.');
+      return;
+    }
+
+    try {
+      // Create auth user first
+      const signUpResult = await auth.signUp(newUser.email, newUser.password, {
+        name: newUser.name,
+      });
+
+      if (!signUpResult.user?.id) {
+        throw new Error('Unable to create auth user.');
+      }
+
+      const authUserId = signUpResult.user.id;
+
+      // Create corresponding profile with the same auth user id
+      const createdProfile = await dataService.createUserProfile({
+        id: authUserId,
         name: newUser.name,
         email: newUser.email,
-        created: new Date().toLocaleDateString('en-GB'),
-        role: newUser.role,
-        project: newUser.project || undefined,
-      };
+        role: newUser.role.toLowerCase(),
+      });
 
-      const updatedUsers = [...users, user];
-      onUsersUpdate(updatedUsers);
-
-      if (newUser.project) {
-        const updatedProjects = projectsData.map((projectData) => {
-          if (projectData.name === newUser.project) {
-            return {
-              ...projectData,
-              teamMembers: [
-                ...projectData.teamMembers,
-                {
-                  id: user.id,
-                  name: user.name,
-                  role: user.role || 'Developer',
-                  joined: user.created,
-                },
-              ],
-            };
-          }
-          return projectData;
-        });
-        onProjectsUpdate(updatedProjects);
+      if (!createdProfile) {
+        throw new Error('Could not create user profile');
       }
+
+      // Add team member for the selected project
+      await dataService.addTeamMember(projectObj.id, authUserId, newUser.role);
+
+      const refreshedProjects = await dataService.getAllProjects();
+      const refreshedUsers = await dataService.getAllUsers();
+
+      onProjectsUpdate(refreshedProjects);
+      onUsersUpdate(refreshedUsers);
 
       setNewUser({ name: '', email: '', password: '', role: 'Developer', project: '' });
       setShowCreateModal(false);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      alert('Failed to create user. Please try again.');
     }
   };
 
@@ -199,38 +225,30 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
     }
   };
 
-  const handleAddUserToProject = (user: User, role: 'Developer' | 'Supervisor', targetProject?: string) => {
+  const handleAddUserToProject = async (user: User, role: 'Developer' | 'Supervisor', targetProject?: string) => {
     const projectName = targetProject || project;
     if (!projectName || projectName === 'All Projects') return;
 
-    const updatedProjects = projectsData.map((projectData) => {
-      if (projectData.name !== projectName) return projectData;
+    try {
+      const projectObj = projectsData.find((p) => p.name === projectName);
+      if (!projectObj) return;
 
-      const exists = projectData.teamMembers.some(m => m.id === user.id);
-      if (exists) return projectData;
+      // Call backend to add team member
+      await dataService.addTeamMember(projectObj.id, user.id, role);
 
-      return {
-        ...projectData,
-        teamMembers: [
-          ...projectData.teamMembers,
-          {
-            id: user.id,
-            name: user.name,
-            role: role,
-            joined: new Date().toLocaleDateString('en-GB'),
-          }
-        ]
-      };
-    });
+      // Refresh projects and users from backend
+      const refreshedProjects = await dataService.getAllProjects();
+      const refreshedUsers = await dataService.getAllUsers();
 
-    // update user's project and role locally only if empty
-    const updatedUsers = users.map(u => u.id === user.id ? ({ ...u, project: u.project || projectName, role: u.role || role }) : u);
-
-    onProjectsUpdate(updatedProjects);
-    onUsersUpdate(updatedUsers);
-
-    setAddingUserId(null);
-    setAddTargetProject('');
+      onProjectsUpdate(refreshedProjects);
+      onUsersUpdate(refreshedUsers);
+    } catch (error) {
+      console.error('Error adding user to project:', error);
+      alert('Failed to add user to project.');
+    } finally {
+      setAddingUserId(null);
+      setAddTargetProject('');
+    }
   };
 
   const handleCancelDelete = () => {
@@ -251,7 +269,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ view, project, users, p
             <h2>{project}</h2>
             <span className="project-description">{getProjectDescription(project)}</span>
           </div>
-          {isSupervisor && (
+          {isAdmin && (
             <button className="create-user-btn" onClick={() => setShowCreateModal(true)}>
               Create & Invite User
             </button>

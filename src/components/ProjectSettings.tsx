@@ -12,6 +12,7 @@ interface ProjectSettingsProps {
   projectsData: Project[];
   onProjectsUpdate: (projects: Project[]) => void;
   onProjectSelect?: (project: string) => void;
+  isAdmin?: boolean;
 }
 
 // ============================================
@@ -80,7 +81,8 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   project, 
   projectsData, 
   onProjectsUpdate,
-  onProjectSelect
+  onProjectSelect,
+  isAdmin = false,
 }) => {
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [showAddSubProject, setShowAddSubProject] = useState(false);
@@ -495,12 +497,16 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
   const getRoleBadgeClass = (role: string): string => {
     const normalizedRole = role?.toLowerCase() || 'developer';
-    return normalizedRole === 'supervisor' ? 'role-supervisor' : 'role-developer';
+    if (normalizedRole === 'admin') return 'role-admin';
+    if (normalizedRole === 'supervisor') return 'role-supervisor';
+    return 'role-developer';
   };
 
   const getRoleDisplayName = (role: string): string => {
     const normalizedRole = role?.toLowerCase() || 'developer';
-    return normalizedRole === 'supervisor' ? 'Supervisor' : 'Developer';
+    if (normalizedRole === 'admin') return 'Admin';
+    if (normalizedRole === 'supervisor') return 'Supervisor';
+    return 'Developer';
   };
 
   // ============================================
@@ -702,10 +708,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <Users size={16} />
             Team Members ({currentProject.teamMembers?.length || 0})
           </h3>
-          <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
-            <Users size={16} />
-            Add Member
-          </button>
+          {isAdmin && (
+            <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
+              <Users size={16} />
+              Add Member
+            </button>
+          )}
         </div>
 
         <div className="team-members-table">
@@ -720,7 +728,18 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {currentProject.teamMembers.map((member) => (
+                {[...currentProject.teamMembers]
+                  .sort((a, b) => {
+                    const roleValue = (role: string) => {
+                      const normalized = role?.toLowerCase();
+                      if (normalized === 'admin') return 0;
+                      if (normalized === 'supervisor') return 1;
+                      if (normalized === 'developer') return 2;
+                      return 3;
+                    };
+                    return roleValue(a.role) - roleValue(b.role);
+                  })
+                  .map((member) => (
                   <tr key={member.id}>
                     <td>
                       <div className="member-info">
@@ -998,6 +1017,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                 >
                   <option value="Developer">Developer</option>
                   <option value="Supervisor">Supervisor</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
             </div>
