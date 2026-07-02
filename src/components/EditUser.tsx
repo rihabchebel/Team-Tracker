@@ -82,6 +82,20 @@ const EditUser: React.FC<EditUserProps> = ({
               >
                 <option value="developer">Developer</option>
                 <option value="supervisor">Supervisor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Status</label>
+              <select
+                name="status"
+                value={formData.status || 'Active'}
+                onChange={handleChange}
+              >
+                <option value="Active">Active</option>
+                <option value="On Leave">On Leave</option>
+                <option value="Left">Left</option>
               </select>
             </div>
 

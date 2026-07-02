@@ -347,8 +347,8 @@ const App: React.FC = () => {
           onProjectSelect={handleProjectSelect}
           onLogout={handleLogout}
           isAdmin={!!isAdmin}
-          hasSupervisor={(supervisorProjects || []).length > 0}
-          hasDeveloper={(developerProjects || []).length > 0}
+          hasSupervisor={!!isAdmin || (supervisorProjects || []).length > 0}
+          hasDeveloper={!!isAdmin || (developerProjects || []).length > 0}
         />
         <main className="main-content">
           {roleSwitchBanner}

@@ -95,6 +95,10 @@ export const dataService = {
               name: profile?.full_name || "Unknown",
               email: profile?.email || "",
               role: tm.role || "developer",
+              status: profile?.status
+                ? ((profile.status.charAt(0).toUpperCase() +
+                    profile.status.slice(1)) as any)
+                : ("Active" as any),
               joined: tm.joined_at || new Date().toISOString(),
               left: tm.left_at || undefined,
             };

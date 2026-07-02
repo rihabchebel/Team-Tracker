@@ -104,7 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* View Switcher - only show role buttons if user has that role */}
         <div className="view-switcher">
           <div className="view-label">View Mode</div>
-          {hasSupervisor && (
+          {(isAdmin || hasSupervisor) && (
             <button
               className={`view-btn ${view === 'supervisor' ? 'active' : ''}`}
               onClick={() => onViewSwitch('supervisor')}
@@ -114,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           )}
 
-          {hasDeveloper && (
+          {(isAdmin || hasDeveloper) && (
             <button
               className={`view-btn ${view === 'developer' ? 'active' : ''}`}
               onClick={() => onViewSwitch('developer')}
