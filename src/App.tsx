@@ -1,5 +1,6 @@
 // src/App.tsx
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "./App.css";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
@@ -10,6 +11,10 @@ import AllTasks from "./components/AllTasks";
 import PerformanceDashboard from "./components/PerformanceDashboard";
 import DeveloperDashboard from "./components/DeveloperDashboard";
 import Login from "./components/Login";
+import { AdminSignUp } from "./components/AdminSignUp";
+import { AcceptInvitation } from "./components/AcceptInvitation";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SetupGuard } from "./components/SetupGuard";
 import { ViewMode, PageType, User, Project, LogEntry } from "./types/models";
 import { dataService } from "./lib/dataService";
 import DebugPanel from "./components/DebugPanel";
@@ -21,25 +26,33 @@ interface AppState {
   selectedProject: string;
 }
 
-const App: React.FC = () => {
-  const { user, loading: authLoading, profile, signOut, isAdmin, supervisorProjects, developerProjects, dashboardMode, setDashboardMode } = useAuth() as any;
-  
+const DashboardShell: React.FC = () => {
+  const {
+    user,
+    loading: authLoading,
+    profile,
+    signOut,
+    isAdmin,
+    supervisorProjects,
+    developerProjects,
+    dashboardMode,
+    setDashboardMode,
+  } = useAuth();
+
   const [state, setState] = useState<AppState>({
     view: "supervisor",
     currentPage: "dashboard",
     selectedProject: "All Projects",
   });
 
-  // If user has a dashboard preference from context, initialize view accordingly
   useEffect(() => {
     if (!dashboardMode) return;
-    if (dashboardMode === 'admin') {
-      // keep view as supervisor by default for admin
-      setState((s) => ({ ...s, view: 'supervisor' }));
-    } else if (dashboardMode === 'supervisor') {
-      setState((s) => ({ ...s, view: 'supervisor' }));
-    } else if (dashboardMode === 'developer') {
-      setState((s) => ({ ...s, view: 'developer' }));
+    if (dashboardMode === "admin") {
+      setState((currentState) => ({ ...currentState, view: "supervisor" }));
+    } else if (dashboardMode === "supervisor") {
+      setState((currentState) => ({ ...currentState, view: "supervisor" }));
+    } else if (dashboardMode === "developer") {
+      setState((currentState) => ({ ...currentState, view: "developer" }));
     }
   }, [dashboardMode]);
 
@@ -49,39 +62,37 @@ const App: React.FC = () => {
   const [taskLogs, setTaskLogs] = useState<LogEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  // Load data from Supabase
   useEffect(() => {
     if (!user) return;
-    
+
     const loadData = async () => {
       try {
         setIsLoading(true);
         setError(null);
         console.log("🔄 Loading data from Supabase...");
-        
+
         const { users, projects, logs } = await dataService.getAllData();
-        
+
         console.log("✅ Data loaded:", {
           users: users.length,
           projects: projects.length,
           logs: logs.length,
         });
-        
+
         setUsersData(users);
         setProjectsData(projects);
         setTaskLogs(logs);
-      } catch (error) {
-        console.error("❌ Error loading data:", error);
+      } catch (loadError) {
+        console.error("❌ Error loading data:", loadError);
         setError("Failed to load data. Please refresh the page.");
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     loadData();
   }, [user]);
 
-  // Refresh data function
   const refreshData = async () => {
     try {
       setIsLoading(true);
@@ -91,17 +102,19 @@ const App: React.FC = () => {
       setProjectsData(projects);
       setTaskLogs(logs);
       console.log("✅ Data refreshed successfully");
-    } catch (error) {
-      console.error("❌ Error refreshing data:", error);
+    } catch (refreshError) {
+      console.error("❌ Error refreshing data:", refreshError);
       setError("Failed to refresh data.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Derive current user info
   const deriveCurrentUser = () => {
-    const currentName = profile?.full_name || user?.user_metadata?.full_name || user?.user_metadata?.display_name;
+    const currentName =
+      profile?.full_name ||
+      user?.user_metadata?.full_name ||
+      user?.user_metadata?.display_name;
     const currentEmail = profile?.email || user?.email;
 
     return {
@@ -112,7 +125,6 @@ const App: React.FC = () => {
 
   const { name: currentUserName, email: currentUserEmail } = deriveCurrentUser();
 
-  // Handlers
   const handleAddTaskLog = async (log: Omit<LogEntry, "id" | "submittedAt">) => {
     try {
       const newLog = await dataService.createLog({
@@ -120,18 +132,17 @@ const App: React.FC = () => {
         submittedById: user?.id || "1",
         submittedBy: currentUserName,
       });
-      
+
       setTaskLogs((prevLogs) => [newLog, ...prevLogs]);
-      
-      // Refresh project data to update used hours
+
       const refreshedProjects = await dataService.getAllProjects();
       setProjectsData(refreshedProjects);
-      
+
       return newLog;
-    } catch (error) {
-      console.error("Error adding task log:", error);
+    } catch (taskLogError) {
+      console.error("Error adding task log:", taskLogError);
       alert("Failed to add task log. Please try again.");
-      throw error;
+      throw taskLogError;
     }
   };
 
@@ -144,8 +155,8 @@ const App: React.FC = () => {
   };
 
   const handleProjectSelect = (project: string) => {
-    const shouldStayOnPage = state.currentPage === 'settings';
-    
+    const shouldStayOnPage = state.currentPage === "settings";
+
     setState({
       ...state,
       selectedProject: project,
@@ -155,12 +166,11 @@ const App: React.FC = () => {
 
   const handleProjectsUpdate = async (updatedProjects: Project[]) => {
     setProjectsData(updatedProjects);
-    // Update user data based on project changes
     const refreshedUsers = await dataService.getAllUsers();
     setUsersData(refreshedUsers);
-    
+
     const stillExists = updatedProjects.some(
-      (p) => p.name === state.selectedProject,
+      (project) => project.name === state.selectedProject,
     );
     if (!stillExists && updatedProjects.length > 0) {
       setState({ ...state, selectedProject: "All Projects" });
@@ -169,12 +179,11 @@ const App: React.FC = () => {
 
   const handleUsersUpdate = async (updatedUsers: User[]) => {
     setUsersData(updatedUsers);
-    // Save each user update to Supabase
-    for (const user of updatedUsers) {
+    for (const updatedUser of updatedUsers) {
       try {
-        await dataService.updateUser(user.id, user);
-      } catch (error) {
-        console.error(`Error updating user ${user.name}:`, error);
+        await dataService.updateUser(updatedUser.id, updatedUser);
+      } catch (updateError) {
+        console.error(`Error updating user ${updatedUser.name}:`, updateError);
       }
     }
   };
@@ -186,12 +195,11 @@ const App: React.FC = () => {
       setUsersData([]);
       setTaskLogs([]);
       setError(null);
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch (logoutError) {
+      console.error("Logout error:", logoutError);
     }
   };
 
-  // Render page based on current state
   const renderPage = () => {
     if (isLoading) {
       return <div className="loading">Loading data from Supabase...</div>;
@@ -201,16 +209,18 @@ const App: React.FC = () => {
       return (
         <div className="error-container">
           <p className="error-message">⚠️ {error}</p>
-          <button className="retry-btn" onClick={refreshData}>Retry</button>
+          <button className="retry-btn" onClick={refreshData}>
+            Retry
+          </button>
         </div>
       );
     }
 
-    // Routing guard based on global/project roles
     if (state.view === "developer" && state.currentPage === "dashboard") {
-      const effectiveProject = state.selectedProject === "All Projects"
-        ? projectsData[0]?.name || ""
-        : state.selectedProject;
+      const effectiveProject =
+        state.selectedProject === "All Projects"
+          ? projectsData[0]?.name || ""
+          : state.selectedProject;
 
       return (
         <DeveloperDashboard
@@ -292,9 +302,8 @@ const App: React.FC = () => {
     }
   };
 
-  const projectNames = projectsData.map((p) => p.name);
+  const projectNames = projectsData.map((project) => project.name);
 
-  // Auth loading
   if (authLoading) {
     return (
       <div className="loading-screen">
@@ -304,38 +313,30 @@ const App: React.FC = () => {
     );
   }
 
-  // Not authenticated
-  if (!user) {
-    return <Login />;
-  }
-
-  const roleSwitchBanner = dashboardMode === 'both' ? (
-    <div className="role-switch-banner">
-      <p>Choose your active project role for this session:</p>
-      <div className="role-toggle-buttons">
-        <button
-          className={state.view === 'supervisor' ? 'active' : ''}
-          onClick={() => setDashboardMode && setDashboardMode('supervisor')}
-        >
-          Supervisor View
-        </button>
-        <button
-          className={state.view === 'developer' ? 'active' : ''}
-          onClick={() => setDashboardMode && setDashboardMode('developer')}
-        >
-          Developer View
-        </button>
+  const roleSwitchBanner =
+    dashboardMode === "both" ? (
+      <div className="role-switch-banner">
+        <p>Choose your active project role for this session:</p>
+        <div className="role-toggle-buttons">
+          <button
+            className={state.view === "supervisor" ? "active" : ""}
+            onClick={() => setDashboardMode && setDashboardMode("supervisor")}
+          >
+            Supervisor View
+          </button>
+          <button
+            className={state.view === "developer" ? "active" : ""}
+            onClick={() => setDashboardMode && setDashboardMode("developer")}
+          >
+            Developer View
+          </button>
+        </div>
       </div>
-    </div>
-  ) : null;
+    ) : null;
 
   return (
     <div className="app-container">
-      <Header 
-        user={currentUserName} 
-        email={currentUserEmail} 
-        onLogout={handleLogout}
-      />
+      <Header user={currentUserName} email={currentUserEmail} onLogout={handleLogout} />
       <div className="main-layout">
         <Sidebar
           view={state.view}
@@ -359,5 +360,43 @@ const App: React.FC = () => {
     </div>
   );
 };
+
+function App() {
+  return (
+    <BrowserRouter>
+      <SetupGuard>
+        <Routes>
+          <Route path="/admin-signup" element={<AdminSignUp />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <DashboardShell />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardShell />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="*"
+            element={
+              <ProtectedRoute>
+                <Navigate to="/dashboard" replace />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </SetupGuard>
+    </BrowserRouter>
+  );
+}
 
 export default App;

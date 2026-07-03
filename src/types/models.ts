@@ -19,7 +19,7 @@ export interface User {
   }[];
 }
 
-export type MemberStatus = 'Active' | 'Inactive' | 'On Leave';
+export type MemberStatus = 'Active' | 'Left' ;
 
 export interface TeamMember {
   id: string;
@@ -48,6 +48,8 @@ export interface Project {
   id: string;
   name: string;
   description: string;
+  status: 'active' | 'completed' | 'archived' | 'on-hold';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   totalHours: number;
   usedHours: number;
   subProjects: SubProject[];
@@ -112,4 +114,19 @@ export interface SupabaseTaskLog {
   partial_reason?: string;
   unavailable_reason?: string;
   submitted_at: string;
+}
+export interface Invitation {
+    id: string;
+    email: string;
+    full_name: string;
+    role: 'admin' | 'supervisor' | 'developer';
+    project_id: string | null;
+    project_name?: string;
+    token: string;
+    status: 'pending' | 'accepted' | 'rejected' | 'expired';
+    invited_by: string;
+    invited_at: string;
+    accepted_at: string | null;
+    rejected_at: string | null;
+    expires_at: string;
 }
