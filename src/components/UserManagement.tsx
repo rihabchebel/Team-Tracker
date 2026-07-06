@@ -54,13 +54,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const projects = projectsData.map((p) => p.name);
 
   // Project descriptions mapping
-  const projectDescriptions: Record<string, string> = {
-    "Project Alpha": "Main product development sprint",
-    "Project Beta": "Client portal redesign",
-    "Service VAS": "Test description",
-    test: "test",
-    T: "test",
-  };
 
   // Get users that have access to the current project
   const getProjectUsers = () => {
@@ -103,9 +96,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
     });
 
   // Get the description for the current project
-  const getProjectDescription = (projectName: string): string => {
-    return projectDescriptions[projectName] || "No description available";
-  };
 
   const handleCreateUser = async () => {
     if (!isAdmin) {
@@ -364,9 +354,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
         <div className="page-header-content">
           <div>
             <h2>{project}</h2>
-            <span className="project-description">
-              {getProjectDescription(project)}
-            </span>
+           
           </div>
           {isAdmin && (
             <button

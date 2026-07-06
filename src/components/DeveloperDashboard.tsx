@@ -1,8 +1,8 @@
 // components/DeveloperDashboard.tsx
 import React, { useState } from "react";
 import "./DeveloperDashboard.css";
-import { Plus, Trash2, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
-import { Project, ProjectTimelineEvent } from '../types/models';
+import { Plus, Trash2, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { Project, ProjectTimelineEvent } from "../types/models";
 
 export type ViewMode = "supervisor" | "developer";
 
@@ -12,7 +12,7 @@ interface DeveloperDashboardProps {
   currentUser: string;
   projectData?: Project | null;
   timelineEvents?: ProjectTimelineEvent[];
-  onAddTaskLog: (log: Omit<LogEntry, 'id' | 'submittedAt'>) => void;
+  onAddTaskLog: (log: Omit<LogEntry, "id" | "submittedAt">) => void;
 }
 
 interface Task {
@@ -24,7 +24,7 @@ interface LogEntry {
   id: string;
   project: string;
   date: string;
-  status: 'full' | 'partial' | 'unavailable';
+  status: "full" | "partial" | "unavailable";
   hoursWorked: number;
   tasks: Task[];
   partialReason?: string;
@@ -36,8 +36,6 @@ interface LogEntry {
 const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
   project,
   currentUser,
-  projectData,
-  timelineEvents = [],
   onAddTaskLog,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(
@@ -103,20 +101,21 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
     setIsSubmitting(true);
 
-    const logData: Omit<LogEntry, 'id' | 'submittedAt'> = {
+    const logData: Omit<LogEntry, "id" | "submittedAt"> = {
       project: project,
       date: selectedDate,
       status: status,
       hoursWorked: status === "unavailable" ? 0 : hoursWorked,
       tasks: status === "unavailable" ? [] : tasks,
       partialReason: status === "partial" ? partialReason : undefined,
-      unavailableReason: status === "unavailable" ? unavailableReason : undefined,
+      unavailableReason:
+        status === "unavailable" ? unavailableReason : undefined,
       submittedBy: currentUser,
     };
 
     try {
       await onAddTaskLog(logData);
-      
+
       // Reset form
       setTasks([]);
       setNewTask("");
@@ -127,7 +126,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
         setUnavailableReason("");
       }
       setHoursWorked(8);
-      
+
       alert("Log saved successfully!");
     } catch (error) {
       console.error("Error saving log:", error);
@@ -138,22 +137,17 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
   };
 
   const getStatusIcon = (status: string) => {
-    switch(status) {
-      case 'full':
+    switch (status) {
+      case "full":
         return <CheckCircle size={16} />;
-      case 'partial':
+      case "partial":
         return <AlertCircle size={16} />;
-      case 'unavailable':
+      case "unavailable":
         return <XCircle size={16} />;
       default:
         return null;
     }
   };
-
-  const currentTimeline = timelineEvents.filter((event) => {
-    if (!projectData) return false;
-    return event.project_id === projectData.id;
-  }).slice(0, 5);
 
   return (
     <div className="developer-dashboard">
@@ -161,9 +155,6 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
         <div className="page-header-content">
           <div>
             <h2>{project}</h2>
-            <span className="project-description">
-              Log your daily availability and tasks
-            </span>
           </div>
           <div className="user-info">
             <span className="user-name">{currentUser}</span>
@@ -172,76 +163,14 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
         </div>
       </div>
 
-      {projectData && (
-        <div className="overview-section" style={{ marginBottom: '24px' }}>
-          <h3>Project Overview</h3>
-          <div className="overview-grid" style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-            <div className="overview-card">
-              <strong>Description</strong>
-              <p>{projectData.description || 'No description available'}</p>
-            </div>
-            <div className="overview-card">
-              <strong>Status</strong>
-              <p className="capitalize">{projectData.status}</p>
-            </div>
-            <div className="overview-card">
-              <strong>Priority</strong>
-              <p className="capitalize">{projectData.priority}</p>
-            </div>
-            <div className="overview-card">
-              <strong>Team Members</strong>
-              <p>{projectData.teamMembers.length}</p>
-            </div>
-            <div className="overview-card">
-              <strong>Supervisors</strong>
-              <p>{projectData.teamMembers.filter((member) => member.role?.toLowerCase() === 'supervisor').length}</p>
-            </div>
-            <div className="overview-card">
-              <strong>Sub-projects</strong>
-              <p>{projectData.subProjects.length}</p>
-            </div>
-          </div>
-
-          {projectData.subProjects.length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h4>Sub-projects</h4>
-              <div style={{ display: 'grid', gap: '12px' }}>
-                {projectData.subProjects.map((subProject) => (
-                  <div key={subProject.id} className="overview-card">
-                    <strong>{subProject.name}</strong>
-                    <p>{subProject.timeUsed}/{subProject.timeTotal}h</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {currentTimeline.length > 0 && (
-            <div style={{ marginTop: '16px' }}>
-              <h4>Latest Activity</h4>
-              <div style={{ display: 'grid', gap: '10px' }}>
-                {currentTimeline.map((event) => (
-                  <div key={event.id} className="overview-card">
-                    <strong>{event.event_type.replace(/_/g, ' ')}</strong>
-                    <p>{event.description}</p>
-                    <small>{new Date(event.created_at).toLocaleString()}</small>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
       <div className="dashboard-content">
         <div className="availability-section">
           <h3>Log Your Availability</h3>
 
           <div className="form-group">
             <label>Date</label>
-            
+
             <div className="date-input-wrapper">
-             
               <input
                 type="date"
                 value={selectedDate}
@@ -263,7 +192,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   setUnavailableReason("");
                 }}
               >
-                {getStatusIcon('full')}
+                {getStatusIcon("full")}
                 Full
               </button>
               <button
@@ -274,7 +203,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   setUnavailableReason("");
                 }}
               >
-                {getStatusIcon('partial')}
+                {getStatusIcon("partial")}
                 Partial
               </button>
               <button
@@ -286,7 +215,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   setHoursWorked(0);
                 }}
               >
-                {getStatusIcon('unavailable')}
+                {getStatusIcon("unavailable")}
                 Unavailable
               </button>
             </div>
@@ -294,7 +223,10 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
           {status === "partial" && (
             <div className="form-group">
-              <label>Reason for Partial Availability <span className="required">*</span></label>
+              <label>
+                Reason for Partial Availability{" "}
+                <span className="required">*</span>
+              </label>
               <input
                 type="text"
                 value={partialReason}
@@ -355,7 +287,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
           {status === "unavailable" && (
             <div className="form-group">
-              <label>Reason for Unavailability <span className="required">*</span></label>
+              <label>
+                Reason for Unavailability <span className="required">*</span>
+              </label>
               <input
                 type="text"
                 value={unavailableReason}
@@ -423,7 +357,7 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
             onClick={handleSaveLog}
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving...' : 'Save Log'}
+            {isSubmitting ? "Saving..." : "Save Log"}
           </button>
         </div>
       </div>
