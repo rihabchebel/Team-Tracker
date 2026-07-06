@@ -1,5 +1,5 @@
-// components/Login.tsx
-import React, { useState } from "react";
+// src/components/Login.tsx
+import React, { useState, useEffect } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Lock, Mail, ArrowRight, Shield, Users } from "lucide-react";
@@ -14,6 +14,13 @@ const Login: React.FC = () => {
   const location = useLocation();
   const locationState = location.state as { message?: string } | null;
 
+  // Clear any stale session on mount
+  useEffect(() => {
+    localStorage.removeItem("supabase.auth.token");
+    sessionStorage.clear();
+  }, []);
+
+  // If user is already logged in, redirect to dashboard
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -27,7 +34,7 @@ const Login: React.FC = () => {
       await signIn(email, password);
     } catch (err: any) {
       console.error("Auth error:", err);
-      setError(err.message || "An error occurred. Please try again.");
+      setError(err.message || "Invalid email or password. Please try again.");
     } finally {
       setLoading(false);
     }

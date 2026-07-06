@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { formatDate } from '../utils/dateUtils';
 import { Briefcase, Flag, FileText, Calendar } from 'lucide-react';
 import './UserTimeline.css';
-import { ViewMode, User, Project } from '../types/models';
+import { ViewMode, User, Project, ProjectTimelineEvent } from '../types/models';
 
 interface TimelineEvent {
   id: string;
@@ -21,13 +21,15 @@ interface UserTimelineProps {
   project: string;
   users: User[];
   projectsData: Project[];
+  timelineEvents?: ProjectTimelineEvent[];
 }
 
 const UserTimeline: React.FC<UserTimelineProps> = ({ 
   view: _view,
   project, 
   users, 
-  projectsData 
+  projectsData,
+  timelineEvents = []
 }) => {
   const [selectedUser, setSelectedUser] = useState<string>('All users');
   const [selectedProject, setSelectedProject] = useState<string>(
@@ -51,6 +53,28 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
   const allProjects = ['All projects', ...projectsData.map((p) => p.name)];
 
   const getTimelineEvents = (): TimelineEvent[] => {
+    if (timelineEvents.length > 0) {
+      const filtered = timelineEvents.filter((event) => {
+        const matchesProject =
+          selectedProject === 'All projects' ||
+          event.project_name === selectedProject ||
+          projectsData.find((p) => p.id === event.project_id)?.name === selectedProject;
+        const matchesUser = selectedUser === 'All users' || event.user_name === selectedUser;
+        return matchesProject && matchesUser;
+      });
+
+      return filtered.map((event) => ({
+        id: event.id,
+        project: event.project_name || projectsData.find((p) => p.id === event.project_id)?.name || 'Unknown',
+        user: event.user_name || 'System',
+        date: formatDate(event.created_at),
+        hours: 0,
+        type: event.event_type.includes('created') || event.event_type.includes('updated') ? 'milestone' : 'work',
+        description: event.description,
+        subProject: event.metadata?.sub_project_name,
+      }));
+    }
+
     const events: TimelineEvent[] = [];
     const months = ['Mar 26', 'Apr 26', 'May 26', 'Jun 26'];
     const types: ('work' | 'leave' | 'milestone')[] = ['work', 'work', 'work', 'leave', 'milestone'];
@@ -124,10 +148,10 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
     return events;
   };
 
-  const timelineEvents = getTimelineEvents();
+  const resolvedTimelineEvents = getTimelineEvents();
 
   const groupedEvents: Record<string, TimelineEvent[]> = {};
-  timelineEvents.forEach(event => {
+  resolvedTimelineEvents.forEach(event => {
     const month = event.date.split(' ')[0] + ' ' + event.date.split(' ')[1];
     if (!groupedEvents[month]) {
       groupedEvents[month] = [];

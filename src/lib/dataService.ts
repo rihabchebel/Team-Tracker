@@ -6,7 +6,29 @@ import {
   SubProject,
   TeamMember,
   LogEntry,
+  ProjectTimelineEvent,
+  UserActivity,
 } from "../types/models";
+
+const safeRecordEvent = async (
+  table: "project_timeline" | "user_activity",
+  payload: Record<string, any>,
+) => {
+  try {
+    const { error } = await supabase.from(table).insert(payload);
+    if (error) {
+      console.warn(`Could not write ${table} event:`, error);
+    }
+  } catch (error) {
+    console.warn(`Could not write ${table} event:`, error);
+  }
+};
+
+const recordTimelineEvent = async (payload: Record<string, any>) =>
+  safeRecordEvent("project_timeline", payload);
+
+const recordUserActivity = async (payload: Record<string, any>) =>
+  safeRecordEvent("user_activity", payload);
 
 export const dataService = {
   // ============================================
@@ -108,6 +130,8 @@ export const dataService = {
           id: project.id,
           name: project.name,
           description: project.description || "",
+          status: (project.status || "active") as any,
+          priority: (project.priority || "medium") as any,
           totalHours: project.total_hours || 0,
           usedHours: project.used_hours || 0,
           subProjects: projectSubProjects,
@@ -162,6 +186,8 @@ export const dataService = {
         id: project.id,
         name: project.name,
         description: project.description || "",
+        status: (project.status || "active") as any,
+        priority: (project.priority || "medium") as any,
         totalHours: project.total_hours || 0,
         usedHours: project.used_hours || 0,
         subProjects: subProjects.map((sp: any) => ({
@@ -208,10 +234,21 @@ export const dataService = {
 
       if (error) throw error;
 
+      await recordTimelineEvent({
+        project_id: data.id,
+        user_id: user?.id || null,
+        event_type: "project_created",
+        description: `Project ${data.name} created`,
+        metadata: { name: data.name, total_hours: data.total_hours },
+        created_at: new Date().toISOString(),
+      });
+
       return {
         id: data.id,
         name: data.name,
         description: data.description || "",
+        status: (data.status || "active") as any,
+        priority: (data.priority || "medium") as any,
         totalHours: data.total_hours || 0,
         usedHours: data.used_hours || 0,
         subProjects: [],
@@ -243,10 +280,21 @@ export const dataService = {
 
       if (error) throw error;
 
+      await recordTimelineEvent({
+        project_id: projectId,
+        user_id: (await supabase.auth.getUser()).data.user?.id || null,
+        event_type: "project_updated",
+        description: `Project ${data.name} updated`,
+        metadata: updates,
+        created_at: new Date().toISOString(),
+      });
+
       return {
         id: data.id,
         name: data.name,
         description: data.description || "",
+        status: (data.status || "active") as any,
+        priority: (data.priority || "medium") as any,
         totalHours: data.total_hours || 0,
         usedHours: data.used_hours || 0,
         subProjects: [],
@@ -297,6 +345,15 @@ export const dataService = {
       // Update project totals
       await dataService.updateProjectTotals(projectId);
 
+      await recordTimelineEvent({
+        project_id: projectId,
+        user_id: (await supabase.auth.getUser()).data.user?.id || null,
+        event_type: "sub_project_created",
+        description: `Sub-project ${data.name} created`,
+        metadata: { sub_project_id: data.id, time_total: data.time_total },
+        created_at: new Date().toISOString(),
+      });
+
       return {
         id: data.id,
         name: data.name,
@@ -333,6 +390,15 @@ export const dataService = {
       // Update project totals
       await dataService.updateProjectTotals(projectId);
 
+      await recordTimelineEvent({
+        project_id: projectId,
+        user_id: (await supabase.auth.getUser()).data.user?.id || null,
+        event_type: "sub_project_updated",
+        description: `Sub-project ${data.name} updated`,
+        metadata: { sub_project_id: subProjectId, ...updates },
+        created_at: new Date().toISOString(),
+      });
+
       return {
         id: data.id,
         name: data.name,
@@ -360,6 +426,15 @@ export const dataService = {
 
       // Update project totals
       await dataService.updateProjectTotals(projectId);
+
+      await recordTimelineEvent({
+        project_id: projectId,
+        user_id: (await supabase.auth.getUser()).data.user?.id || null,
+        event_type: "sub_project_deleted",
+        description: `Sub-project removed`,
+        metadata: { sub_project_id: subProjectId },
+        created_at: new Date().toISOString(),
+      });
     } catch (error) {
       console.error("Error deleting sub-project:", error);
       throw error;
@@ -558,6 +633,32 @@ export const dataService = {
     role: string,
   ): Promise<TeamMember> => {
     try {
+      const normalizedRole = String(role || "developer").toLowerCase();
+
+      const { data: existingMembership } = await supabase
+        .from("team_members")
+        .select("id, role")
+        .eq("project_id", projectId)
+        .eq("user_id", userId)
+        .eq("role", normalizedRole)
+        .maybeSingle();
+
+      if (existingMembership) {
+        const { data: existingProfile } = await supabase
+          .from("user_profiles")
+          .select("full_name, email")
+          .eq("id", userId)
+          .single();
+
+        return {
+          id: userId,
+          name: existingProfile?.full_name || "Unknown",
+          email: existingProfile?.email || "",
+          role: normalizedRole,
+          joined: new Date().toISOString(),
+        };
+      }
+
       // Get user profile
       const { data: profile } = await supabase
         .from("user_profiles")
@@ -570,7 +671,7 @@ export const dataService = {
         .insert({
           project_id: projectId,
           user_id: userId,
-          role: role,
+          role: normalizedRole,
           joined_at: new Date().toISOString(),
         })
         .select()
@@ -578,11 +679,20 @@ export const dataService = {
 
       if (error) throw error;
 
+      await recordTimelineEvent({
+        project_id: projectId,
+        user_id: userId,
+        event_type: "team_member_added",
+        description: `${profile?.full_name || "Team member"} added as ${normalizedRole}`,
+        metadata: { role: normalizedRole, user_id: userId },
+        created_at: new Date().toISOString(),
+      });
+
       return {
         id: userId,
         name: profile?.full_name || "Unknown",
         email: profile?.email || "",
-        role: role,
+        role: normalizedRole,
         joined: data.joined_at || new Date().toISOString(),
         left: data.left_at || undefined,
       };
@@ -735,6 +845,31 @@ export const dataService = {
 
       if (error) throw error;
 
+      await recordTimelineEvent({
+        project_id: log.projectId || "",
+        user_id: log.submittedById || null,
+        event_type: "task_log_created",
+        description: `Task log submitted by ${log.submittedBy || "user"}`,
+        metadata: {
+          status: log.status,
+          hours: log.hoursWorked,
+          tasks: log.tasks || [],
+        },
+        created_at: new Date().toISOString(),
+      });
+
+      if (log.projectId && log.submittedById) {
+        await recordUserActivity({
+          user_id: log.submittedById,
+          project_id: log.projectId,
+          activity_type: "task_log",
+          description: `Logged ${log.hoursWorked || 0} hours`,
+          metadata: { status: log.status, tasks: log.tasks || [] },
+          hours: log.hoursWorked || 0,
+          created_at: new Date().toISOString(),
+        });
+      }
+
       // Update project used hours
       if (log.projectId) {
         await dataService.updateProjectTotals(log.projectId);
@@ -815,6 +950,134 @@ export const dataService = {
     }
   },
 
+  getProjectTimeline: async (
+    projectId?: string,
+  ): Promise<ProjectTimelineEvent[]> => {
+    try {
+      let query = supabase
+        .from("project_timeline")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (projectId) {
+        query = query.eq("project_id", projectId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn("Could not fetch project timeline:", error);
+        return [];
+      }
+
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id, name");
+      const { data: profiles } = await supabase
+        .from("user_profiles")
+        .select("id, full_name");
+
+      return (data || []).map((event: any) => ({
+        id: event.id,
+        project_id: event.project_id,
+        user_id: event.user_id,
+        event_type: event.event_type,
+        description: event.description,
+        metadata: event.metadata,
+        created_at: event.created_at,
+        project_name: projects?.find((p: any) => p.id === event.project_id)
+          ?.name,
+        user_name: profiles?.find((u: any) => u.id === event.user_id)
+          ?.full_name,
+      }));
+    } catch (error) {
+      console.error("Error fetching project timeline:", error);
+      return [];
+    }
+  },
+
+  getUserActivity: async (projectId?: string): Promise<UserActivity[]> => {
+    try {
+      let query = supabase
+        .from("user_activity")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (projectId) {
+        query = query.eq("project_id", projectId);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.warn("Could not fetch user activity:", error);
+        return [];
+      }
+
+      const { data: projects } = await supabase
+        .from("projects")
+        .select("id, name");
+      const { data: profiles } = await supabase
+        .from("user_profiles")
+        .select("id, full_name");
+
+      return (data || []).map((activity: any) => ({
+        id: activity.id,
+        user_id: activity.user_id,
+        project_id: activity.project_id,
+        sub_project_id: activity.sub_project_id,
+        activity_type: activity.activity_type,
+        description: activity.description,
+        metadata: activity.metadata,
+        created_at: activity.created_at,
+        hours: activity.hours || 0,
+        user_name: profiles?.find((u: any) => u.id === activity.user_id)
+          ?.full_name,
+        project_name: projects?.find((p: any) => p.id === activity.project_id)
+          ?.name,
+      }));
+    } catch (error) {
+      console.error("Error fetching user activity:", error);
+      return [];
+    }
+  },
+
+  subscribeToDataChanges: (callback: () => void) => {
+    const channel = supabase
+      .channel("teamtracker-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "projects" },
+        callback,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sub_projects" },
+        callback,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "team_members" },
+        callback,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "task_logs" },
+        callback,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_activity" },
+        callback,
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "project_timeline" },
+        callback,
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  },
+
   // ============================================
   // HELPER FUNCTIONS
   // ============================================
@@ -879,22 +1142,28 @@ export const dataService = {
     try {
       console.log("🔄 Fetching all data...");
 
-      const [projects, users, logs] = await Promise.all([
+      const [projects, users, logs, timeline, activity] = await Promise.all([
         dataService.getAllProjects(),
         dataService.getAllUsers(),
         dataService.getAllLogs(),
+        dataService.getProjectTimeline(),
+        dataService.getUserActivity(),
       ]);
 
       console.log("✅ Data loaded:", {
         projects: projects.length,
         users: users.length,
         logs: logs.length,
+        timeline: timeline.length,
+        activity: activity.length,
       });
 
       return {
         projects,
         users,
         logs,
+        timeline,
+        activity,
       };
     } catch (error) {
       console.error("Error fetching all data:", error);
@@ -902,6 +1171,8 @@ export const dataService = {
         projects: [],
         users: [],
         logs: [],
+        timeline: [],
+        activity: [],
       };
     }
   },

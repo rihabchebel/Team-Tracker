@@ -1,0 +1,21 @@
+.project-overview {
+  padding: 12px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.po-title {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+}
+.po-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.po-label { color: #555; }
+.po-value { font-weight: 600; }
+.po-subprojects { margin-top: 8px; }
+.po-subprojects-title { font-size: 12px; margin-bottom: 6px; }
+.po-subproject-item { display:flex; justify-content:space-between; font-size:12px; padding:2px 0; }
+.sp-name { color:#333 }
+.sp-hours { color:#666 }

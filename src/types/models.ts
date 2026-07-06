@@ -1,6 +1,11 @@
 // src/types/models.ts
 export type ViewMode = "supervisor" | "developer";
-export type PageType = "dashboard" | "users" | "timeline" | "settings" | "tasks";
+export type PageType =
+  | "dashboard"
+  | "users"
+  | "timeline"
+  | "settings"
+  | "tasks";
 
 export interface User {
   id: string;
@@ -19,7 +24,7 @@ export interface User {
   }[];
 }
 
-export type MemberStatus = 'Active' | 'Left' ;
+export type MemberStatus = "Active" | "Left";
 
 export interface TeamMember {
   id: string;
@@ -48,8 +53,8 @@ export interface Project {
   id: string;
   name: string;
   description: string;
-  status: 'active' | 'completed' | 'archived' | 'on-hold';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: "active" | "completed" | "archived" | "on-hold";
+  priority: "low" | "medium" | "high" | "urgent";
   totalHours: number;
   usedHours: number;
   subProjects: SubProject[];
@@ -116,17 +121,43 @@ export interface SupabaseTaskLog {
   submitted_at: string;
 }
 export interface Invitation {
-    id: string;
-    email: string;
-    full_name: string;
-    role: 'admin' | 'supervisor' | 'developer';
-    project_id: string | null;
-    project_name?: string;
-    token: string;
-    status: 'pending' | 'accepted' | 'rejected' | 'expired';
-    invited_by: string;
-    invited_at: string;
-    accepted_at: string | null;
-    rejected_at: string | null;
-    expires_at: string;
+  id: string;
+  email: string;
+  full_name: string;
+  role: "admin" | "supervisor" | "developer";
+  project_id: string | null;
+  project_name?: string;
+  token: string;
+  status: "pending" | "accepted" | "rejected" | "expired";
+  invited_by: string;
+  invited_at: string;
+  accepted_at: string | null;
+  rejected_at: string | null;
+  expires_at: string;
+}
+
+export interface UserActivity {
+  id: string;
+  user_id: string;
+  project_id: string;
+  sub_project_id?: string;
+  activity_type: string;
+  description: string;
+  metadata: any;
+  created_at: string;
+  hours: number;
+  user_name?: string;
+  project_name?: string;
+}
+
+export interface ProjectTimelineEvent {
+  id: string;
+  project_id: string;
+  user_id?: string;
+  event_type: string;
+  description: string;
+  metadata: any;
+  created_at: string;
+  user_name?: string;
+  project_name?: string;
 }

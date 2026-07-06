@@ -77,7 +77,7 @@ const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
 };
 
 const ProjectSettings: React.FC<ProjectSettingsProps> = ({ 
-  view: _view,
+  view,
   project, 
   projectsData, 
   onProjectsUpdate,
@@ -708,7 +708,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <Users size={16} />
             Team Members ({currentProject.teamMembers?.length || 0})
           </h3>
-          {isAdmin && (
+          {(isAdmin || view === 'supervisor') && (
             <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
               <Users size={16} />
               Add Member

@@ -12,6 +12,8 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 import './Sidebar.css';
+import ProjectOverview from './ProjectOverview';
+import { Project } from '../types/models';
 
 export type ViewMode = 'supervisor' | 'developer';
 export type PageType = 'dashboard' | 'users' | 'timeline' | 'settings' | 'tasks';
@@ -28,6 +30,7 @@ interface SidebarProps {
   isAdmin?: boolean;
   hasSupervisor?: boolean;
   hasDeveloper?: boolean;
+  projectsData?: Project[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -43,6 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   isAdmin = false,
   hasSupervisor = false,
   hasDeveloper = false,
+  projectsData = [],
 }) => {
   const adminLinks = [
     { id: 'dashboard' as PageType, label: 'Admin Dashboard', icon: LayoutDashboard },
@@ -143,6 +147,15 @@ const Sidebar: React.FC<SidebarProps> = ({
                 ))}
               </ul>
             </div>
+          </div>
+        )}
+
+        {/* Project Overview (sidebar) */}
+        {projectsData && (
+          <div className="sidebar-project-overview">
+            <ProjectOverview
+              project={projectsData.find((p) => p.name === selectedProject) || null}
+            />
           </div>
         )}
 

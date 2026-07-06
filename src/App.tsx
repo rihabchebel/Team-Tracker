@@ -15,10 +15,18 @@ import { AdminSignUp } from "./components/AdminSignUp";
 import { AcceptInvitation } from "./components/AcceptInvitation";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { SetupGuard } from "./components/SetupGuard";
-import { ViewMode, PageType, User, Project, LogEntry } from "./types/models";
+import {
+  ViewMode,
+  PageType,
+  User,
+  Project,
+  LogEntry,
+  ProjectTimelineEvent,
+  UserActivity,
+} from "./types/models";
 import { dataService } from "./lib/dataService";
-import DebugPanel from "./components/DebugPanel";
 import { useAuth } from "./context/AuthContext";
+import { AuthGuard } from "./components/AuthGuard";
 
 interface AppState {
   view: ViewMode;
@@ -60,6 +68,8 @@ const DashboardShell: React.FC = () => {
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [usersData, setUsersData] = useState<User[]>([]);
   const [taskLogs, setTaskLogs] = useState<LogEntry[]>([]);
+  const [timelineEvents, setTimelineEvents] = useState<ProjectTimelineEvent[]>([]);
+  const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -71,17 +81,21 @@ const DashboardShell: React.FC = () => {
         setError(null);
         console.log("🔄 Loading data from Supabase...");
 
-        const { users, projects, logs } = await dataService.getAllData();
+        const { users, projects, logs, timeline, activity } = await dataService.getAllData();
 
         console.log("✅ Data loaded:", {
           users: users.length,
           projects: projects.length,
           logs: logs.length,
+          timeline: timeline.length,
+          activity: activity.length,
         });
 
         setUsersData(users);
         setProjectsData(projects);
         setTaskLogs(logs);
+        setTimelineEvents(timeline);
+        setUserActivity(activity);
       } catch (loadError) {
         console.error("❌ Error loading data:", loadError);
         setError("Failed to load data. Please refresh the page.");
@@ -93,14 +107,35 @@ const DashboardShell: React.FC = () => {
     loadData();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribe = dataService.subscribeToDataChanges(() => {
+      void (async () => {
+        const { users, projects, logs, timeline, activity } = await dataService.getAllData();
+        setUsersData(users);
+        setProjectsData(projects);
+        setTaskLogs(logs);
+        setTimelineEvents(timeline);
+        setUserActivity(activity);
+      })();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [user]);
+
   const refreshData = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      const { users, projects, logs } = await dataService.refreshData();
+      const { users, projects, logs, timeline, activity } = await dataService.refreshData();
       setUsersData(users);
       setProjectsData(projects);
       setTaskLogs(logs);
+      setTimelineEvents(timeline);
+      setUserActivity(activity);
       console.log("✅ Data refreshed successfully");
     } catch (refreshError) {
       console.error("❌ Error refreshing data:", refreshError);
@@ -195,6 +230,7 @@ const DashboardShell: React.FC = () => {
       setUsersData([]);
       setTaskLogs([]);
       setError(null);
+      window.location.href = '/login';
     } catch (logoutError) {
       console.error("Logout error:", logoutError);
     }
@@ -227,6 +263,8 @@ const DashboardShell: React.FC = () => {
           view={state.view}
           project={effectiveProject}
           currentUser={currentUserName}
+          projectData={projectsData.find((item) => item.name === effectiveProject) || null}
+          timelineEvents={timelineEvents}
           onAddTaskLog={handleAddTaskLog}
         />
       );
@@ -240,6 +278,9 @@ const DashboardShell: React.FC = () => {
             project={state.selectedProject}
             users={usersData}
             projectsData={projectsData}
+            taskLogs={taskLogs}
+            userActivity={userActivity}
+            timelineEvents={timelineEvents}
             onProjectsUpdate={handleProjectsUpdate}
             onProjectSelect={handleProjectSelect}
             isAdmin={!!isAdmin}
@@ -264,6 +305,7 @@ const DashboardShell: React.FC = () => {
             project={state.selectedProject}
             users={usersData}
             projectsData={projectsData}
+            timelineEvents={timelineEvents}
           />
         );
       case "settings":
@@ -294,6 +336,9 @@ const DashboardShell: React.FC = () => {
             project={state.selectedProject}
             users={usersData}
             projectsData={projectsData}
+            taskLogs={taskLogs}
+            userActivity={userActivity}
+            timelineEvents={timelineEvents}
             onProjectsUpdate={handleProjectsUpdate}
             onProjectSelect={handleProjectSelect}
             isAdmin={!!isAdmin}
@@ -343,6 +388,7 @@ const DashboardShell: React.FC = () => {
           currentPage={state.currentPage}
           selectedProject={state.selectedProject}
           projects={projectNames}
+          projectsData={projectsData}
           onViewSwitch={handleViewSwitch}
           onPageChange={handlePageChange}
           onProjectSelect={handleProjectSelect}
@@ -356,7 +402,7 @@ const DashboardShell: React.FC = () => {
           {renderPage()}
         </main>
       </div>
-      <DebugPanel />
+      
     </div>
   );
 };
@@ -365,35 +411,52 @@ function App() {
   return (
     <BrowserRouter>
       <SetupGuard>
-        <Routes>
-          <Route path="/admin-signup" element={<AdminSignUp />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardShell />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardShell />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="*"
-            element={
-              <ProtectedRoute>
-                <Navigate to="/dashboard" replace />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
+        <AuthGuard>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/admin-signup" element={<AdminSignUp />} />
+            <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
+            
+            {/* Protected routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardShell />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardShell />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Admin-only routes */}
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <DashboardShell />
+                </ProtectedRoute>
+              }
+            />
+            
+            {/* Catch all */}
+            <Route
+              path="*"
+              element={
+                <ProtectedRoute>
+                  <Navigate to="/dashboard" replace />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AuthGuard>
       </SetupGuard>
     </BrowserRouter>
   );

@@ -1,7 +1,7 @@
 // src/context/AuthContext.tsx
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '../lib/supabase';
-import { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../lib/supabase";
+import { User } from "@supabase/supabase-js";
 import {
   getUserProfile,
   getUserTeamMemberships,
@@ -10,7 +10,7 @@ import {
   isUserAdmin,
   DashboardMode,
   getUserDashboardMode,
-} from '../utils/roleUtils';
+} from "../utils/roleUtils";
 
 interface AuthContextType {
   user: User | null;
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [supervisorProjects, setSupervisorProjects] = useState<any[]>([]);
   const [developerProjects, setDeveloperProjects] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [dashboardMode, setDashboardMode] = useState<DashboardMode>('none');
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>("none");
 
   const refreshUser = async () => {
     try {
@@ -71,10 +71,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSupervisorProjects([]);
         setDeveloperProjects([]);
         setIsAdmin(false);
-        setDashboardMode('none');
+        setDashboardMode("none");
       }
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      console.error("Error refreshing user:", error);
       setUser(null);
     }
   };
@@ -82,11 +82,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        console.log('🔄 Initializing auth...');
-        
+        console.log("🔄 Initializing auth...");
+
         const session = await auth.getSession();
         if (session?.user) {
-          console.log('✅ Session found for:', session.user.email);
+          console.log("✅ Session found for:", session.user.email);
           setUser(session.user);
 
           // Fetch profile and memberships for the signed-in user
@@ -110,14 +110,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const mode = await getUserDashboardMode(session.user.id);
             setDashboardMode(mode);
           } catch (err) {
-            console.error('Error fetching profile/memberships on init:', err);
+            console.error("Error fetching profile/memberships on init:", err);
           }
         } else {
-          console.log('ℹ️ No session found');
+          console.log("ℹ️ No session found");
+          localStorage.removeItem("supabase.auth.token");
           setUser(null);
         }
       } catch (error) {
-        console.error('❌ Auth init error:', error);
+        console.error("❌ Auth init error:", error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -126,23 +127,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth();
 
-    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email || 'No user');
-      
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+    const {
+      data: { subscription },
+    } = auth.onAuthStateChange((event, session) => {
+      console.log(
+        "🔄 Auth state changed:",
+        event,
+        session?.user?.email || "No user",
+      );
+
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         setUser(session?.user || null);
 
         // refresh profile + memberships
         if (session?.user?.id) {
           refreshUser().catch((e) => console.error(e));
         }
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === "SIGNED_OUT") {
         setUser(null);
-      } else if (event === 'USER_UPDATED') {
+      } else if (event === "USER_UPDATED") {
         setUser(session?.user || null);
         if (session?.user?.id) refreshUser().catch((e) => console.error(e));
       }
-      
+
       setLoading(false);
     });
 
@@ -152,33 +159,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, userData?: any) => {
-    console.log('📝 Signing up:', email);
+    console.log("📝 Signing up:", email);
     try {
       const data = await auth.signUp(email, password, userData);
       if (data.user) {
         setUser(data.user);
       }
     } catch (error) {
-      console.error('❌ Sign up error:', error);
+      console.error("❌ Sign up error:", error);
       throw error;
     }
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔑 Signing in:', email);
+    console.log("🔑 Signing in:", email);
     try {
       const data = await auth.signIn(email, password);
       if (data.user) {
         setUser(data.user);
       }
     } catch (error) {
-      console.error('❌ Sign in error:', error);
+      console.error("❌ Sign in error:", error);
       throw error;
     }
   };
 
   const signOut = async () => {
-    console.log('👤 Signing out');
+    console.log("👤 Signing out");
     try {
       await auth.signOut();
       setUser(null);
@@ -187,9 +194,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSupervisorProjects([]);
       setDeveloperProjects([]);
       setIsAdmin(false);
-      setDashboardMode('none');
+      setDashboardMode("none");
     } catch (error) {
-      console.error('❌ Sign out error:', error);
+      console.error("❌ Sign out error:", error);
       throw error;
     }
   };
@@ -220,7 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

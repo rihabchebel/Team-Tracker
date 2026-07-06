@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { dataService, supabase } from '../lib/dataService';
 import "./PerformanceDashboard.css";
-import { ViewMode, User, Project } from "../types/models";
+import { ViewMode, User, Project, LogEntry, UserActivity, ProjectTimelineEvent } from "../types/models";
 import { formatDate, formatDateLong } from "../utils/dateUtils";
 
 
@@ -46,6 +46,9 @@ interface PerformanceDashboardProps {
   project: string;
   users: User[];
   projectsData: Project[];
+  taskLogs?: LogEntry[];
+  userActivity?: UserActivity[];
+  timelineEvents?: ProjectTimelineEvent[];
   onProjectsUpdate?: (projects: Project[]) => void;
   onProjectSelect?: (project: string) => void;
   isAdmin?: boolean;
@@ -135,6 +138,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   project,
   users,
   projectsData,
+  taskLogs = [],
+  userActivity = [],
+  timelineEvents = [],
   onProjectsUpdate,
   onProjectSelect,
   isAdmin = false,
@@ -204,13 +210,16 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     member: Project["teamMembers"][number],
   ): MemberStatus => {
     if (member.left) return "Left";
-    const role = member.role?.toLowerCase() || "developer";
-    const seed = hashString(`${member.id}|status|${project}`);
-    const rand = randFromSeed(seed);
-    if (role === "supervisor" || role === "admin") {
-      return rand < 0.15 ? "On Leave" : "Active";
+
+    const explicitStatus = (member as any)?.status;
+    if (explicitStatus) {
+      const s = String(explicitStatus).toLowerCase();
+      if (s === "left") return "Left";
+      if (s === "on leave" || s === "on_leave" || s === "onleave") return "On Leave";
+      return "Active";
     }
-    return rand < 0.1 ? "On Leave" : rand < 0.04 ? "Left" : "Active";
+
+    return "Active";
   };
 
   const deriveActiveHours = (
@@ -332,6 +341,26 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   }
 
   const { teamMembers, budget, hoursSpent } = projectData;
+  const projectTaskLogs = taskLogs.filter((log) =>
+    isAll
+      ? true
+      : log.project === project || log.projectId === currentProjectData?.id,
+  );
+  const projectActivities = userActivity.filter((activity) =>
+    isAll
+      ? true
+      : activity.project_name === project || activity.project_id === currentProjectData?.id,
+  );
+  const projectTimeline = timelineEvents.filter((event) =>
+    isAll
+      ? true
+      : event.project_name === project || event.project_id === currentProjectData?.id,
+  );
+  const heatmapDates = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (29 - index));
+    return date.toISOString().split("T")[0];
+  });
 
   const getAvailableUsers = () => {
     const userSet = new Set(teamMembers.map((m) => m.name));
@@ -450,6 +479,17 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const budgetPercentage =
     budget > 0 ? Math.round((hoursSpent / budget) * 100) : 0;
 
+  const totalLoggedHours = projectTaskLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+  const completionPercentage = budget > 0 ? Math.min(100, Math.round((hoursSpent / budget) * 100)) : 0;
+  const productivityByUser = teamMembers
+    .map((member) => {
+      const memberHours = projectTaskLogs
+        .filter((log) => log.submittedById === member.id)
+        .reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
+      return { member, hours: memberHours };
+    })
+    .sort((a, b) => b.hours - a.hours);
+
   // Heatmap functions
   const getCellStatus = (
     member: DashboardMember,
@@ -458,79 +498,34 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     if (member.activeHours === 0 || member.status === "Left") {
       return "no-log";
     }
-    const seed = hashString(`${member.id}|${dayIndex}|${project}`);
-    const rand = randFromSeed(seed);
-    if (rand < 0.4) return "full";
-    if (rand < 0.75) return "partial";
-    return "unavailable";
+    const targetDate = heatmapDates[dayIndex];
+    const log = projectTaskLogs.find(
+      (entry) => entry.submittedById === member.id && entry.date === targetDate,
+    );
+    if (!log) return "no-log";
+    return log.status;
   };
 
   const getHoursForStatus = (
-    status: string,
     member: DashboardMember,
     dayIndex: number,
   ): number => {
-    const seed = hashString(
-      `${member.id}|hours|${dayIndex}|${status}|${project}`,
+    const targetDate = heatmapDates[dayIndex];
+    const log = projectTaskLogs.find(
+      (entry) => entry.submittedById === member.id && entry.date === targetDate,
     );
-    const r = randFromSeed(seed);
-    switch (status) {
-      case "full":
-        return 6 + Math.floor(r * 3);
-      case "partial":
-        return 2 + Math.floor(r * 3);
-      default:
-        return 0;
-    }
+    return log?.hoursWorked || 0;
   };
 
   const getTasksForStatus = (
-    status: string,
     member: DashboardMember,
     dayIndex: number,
   ): string[] => {
-    const mockTasks = [
-      "RTEST",
-      "Feature development",
-      "Bug fixes",
-      "Code review",
-      "Documentation",
-      "Testing",
-      "Deployment",
-      "Meeting",
-      "Design review",
-      "Sprint planning",
-      "Client call",
-      "Code refactoring",
-      "Database optimization",
-      "API development",
-      "UI implementation",
-    ];
-
-    const seedBase = hashString(
-      `${member.id}|tasks|${dayIndex}|${status}|${project}`,
+    const targetDate = heatmapDates[dayIndex];
+    const log = projectTaskLogs.find(
+      (entry) => entry.submittedById === member.id && entry.date === targetDate,
     );
-    const r = randFromSeed(seedBase);
-    let numTasks =
-      status === "full"
-        ? 2 + Math.floor(r * 3)
-        : status === "partial"
-          ? 1 + Math.floor(r * 2)
-          : 0;
-
-    const tasksCompleted: string[] = [];
-    const usedTasks = new Set<string>();
-    for (let i = 0; i < numTasks; i++) {
-      const pickSeed = seedBase + i * 1315423911;
-      const pickRand = randFromSeed(pickSeed);
-      const idx = Math.floor(pickRand * mockTasks.length);
-      const task = mockTasks[idx];
-      if (!usedTasks.has(task)) {
-        usedTasks.add(task);
-        tasksCompleted.push(task);
-      }
-    }
-    return tasksCompleted;
+    return (log?.tasks || []).map((task) => task.description);
   };
 
   const getSupervisorNotes = (
@@ -538,41 +533,19 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     member: DashboardMember,
     dayIndex: number,
   ): string => {
-    const notesMap: Record<string, string[]> = {
-      full: [
-        "Excellent work, keep it up!",
-        "Great progress on tasks.",
-        "Consistent performance.",
-        "Meeting all deadlines.",
-        "Outstanding contribution.",
-      ],
-      partial: [
-        "Good effort, try to log more hours.",
-        "Partial availability noted.",
-        "Consider increasing work hours.",
-        "Balancing multiple priorities.",
-        "Productive despite limited hours.",
-      ],
-      unavailable: [
-        "No work logged for this day.",
-        "Day off or unavailable.",
-        "Please ensure you log your availability.",
-        "No activity recorded.",
-        "Unavailable - please update status.",
-      ],
-      "no-log": [
-        "No logs available for this day.",
-        "Please log your availability.",
-        "Missing data for this date.",
-        "No activity recorded.",
-      ],
-    };
-    const notes = notesMap[status] || notesMap["no-log"];
-    const seed = hashString(
-      `${member.id}|notes|${dayIndex}|${status}|${project}`,
-    );
-    const idx = Math.floor(randFromSeed(seed) * notes.length);
-    return notes[idx];
+    const targetDate = heatmapDates[dayIndex];
+    const note = projectTimeline.find((event) => {
+      const created = event.created_at.split("T")[0];
+      const matchesUser = event.user_id ? event.user_id === member.id : true;
+      return created === targetDate && matchesUser;
+    });
+
+    if (note) return note.description;
+
+    if (status === "no-log") return "No logs available for this day.";
+    if (status === "partial") return "Partial availability logged.";
+    if (status === "unavailable") return "Unavailable for this day.";
+    return "Logged activity recorded.";
   };
 
   const handleCellClick = (
@@ -580,8 +553,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     dayIndex: number,
     status: "full" | "partial" | "unavailable" | "no-log",
   ) => {
-    const hoursWorked = getHoursForStatus(status, member, dayIndex);
-    const tasksCompleted = getTasksForStatus(status, member, dayIndex);
+    const hoursWorked = getHoursForStatus(member, dayIndex);
+    const tasksCompleted = getTasksForStatus(member, dayIndex);
     const noteKey = `${project}|${member.id}|${dayIndex}`;
     const supervisorNotes = getSupervisorNotes(status, member, dayIndex);
     const addedSupervisorNotes = addedSupervisorNotesByCell[noteKey] ?? [];
@@ -655,7 +628,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         return;
       }
 
-      // Create user profile first
       const { data: userData, error: userError } = await supabase
         .from('user_profiles')
         .insert({
@@ -668,14 +640,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
       if (userError) throw userError;
 
-      // Add to project team
       await dataService.addTeamMember(
         currentProject.id,
         userData.id,
         newMember.role.toLowerCase()
       );
 
-      // Refresh data
       const refreshedProjects = await dataService.getAllProjects();
       if (onProjectsUpdate) {
         onProjectsUpdate(refreshedProjects);
@@ -706,7 +676,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           <div className="page-header-content">
             <div>
               <h2>{project}</h2>
-              <span className="project-description">Project not found</span>
+              {/* Description removed from error state too */}
             </div>
           </div>
         </div>
@@ -732,9 +702,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             >
               {project}
             </h2>
-            <span className="project-description">
-              {projectData.description}
-            </span>
+            {/* ❌ DESCRIPTION COMPLETELY REMOVED FROM HERE */}
           </div>
           {isAdmin && !isAll && (
             <button
@@ -1009,9 +977,42 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               </div>
             </div>
 
+            <div className="stats-grid" style={{ marginBottom: '16px' }}>
+              <div className="stat-card">
+                <div className="stat-card-header">
+                  <div className="stat-info">
+                    <span className="stat-name">Logged Hours</span>
+                  </div>
+                </div>
+                <div className="stat-details">
+                  <div className="stat-item"><span className="stat-value">{totalLoggedHours}h</span></div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-card-header">
+                  <div className="stat-info">
+                    <span className="stat-name">Completion</span>
+                  </div>
+                </div>
+                <div className="stat-details">
+                  <div className="stat-item"><span className="stat-value">{completionPercentage}%</span></div>
+                </div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-card-header">
+                  <div className="stat-info">
+                    <span className="stat-name">Activity Events</span>
+                  </div>
+                </div>
+                <div className="stat-details">
+                  <div className="stat-item"><span className="stat-value">{projectActivities.length}</span></div>
+                </div>
+              </div>
+            </div>
+
             <h4>Developer Stats</h4>
             <div className="stats-grid">
-              {teamMembers.map((member) => (
+              {productivityByUser.map(({ member, hours }) => (
                 <div key={member.id} className="stat-card">
                   <div className="stat-card-header">
                     <div className="stat-avatar">
@@ -1033,7 +1034,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                         <Clock size={12} />
                         Hours
                       </span>
-                      <span className="stat-value">{member.activeHours}h</span>
+                      <span className="stat-value">{hours}h</span>
                     </div>
                     <div className="stat-item">
                       <span className="stat-label">
