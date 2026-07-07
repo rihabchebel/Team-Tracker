@@ -1,4 +1,5 @@
-// components/UserManagement.tsx
+// components/UserManagement.tsx - Fixed for JSONB roles
+
 import React, { useState } from "react";
 import { Edit3, Trash2, X, Plus } from "lucide-react";
 import EditUser from "./EditUser";
@@ -7,6 +8,13 @@ import "./UserManagement.css";
 import { ViewMode, User, Project } from "../types/models";
 import { dataService } from "../lib/dataService";
 import { auth } from "../lib/supabase";
+// ✅ Import role utilities
+import {
+  getPrimaryRole,
+  getRoleDisplayName,
+  getRoleBadgeClass,
+  getRolePriority
+} from "../utils/roleUtils";
 
 interface UserManagementProps {
   view: ViewMode;
@@ -16,6 +24,13 @@ interface UserManagementProps {
   onUsersUpdate: (updatedUsers: User[]) => void;
   onProjectsUpdate: (updatedProjects: Project[]) => void;
   isAdmin?: boolean;
+}
+
+// ✅ Extended user type with proper typing
+interface ExtendedUser extends User {
+  memberships?: Array<{ projectName: string; role: string }>;
+  allRoles?: string[];
+  allMemberships?: Array<{ projectName: string; role: string }>;
 }
 
 const UserManagement: React.FC<UserManagementProps> = ({
@@ -33,6 +48,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [newUser, setNewUser] = useState({
     name: "",
     email: "",
@@ -42,45 +58,106 @@ const UserManagement: React.FC<UserManagementProps> = ({
     project: "",
   });
 
-  const [searchTerm /*, setSearchTerm*/] = useState("");
+  const [searchTerm] = useState("");
   const [addingUserId, setAddingUserId] = useState<string | null>(null);
   const [addRole, setAddRole] = useState<"Developer" | "Supervisor">(
     "Developer",
   );
-  const [addTargetProject, setAddTargetProject] = useState<string>("");
+  const [, setAddTargetProject] = useState<string>("");
 
   const isSupervisor = view === "supervisor";
+  const isAllProjects = project === "All Projects";
 
   const projects = projectsData.map((p) => p.name);
 
-  // Project descriptions mapping
-
   // Get users that have access to the current project
-  const getProjectUsers = () => {
-    if (project === "All Projects") {
-      return users;
+  const getProjectUsers = (): ExtendedUser[] => {
+    if (isAllProjects) {
+      return users.map((user) => {
+        // Get all memberships for this user
+        const memberships = projectsData
+          .map((p) => ({
+            projectName: p.name,
+            role: p.teamMembers.find((m) => m.id === user.id)?.role || null,
+          }))
+          .filter((m): m is { projectName: string; role: string } => m.role !== null);
+
+        // ✅ Get UNIQUE roles from memberships using getPrimaryRole
+        const rolesFromMemberships = Array.from(
+          new Set(memberships.map((m) => getPrimaryRole(m.role)))
+        );
+
+        // ✅ Only add user.role if it's not already in the list
+        let allRoles = [...rolesFromMemberships];
+        if (user.role) {
+          const primaryRole = getPrimaryRole(user.role);
+          if (!allRoles.includes(primaryRole)) {
+            allRoles.push(primaryRole);
+          }
+        }
+
+        // ✅ If no roles found, default to ['developer']
+        if (allRoles.length === 0) {
+          allRoles = ['developer'];
+        }
+
+        return {
+          ...user,
+          memberships,
+          allRoles: allRoles,
+        };
+      });
     }
 
     const currentProject = projectsData.find((p) => p.name === project);
-    if (!currentProject) return users;
+    if (!currentProject) return [];
 
     const memberIds = currentProject.teamMembers.map((m) => m.id);
     const projectUsers = users.filter((u) => memberIds.includes(u.id));
 
-    // If no users have access to this project, show all users
-    if (projectUsers.length === 0) {
-      return users.map((u) => ({ ...u, project: project }));
-    }
+    return projectUsers.map((user) => {
+      const member = currentProject.teamMembers.find((m) => m.id === user.id);
 
-    return projectUsers;
+      // Get all memberships across all projects
+      const allMemberships = projectsData
+        .map((p) => ({
+          projectName: p.name,
+          role: p.teamMembers.find((m) => m.id === user.id)?.role || null,
+        }))
+        .filter((m): m is { projectName: string; role: string } => m.role !== null);
+
+      // ✅ Get UNIQUE roles from all memberships using getPrimaryRole
+      const rolesFromMemberships = Array.from(
+        new Set(allMemberships.map((m) => getPrimaryRole(m.role)))
+      );
+
+      // ✅ Only add user.role if it's not already in the list
+      let allRoles = [...rolesFromMemberships];
+      if (user.role) {
+        const primaryRole = getPrimaryRole(user.role);
+        if (!allRoles.includes(primaryRole)) {
+          allRoles.push(primaryRole);
+        }
+      }
+
+      // ✅ If no roles found, default to ['developer']
+      if (allRoles.length === 0) {
+        allRoles = ['developer'];
+      }
+
+      return {
+        ...user,
+        role: member?.role || user.role || 'Developer',
+        project: project,
+        allRoles: allRoles,
+        allMemberships: allMemberships,
+      };
+    });
   };
 
-  const rolePriority = (role: string = "") => {
-    const normalized = role.toLowerCase();
-    if (normalized === "admin") return 0;
-    if (normalized === "supervisor") return 1;
-    if (normalized === "developer") return 2;
-    return 3;
+  // ✅ FIXED: Use getRolePriority from roleUtils
+  const rolePriority = (role: any): number => {
+    return getRolePriority(role);
   };
 
   const filteredUsers = getProjectUsers()
@@ -90,12 +167,12 @@ const UserManagement: React.FC<UserManagementProps> = ({
         user.email.toLowerCase().includes(searchTerm.toLowerCase()),
     )
     .sort((a, b) => {
-      const roleDiff = rolePriority(a.role || "") - rolePriority(b.role || "");
+      const roleDiff = rolePriority(a.role) - rolePriority(b.role);
       if (roleDiff !== 0) return roleDiff;
       return a.name.localeCompare(b.name);
     });
 
-  // Get the description for the current project
+  // ✅ Helper function to format role display
 
   const handleCreateUser = async () => {
     if (!isAdmin) {
@@ -130,23 +207,49 @@ const UserManagement: React.FC<UserManagementProps> = ({
     setIsCreating(true);
 
     try {
-      console.log("📝 Creating user:", trimmedEmail);
+      console.log("📝 Creating/Checking user:", trimmedEmail);
 
-      // Create auth user with the NEW API format
-      const signUpResult = await auth.signUp(trimmedEmail, trimmedPassword, {
-        full_name: trimmedName,
-        role: newUser.role.toLowerCase(),
-      });
+      let authUserId: string;
+      let isExistingUser = false;
 
-      console.log("✅ Auth user created:", signUpResult);
+      // First, try to sign up
+      try {
+        const signUpResult = await auth.signUp(trimmedEmail, trimmedPassword, {
+          full_name: trimmedName,
+          role: newUser.role.toLowerCase(),
+        });
+        console.log("✅ Auth user created:", signUpResult);
 
-      if (!signUpResult.user?.id) {
-        throw new Error("Unable to create auth user.");
+        if (signUpResult.user?.id) {
+          authUserId = signUpResult.user.id;
+        } else {
+          throw new Error("No user ID returned from sign up");
+        }
+      } catch (signUpError: any) {
+        // If user already exists, try to sign in
+        if (signUpError.message?.includes("already registered") ||
+          signUpError.message?.includes("User already registered")) {
+          console.log("👤 User already exists, attempting to sign in...");
+
+          try {
+            const signInResult = await auth.signIn(trimmedEmail, trimmedPassword);
+            if (signInResult.user?.id) {
+              authUserId = signInResult.user.id;
+              isExistingUser = true;
+              console.log("✅ Existing user found:", authUserId);
+            } else {
+              throw new Error("Could not get existing user ID.");
+            }
+          } catch (signInError) {
+            console.error("❌ Error signing in existing user:", signInError);
+            throw new Error("User exists but could not be authenticated. Please check your password.");
+          }
+        } else {
+          throw signUpError;
+        }
       }
 
-      const authUserId = signUpResult.user.id;
-
-      // Create corresponding profile with the same auth user id
+      // Create or update profile
       const createdProfile = await dataService.createUserProfile({
         id: authUserId,
         name: trimmedName,
@@ -155,25 +258,38 @@ const UserManagement: React.FC<UserManagementProps> = ({
         status: newUser.status.toLowerCase(),
       });
 
-      console.log("✅ Profile created:", createdProfile);
+      console.log("✅ Profile created/updated:", createdProfile);
 
       if (!createdProfile) {
-        throw new Error("Could not create user profile");
+        throw new Error("Could not create or update user profile");
       }
 
+      // IMPORTANT: Add to project if specified
       if (projectObj) {
-        // Add team member for the selected project
-        await dataService.addTeamMember(
-          projectObj.id,
-          authUserId,
-          newUser.role,
-        );
-        console.log("✅ Added to project:", projectObj.name);
+        console.log(`📝 Adding user ${trimmedName} to project ${projectObj.name} with role ${newUser.role}`);
+
+        // Check if user is already in the project
+        const isMember = projectObj.teamMembers.some(m => m.id === authUserId);
+
+        if (!isMember) {
+          // Add to team_members with the correct role
+          await dataService.addTeamMember(projectObj.id, authUserId, newUser.role);
+          console.log(`✅ User added to project: ${projectObj.name} with role ${newUser.role}`);
+        } else {
+          console.log(`ℹ️ User is already a member of ${projectObj.name}`);
+        }
+      } else {
+        console.log("ℹ️ No project selected, user added to system only");
       }
 
-      // Refresh data
-      const refreshedProjects = await dataService.getAllProjects();
-      const refreshedUsers = await dataService.getAllUsers();
+      // Refresh data from database
+      const [refreshedProjects, refreshedUsers] = await Promise.all([
+        dataService.getAllProjects(),
+        dataService.getAllUsers(),
+      ]);
+
+      console.log("✅ Refreshed projects:", refreshedProjects.length);
+      console.log("✅ Refreshed users:", refreshedUsers.length);
 
       onProjectsUpdate(refreshedProjects);
       onUsersUpdate(refreshedUsers);
@@ -190,11 +306,13 @@ const UserManagement: React.FC<UserManagementProps> = ({
       setShowCreateModal(false);
       setIsCreating(false);
 
-      alert(`✅ User "${trimmedName}" created successfully!`);
+      const message = isExistingUser
+        ? `✅ User "${trimmedName}" already exists and has been updated!`
+        : `✅ User "${trimmedName}" created successfully!`;
+      alert(message);
     } catch (error: any) {
       console.error("❌ Error creating user:", error);
 
-      // Better error messages
       let errorMessage = "Failed to create user. ";
       if (error.message?.includes("duplicate key")) {
         errorMessage += "This email is already registered.";
@@ -214,7 +332,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
     setShowEditModal(true);
   };
 
-  // Keep selectedUser object in sync if `users` prop updates externally
   React.useEffect(() => {
     if (!selectedUser) return;
     const latest = users.find((u) => u.id === selectedUser.id);
@@ -229,55 +346,51 @@ const UserManagement: React.FC<UserManagementProps> = ({
     }
   }, [users, selectedUser]);
 
-  const handleSaveUser = (updatedUser: User) => {
-    const updatedUsers = users.map((user) =>
-      user.id === updatedUser.id ? updatedUser : user,
-    );
-    onUsersUpdate(updatedUsers);
+  const handleSaveUser = async (updatedUser: User) => {
+    try {
+      console.log("💾 Saving user:", updatedUser);
 
-    // Update team members in-place across projects
-    const updatedProjects = projectsData.map((projectData) => {
-      const hasMember = projectData.teamMembers.some(
-        (member) => member.id === updatedUser.id,
-      );
-      let nextTeamMembers = projectData.teamMembers;
+      await dataService.updateUser(updatedUser.id, {
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        status: updatedUser.status,
+      });
 
-      if (hasMember) {
-        // Update existing member in-place
-        nextTeamMembers = projectData.teamMembers.map((member) =>
-          member.id === updatedUser.id
-            ? {
-                ...member,
-                name: updatedUser.name,
-                role: updatedUser.role || "Developer",
-              }
-            : member,
-        );
-      } else if (
-        projectData.name === updatedUser.project &&
-        updatedUser.project
-      ) {
-        // Add to new project if assigned and not already present
-        nextTeamMembers = [
-          ...projectData.teamMembers,
-          {
-            id: updatedUser.id,
-            name: updatedUser.name,
-            role: updatedUser.role || "Developer",
-            joined: updatedUser.created,
-          },
-        ];
+      if (project && project !== "All Projects") {
+        const projectObj = projectsData.find((p) => p.name === project);
+        if (projectObj) {
+          await dataService.updateTeamMemberRole(
+            projectObj.id,
+            updatedUser.id,
+            updatedUser.role || "Developer",
+          );
+          console.log(`✅ Role updated for project ${project} only`);
+        }
       }
 
-      return {
-        ...projectData,
-        teamMembers: nextTeamMembers,
-      };
-    });
-    onProjectsUpdate(updatedProjects);
+      const [finalProjects, finalUsers] = await Promise.all([
+        dataService.getAllProjects(),
+        dataService.getAllUsers(),
+      ]);
 
-    setShowEditModal(false);
-    setSelectedUser(null);
+      onProjectsUpdate(finalProjects);
+      onUsersUpdate(finalUsers);
+
+      console.log("🔍 Debug - After update:");
+      console.log("Updated user:", updatedUser);
+      console.log("Current project:", project);
+      console.log("All projects:", finalProjects);
+      console.log("All users:", finalUsers);
+
+      setShowEditModal(false);
+      setSelectedUser(null);
+
+      alert("✅ User updated successfully!");
+    } catch (error) {
+      console.error("Error saving user:", error);
+      alert("Failed to update user. Please try again.");
+    }
   };
 
   const handleCloseEditModal = () => {
@@ -290,26 +403,45 @@ const UserManagement: React.FC<UserManagementProps> = ({
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = () => {
-    if (userToDelete) {
-      const updatedUsers = users.filter((user) => user.id !== userToDelete.id);
-      onUsersUpdate(updatedUsers);
+  const handleConfirmDelete = async () => {
+    if (!userToDelete || isDeleting) return;
 
-      const updatedProjects = projectsData.map((projectData) => ({
-        ...projectData,
-        teamMembers: projectData.teamMembers.filter(
-          (member) => member.id !== userToDelete.id,
-        ),
-      }));
-      onProjectsUpdate(updatedProjects);
+    setIsDeleting(true);
+    try {
+      console.log(`🗑️ Deleting user: ${userToDelete.name} (${userToDelete.id})`);
+      console.log(`⚠️ This will remove the user from ALL projects!`);
+
+      await dataService.deleteUser(userToDelete.id);
+
+      const [refreshedProjects, refreshedUsers] = await Promise.all([
+        dataService.getAllProjects(),
+        dataService.getAllUsers(),
+      ]);
+
+      onProjectsUpdate(refreshedProjects);
+      onUsersUpdate(refreshedUsers);
 
       setShowDeleteModal(false);
       setUserToDelete(null);
+
+      alert(
+        `✅ User "${userToDelete.name}" has been permanently deleted from ALL projects.`,
+      );
+    } catch (error) {
+      console.error("❌ Error deleting user:", error);
+      alert("Failed to delete user. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setUserToDelete(null);
+  };
+
   const handleAddUserToProject = async (
-    user: User,
+    user: ExtendedUser,
     role: "Developer" | "Supervisor",
     targetProject?: string,
   ) => {
@@ -320,10 +452,8 @@ const UserManagement: React.FC<UserManagementProps> = ({
       const projectObj = projectsData.find((p) => p.name === projectName);
       if (!projectObj) return;
 
-      // Call backend to add team member
       await dataService.addTeamMember(projectObj.id, user.id, role);
 
-      // Refresh projects and users from backend
       const refreshedProjects = await dataService.getAllProjects();
       const refreshedUsers = await dataService.getAllUsers();
 
@@ -338,11 +468,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
     }
   };
 
-  const handleCancelDelete = () => {
-    setShowDeleteModal(false);
-    setUserToDelete(null);
-  };
-
   const handleCreateUserSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     handleCreateUser();
@@ -354,7 +479,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
         <div className="page-header-content">
           <div>
             <h2>{project}</h2>
-           
           </div>
           {isAdmin && (
             <button
@@ -385,26 +509,43 @@ const UserManagement: React.FC<UserManagementProps> = ({
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => {
+              {filteredUsers.map((user: ExtendedUser) => {
                 const proj = projectsData.find((p) => p.name === project);
                 const member = proj?.teamMembers.find((m) => m.id === user.id);
 
-                // For 'All Projects' view, compute memberships across all projects
-                const memberships =
-                  project === "All Projects"
-                    ? projectsData
-                        .map((pd) => ({
-                          projectName: pd.name,
-                          member: pd.teamMembers.find((m) => m.id === user.id),
-                        }))
-                        .filter((x) => x.member)
-                    : [];
+                const memberships = isAllProjects
+                  ? projectsData
+                    .map((pd) => ({
+                      projectName: pd.name,
+                      member: pd.teamMembers.find((m) => m.id === user.id),
+                    }))
+                    .filter((x) => x.member)
+                  : [];
+
+                // ✅ Get UNIQUE roles for this user using getAllRoles
+                const allRoles = user.allRoles || [getPrimaryRole(user.role) || 'developer'];
+                const uniqueRoles = Array.from(new Set(allRoles));
+                const hasMultipleRolesFlag = uniqueRoles.length > 1;
+
+                // ✅ Format role names for display
+                const displayRoles = uniqueRoles.map((r: string) => getRoleDisplayName(r));
 
                 return (
                   <tr key={user.id}>
                     <td className="user-name-cell">
                       <div className="user-avatar">{user.name.charAt(0)}</div>
-                      {user.name}
+                      <div>
+                        <div>{user.name}</div>
+                        {/* ✅ ONLY show green indicator if user has multiple UNIQUE roles */}
+                        {hasMultipleRolesFlag && (
+                          <div className="multiple-roles-indicator">
+                            <span className="green-dot"></span>
+                            <span className="roles-text">
+                              {displayRoles.join(' + ')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td>{user.email}</td>
                     <td>{formatDate(user.created)}</td>
@@ -416,112 +557,77 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       </span>
                     </td>
                     <td>
-                      {project === "All Projects" ? (
+                      {isAllProjects ? (
                         memberships.length > 0 ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: 8,
-                              flexWrap: "wrap",
-                            }}
-                          >
+                          <div className="roles-container">
                             {memberships.map(({ projectName, member: m }) => (
                               <span
                                 key={projectName}
-                                className={`role-badge role-${(m!.role || "Developer").toLowerCase()}`}
+                                className={`role-badge ${getRoleBadgeClass(m!.role || "Developer")}`}
                                 title={projectName}
                               >
-                                {m!.role} · {projectName}
+                                {getRoleDisplayName(m!.role || "Developer")} · {projectName}
                               </span>
                             ))}
-                          </div>
-                        ) : (
-                          <div className="no-access">
-                            <span className="no-access-text">No access</span>
-                            {isSupervisor && (
-                              <div className="add-inline">
-                                {addingUserId === user.id ? (
-                                  <>
-                                    <select
-                                      value={addTargetProject}
-                                      onChange={(e) =>
-                                        setAddTargetProject(e.target.value)
-                                      }
-                                    >
-                                      <option value="">Select project</option>
-                                      {projects.map((pn) => (
-                                        <option key={pn} value={pn}>
-                                          {pn}
-                                        </option>
-                                      ))}
-                                    </select>
-
-                                    <select
-                                      value={addRole}
-                                      onChange={(e) =>
-                                        setAddRole(
-                                          e.target.value as
-                                            | "Developer"
-                                            | "Supervisor",
-                                        )
-                                      }
-                                    >
-                                      <option value="Developer">
-                                        Developer
-                                      </option>
-                                      <option value="Supervisor">
-                                        Supervisor
-                                      </option>
-                                    </select>
-
-                                    <button
-                                      className="confirm-add"
-                                      onClick={() => {
-                                        handleAddUserToProject(
-                                          user,
-                                          addRole,
-                                          addTargetProject,
-                                        );
-                                      }}
-                                    >
-                                      Add
-                                    </button>
-                                    <button
-                                      className="cancel-add"
-                                      onClick={() => {
-                                        setAddingUserId(null);
-                                        setAddTargetProject("");
-                                      }}
-                                    >
-                                      Cancel
-                                    </button>
-                                  </>
-                                ) : (
-                                  <button
-                                    className="add-icon-btn"
-                                    onClick={() => {
-                                      setAddingUserId(user.id);
-                                      setAddRole("Developer");
-                                      setAddTargetProject("");
-                                    }}
-                                    title="Add to project"
+                            {/* ✅ Only show "Also:" if multiple UNIQUE roles */}
+                            {hasMultipleRolesFlag && (
+                              <div className="global-roles">
+                                <span className="global-roles-label">Also:</span>
+                                {uniqueRoles.map((role: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className={`role-badge-small ${getRoleBadgeClass(role)}`}
                                   >
-                                    <Plus size={14} />
-                                  </button>
-                                )}
+                                    {getRoleDisplayName(role)}
+                                  </span>
+                                ))}
                               </div>
                             )}
                           </div>
+                        ) : (
+                          <span className="no-access-text">No access</span>
                         )
                       ) : member ? (
-                        <span
-                          className={`role-badge role-${(member.role || "Developer").toLowerCase()}`}
-                        >
-                          {member.role || "Developer"}
-                        </span>
+                        <div>
+                          <span
+                            className={`role-badge ${getRoleBadgeClass(member.role || "Developer")}`}
+                          >
+                            {getRoleDisplayName(member.role || "Developer")} · {project}
+                          </span>
+                          {/* ✅ Only show other roles if multiple UNIQUE roles */}
+                          {hasMultipleRolesFlag && (
+                            <div className="global-roles" style={{ marginTop: '4px' }}>
+                              <span className="global-roles-label">Also:</span>
+                              {uniqueRoles
+                                .filter((r: string) => getPrimaryRole(r) !== getPrimaryRole(member.role))
+                                .map((role: string, idx: number) => (
+                                  <span
+                                    key={idx}
+                                    className={`role-badge-small ${getRoleBadgeClass(role)}`}
+                                  >
+                                    {getRoleDisplayName(role)}
+                                  </span>
+                                ))}
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div className="no-access">
                           <span className="no-access-text">No access</span>
+                          {/* ✅ Only show global roles if multiple UNIQUE roles */}
+                          {hasMultipleRolesFlag && (
+                            <div className="global-roles" style={{ marginTop: '4px' }}>
+                              <span className="global-roles-label">Global:</span>
+                              {uniqueRoles.map((role: string, idx: number) => (
+                                <span
+                                  key={idx}
+                                  className={`role-badge-small ${getRoleBadgeClass(role)}`}
+                                >
+                                  {getRoleDisplayName(role)}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                           {isSupervisor && (
                             <div className="add-inline">
                               {addingUserId === user.id ? (
@@ -541,7 +647,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
                                       Supervisor
                                     </option>
                                   </select>
-
                                   <button
                                     className="confirm-add"
                                     onClick={() => {
@@ -754,6 +859,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
         onClose={handleCloseEditModal}
         onSave={handleSaveUser}
         projects={projects}
+        currentProject={isAllProjects ? undefined : project}
       />
 
       {/* Delete User Confirmation Modal */}
@@ -807,6 +913,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
               <button
                 className="delete-btn-modal"
                 onClick={handleConfirmDelete}
+                disabled={isDeleting}
                 style={{
                   padding: "10px 24px",
                   background: "#dc3545",
@@ -815,23 +922,13 @@ const UserManagement: React.FC<UserManagementProps> = ({
                   borderRadius: "6px",
                   fontSize: "14px",
                   fontWeight: "500",
-                  cursor: "pointer",
+                  cursor: isDeleting ? "not-allowed" : "pointer",
                   transition: "all 0.3s",
                   letterSpacing: "0.5px",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#c82333";
-                  e.currentTarget.style.transform = "translateY(-1px)";
-                  e.currentTarget.style.boxShadow =
-                    "0 4px 12px rgba(220, 53, 69, 0.3)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#dc3545";
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "none";
+                  opacity: isDeleting ? 0.7 : 1,
                 }}
               >
-                Delete User
+                {isDeleting ? "Deleting..." : "Delete User"}
               </button>
             </div>
           </div>

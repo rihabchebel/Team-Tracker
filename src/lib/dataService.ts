@@ -1,5 +1,5 @@
 // src/lib/dataService.ts
-import { supabase } from "./supabase";
+import { supabase, supabaseAdmin } from "./supabase";
 import {
   User,
   Project,
@@ -9,6 +9,75 @@ import {
   ProjectTimelineEvent,
   UserActivity,
 } from "../types/models";
+
+// ============================================
+// CACHE MANAGER
+// ============================================
+
+class DataCache {
+  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private pendingRequests: Map<string, Promise<any>> = new Map();
+  private readonly TTL = 5 * 60 * 1000; // 5 minutes default
+
+  async get<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttl: number = this.TTL
+  ): Promise<T> {
+    // Check if there's a pending request for this key
+    if (this.pendingRequests.has(key)) {
+      return this.pendingRequests.get(key) as Promise<T>;
+    }
+
+    // Check cache
+    const cached = this.cache.get(key);
+    if (cached && Date.now() - cached.timestamp < ttl) {
+      return cached.data as T;
+    }
+
+    // Start new request
+    const promise = fetcher()
+      .then((data) => {
+        this.cache.set(key, { data, timestamp: Date.now() });
+        this.pendingRequests.delete(key);
+        return data;
+      })
+      .catch((error) => {
+        this.pendingRequests.delete(key);
+        throw error;
+      });
+
+    this.pendingRequests.set(key, promise);
+    return promise;
+  }
+
+  invalidate(key: string): void {
+    this.cache.delete(key);
+  }
+
+  invalidatePattern(pattern: string): void {
+    for (const key of this.cache.keys()) {
+      if (key.includes(pattern)) {
+        this.cache.delete(key);
+      }
+    }
+  }
+
+  clear(): void {
+    this.cache.clear();
+    this.pendingRequests.clear();
+  }
+
+  getCacheSize(): number {
+    return this.cache.size;
+  }
+}
+
+const cache = new DataCache();
+
+// ============================================
+// EVENT RECORDING HELPERS
+// ============================================
 
 const safeRecordEvent = async (
   table: "project_timeline" | "user_activity",
@@ -30,101 +99,202 @@ const recordTimelineEvent = async (payload: Record<string, any>) =>
 const recordUserActivity = async (payload: Record<string, any>) =>
   safeRecordEvent("user_activity", payload);
 
+// ============================================
+// ROLE MAPPING HELPERS
+// ============================================
+
+const profileRoleMap: Record<string, string> = {
+  developer: "developer",
+  supervisor: "supervisor",
+  admin: "admin",
+  Developer: "developer",
+  Supervisor: "supervisor",
+  Admin: "admin",
+};
+
+const teamRoleMap: Record<string, string> = {
+  developer: "Developer",
+  supervisor: "Supervisor",
+  admin: "Admin",
+  Developer: "Developer",
+  Supervisor: "Supervisor",
+  Admin: "Admin",
+};
+
+const normalizeProfileRole = (role: string): string => {
+  return profileRoleMap[role?.toLowerCase()] || "developer";
+};
+
+const normalizeTeamRole = (role: string): string => {
+  return teamRoleMap[role?.toLowerCase()] || "Developer";
+};
+
+// ============================================
+// DATA SERVICE
+// ============================================
+
 export const dataService = {
+  // ============================================
+  // CACHE MANAGEMENT
+  // ============================================
+
+  clearCache: () => {
+    cache.clear();
+    console.log("🧹 Cache cleared");
+  },
+
+  invalidateCache: (pattern?: string) => {
+    if (pattern) {
+      cache.invalidatePattern(pattern);
+      console.log(`🧹 Cache invalidated for pattern: ${pattern}`);
+    } else {
+      cache.clear();
+      console.log("🧹 Cache completely cleared");
+    }
+  },
+
+  getCacheSize: () => {
+    return cache.getCacheSize();
+  },
+
   // ============================================
   // PROJECTS
   // ============================================
 
   getAllProjects: async (): Promise<Project[]> => {
-    try {
-      console.log("📋 Fetching projects...");
+    return cache.get("projects", async () => {
+      try {
+        console.log("📋 Fetching projects...");
 
-      // Get projects
-      const { data: projects, error: projectsError } = await supabase
-        .from("projects")
-        .select("*")
-        .order("created_at", { ascending: false });
+        // Fetch all data in parallel
+        const [
+          { data: projects, error: projectsError },
+          { data: subProjects },
+          { data: teamMembers },
+          { data: userProfiles },
+        ] = await Promise.all([
+          supabase
+            .from("projects")
+            .select("*")
+            .order("created_at", { ascending: false }),
+          supabase.from("sub_projects").select("*"),
+          supabase.from("team_members").select("*"),
+          supabase.from("user_profiles").select("*"),
+        ]);
 
-      if (projectsError) {
-        console.warn("Could not fetch projects:", projectsError);
+        if (projectsError) {
+          console.warn("Could not fetch projects:", projectsError);
+          return [];
+        }
+
+        console.log(`📋 Found ${projects?.length || 0} projects`);
+        console.log(`📋 Found ${subProjects?.length || 0} sub-projects`);
+        console.log(`👥 Found ${teamMembers?.length || 0} team members`);
+
+        // Create lookup maps for faster joins
+        const subProjectsMap = new Map();
+        (subProjects || []).forEach((sp: any) => {
+          if (!subProjectsMap.has(sp.project_id)) {
+            subProjectsMap.set(sp.project_id, []);
+          }
+          subProjectsMap.get(sp.project_id).push(sp);
+        });
+
+        const teamMembersMap = new Map();
+        (teamMembers || []).forEach((tm: any) => {
+          if (!teamMembersMap.has(tm.project_id)) {
+            teamMembersMap.set(tm.project_id, []);
+          }
+          teamMembersMap.get(tm.project_id).push(tm);
+        });
+
+        const userProfilesMap = new Map();
+        (userProfiles || []).forEach((up: any) => {
+          userProfilesMap.set(up.id, up);
+        });
+
+        // Transform projects
+        return (projects || []).map((project: any) => {
+          const projectSubProjects = (subProjectsMap.get(project.id) || []).map(
+            (sp: any) => ({
+              id: sp.id,
+              name: sp.name,
+              timeUsed: sp.time_used || 0,
+              timeTotal: sp.time_total || 0,
+            })
+          );
+
+          const projectTeamMembers = (teamMembersMap.get(project.id) || []).map(
+            (tm: any) => {
+              const profile = userProfilesMap.get(tm.user_id);
+              return {
+                id: tm.user_id,
+                name: profile?.full_name || "Unknown",
+                email: profile?.email || "",
+                role: tm.role || "Developer",
+                status: profile?.status
+                  ? ((profile.status.charAt(0).toUpperCase() +
+                      profile.status.slice(1)) as any)
+                  : ("Active" as any),
+                joined: tm.joined_at || new Date().toISOString(),
+                left: tm.left_at || undefined,
+              };
+            }
+          );
+
+          return {
+            id: project.id,
+            name: project.name,
+            description: project.description || "",
+            status: (project.status || "active") as any,
+            priority: (project.priority || "medium") as any,
+            totalHours: project.total_hours || 0,
+            usedHours: project.used_hours || 0,
+            subProjects: projectSubProjects,
+            teamMembers: projectTeamMembers,
+          };
+        });
+      } catch (error) {
+        console.error("Error fetching projects:", error);
         return [];
       }
+    });
+  },
 
-      console.log(`📋 Found ${projects?.length || 0} projects`);
+  getProjects: async (): Promise<Project[]> => {
+    return await dataService.getAllProjects();
+  },
 
-      // Get sub-projects - SIMPLE QUERY without joins
-      let subProjects: any[] = [];
+  getProjectById: async (projectId: string): Promise<Project | null> => {
+    return cache.get(`project_${projectId}`, async () => {
       try {
-        const { data, error } = await supabase.from("sub_projects").select("*");
-        if (!error && data) {
-          subProjects = data;
-          console.log(`📋 Found ${subProjects.length} sub-projects`);
-        } else {
-          console.warn("Could not fetch sub-projects:", error);
-        }
-      } catch (error) {
-        console.warn("Error fetching sub-projects:", error);
-      }
+        const { data: project, error } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("id", projectId)
+          .single();
 
-      // Get team members - SIMPLE QUERY without joins
-      let teamMembers: any[] = [];
-      try {
-        const { data, error } = await supabase.from("team_members").select("*");
-        if (!error && data) {
-          teamMembers = data;
-          console.log(`👥 Found ${teamMembers.length} team members`);
-        } else {
-          console.warn("Could not fetch team members:", error);
-        }
-      } catch (error) {
-        console.warn("Error fetching team members:", error);
-      }
+        if (error) throw error;
 
-      // Get user profiles separately to join in memory
-      let userProfiles: any[] = [];
-      try {
-        const { data, error } = await supabase
+        const { data: subProjects, error: subError } = await supabase
+          .from("sub_projects")
+          .select("*")
+          .eq("project_id", projectId);
+
+        if (subError) throw subError;
+
+        const { data: teamMembers, error: teamError } = await supabase
+          .from("team_members")
+          .select("*")
+          .eq("project_id", projectId);
+
+        if (teamError) throw teamError;
+
+        const { data: userProfiles, error: profileError } = await supabase
           .from("user_profiles")
           .select("*");
-        if (!error && data) {
-          userProfiles = data;
-        }
-      } catch (error) {
-        console.warn("Error fetching user profiles:", error);
-      }
 
-      // Transform projects - join data in memory
-      return projects.map((project: any) => {
-        // Get sub-projects for this project
-        const projectSubProjects = subProjects
-          .filter((sp: any) => sp.project_id === project.id)
-          .map((sp: any) => ({
-            id: sp.id,
-            name: sp.name,
-            timeUsed: sp.time_used || 0,
-            timeTotal: sp.time_total || 0,
-          }));
-
-        // Get team members for this project
-        const projectTeamMembers = teamMembers
-          .filter((tm: any) => tm.project_id === project.id)
-          .map((tm: any) => {
-            const profile = userProfiles.find(
-              (up: any) => up.id === tm.user_id,
-            );
-            return {
-              id: tm.user_id,
-              name: profile?.full_name || "Unknown",
-              email: profile?.email || "",
-              role: tm.role || "developer",
-              status: profile?.status
-                ? ((profile.status.charAt(0).toUpperCase() +
-                    profile.status.slice(1)) as any)
-                : ("Active" as any),
-              joined: tm.joined_at || new Date().toISOString(),
-              left: tm.left_at || undefined,
-            };
-          });
+        if (profileError) throw profileError;
 
         return {
           id: project.id,
@@ -134,84 +304,29 @@ export const dataService = {
           priority: (project.priority || "medium") as any,
           totalHours: project.total_hours || 0,
           usedHours: project.used_hours || 0,
-          subProjects: projectSubProjects,
-          teamMembers: projectTeamMembers,
+          subProjects: subProjects.map((sp: any) => ({
+            id: sp.id,
+            name: sp.name,
+            timeUsed: sp.time_used || 0,
+            timeTotal: sp.time_total || 0,
+          })),
+          teamMembers: teamMembers.map((tm: any) => {
+            const profile = userProfiles.find((up: any) => up.id === tm.user_id);
+            return {
+              id: tm.user_id,
+              name: profile?.full_name || "Unknown",
+              email: profile?.email || "",
+              role: tm.role || "Developer",
+              joined: tm.joined_at || new Date().toISOString(),
+              left: tm.left_at || undefined,
+            };
+          }),
         };
-      });
-    } catch (error) {
-      console.error("Error fetching projects:", error);
-      return [];
-    }
-  },
-
-  getProjects: async (): Promise<Project[]> => {
-    return await dataService.getAllProjects();
-  },
-
-  getProjectById: async (projectId: string): Promise<Project | null> => {
-    try {
-      // Get project
-      const { data: project, error } = await supabase
-        .from("projects")
-        .select("*")
-        .eq("id", projectId)
-        .single();
-
-      if (error) throw error;
-
-      // Get sub-projects
-      const { data: subProjects, error: subError } = await supabase
-        .from("sub_projects")
-        .select("*")
-        .eq("project_id", projectId);
-
-      if (subError) throw subError;
-
-      // Get team members
-      const { data: teamMembers, error: teamError } = await supabase
-        .from("team_members")
-        .select("*")
-        .eq("project_id", projectId);
-
-      if (teamError) throw teamError;
-
-      // Get user profiles
-      const { data: userProfiles, error: profileError } = await supabase
-        .from("user_profiles")
-        .select("*");
-
-      if (profileError) throw profileError;
-
-      return {
-        id: project.id,
-        name: project.name,
-        description: project.description || "",
-        status: (project.status || "active") as any,
-        priority: (project.priority || "medium") as any,
-        totalHours: project.total_hours || 0,
-        usedHours: project.used_hours || 0,
-        subProjects: subProjects.map((sp: any) => ({
-          id: sp.id,
-          name: sp.name,
-          timeUsed: sp.time_used || 0,
-          timeTotal: sp.time_total || 0,
-        })),
-        teamMembers: teamMembers.map((tm: any) => {
-          const profile = userProfiles.find((up: any) => up.id === tm.user_id);
-          return {
-            id: tm.user_id,
-            name: profile?.full_name || "Unknown",
-            email: profile?.email || "",
-            role: tm.role || "developer",
-            joined: tm.joined_at || new Date().toISOString(),
-            left: tm.left_at || undefined,
-          };
-        }),
-      };
-    } catch (error) {
-      console.error("Error fetching project:", error);
-      return null;
-    }
+      } catch (error) {
+        console.error("Error fetching project:", error);
+        return null;
+      }
+    });
   },
 
   createProject: async (projectData: Partial<Project>): Promise<Project> => {
@@ -233,6 +348,9 @@ export const dataService = {
         .single();
 
       if (error) throw error;
+
+      // Invalidate cache
+      cache.invalidate("projects");
 
       await recordTimelineEvent({
         project_id: data.id,
@@ -280,6 +398,10 @@ export const dataService = {
 
       if (error) throw error;
 
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
+
       await recordTimelineEvent({
         project_id: projectId,
         user_id: (await supabase.auth.getUser()).data.user?.id || null,
@@ -314,6 +436,10 @@ export const dataService = {
         .eq("id", projectId);
 
       if (error) throw error;
+
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
     } catch (error) {
       console.error("Error deleting project:", error);
       throw error;
@@ -342,7 +468,10 @@ export const dataService = {
 
       if (error) throw error;
 
-      // Update project totals
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
+
       await dataService.updateProjectTotals(projectId);
 
       await recordTimelineEvent({
@@ -387,7 +516,10 @@ export const dataService = {
 
       if (error) throw error;
 
-      // Update project totals
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
+
       await dataService.updateProjectTotals(projectId);
 
       await recordTimelineEvent({
@@ -424,7 +556,10 @@ export const dataService = {
 
       if (error) throw error;
 
-      // Update project totals
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
+
       await dataService.updateProjectTotals(projectId);
 
       await recordTimelineEvent({
@@ -442,8 +577,118 @@ export const dataService = {
   },
 
   // ============================================
-  // TEAM MEMBERS
+  // TEAM MEMBERS - PROJECT SPECIFIC
   // ============================================
+
+  addTeamMember: async (
+    projectId: string,
+    userId: string,
+    role: string,
+  ): Promise<TeamMember> => {
+    try {
+      const finalRole = normalizeTeamRole(role);
+
+      console.log(
+        `📝 Adding team member: userId=${userId}, projectId=${projectId}, role=${finalRole}`,
+      );
+
+      // Check if membership already exists
+      const { data: existingMembership, error: checkError } = await supabase
+        .from("team_members")
+        .select("id, role")
+        .eq("project_id", projectId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== "PGRST116") {
+        console.warn("Error checking existing membership:", checkError);
+      }
+
+      if (existingMembership) {
+        console.log(
+          `User already has role ${existingMembership.role}, updating to ${finalRole}`,
+        );
+
+        const { error: updateError } = await supabase
+          .from("team_members")
+          .update({
+            role: finalRole,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingMembership.id);
+
+        if (updateError) {
+          console.error("Error updating team member:", updateError);
+          throw updateError;
+        }
+
+        // Invalidate cache
+        cache.invalidate("projects");
+        cache.invalidate(`project_${projectId}`);
+
+        const { data: profile } = await supabase
+          .from("user_profiles")
+          .select("full_name, email")
+          .eq("id", userId)
+          .single();
+
+        return {
+          id: userId,
+          name: profile?.full_name || "Unknown",
+          email: profile?.email || "",
+          role: finalRole,
+          joined: new Date().toISOString(),
+        };
+      }
+
+      const { data, error } = await supabase
+        .from("team_members")
+        .insert({
+          project_id: projectId,
+          user_id: userId,
+          role: finalRole,
+          joined_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error adding team member:", error);
+        throw error;
+      }
+
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
+
+      const { data: profile } = await supabase
+        .from("user_profiles")
+        .select("full_name, email")
+        .eq("id", userId)
+        .single();
+
+      await recordTimelineEvent({
+        project_id: projectId,
+        user_id: userId,
+        event_type: "team_member_added",
+        description: `${profile?.full_name || "Team member"} added as ${finalRole}`,
+        metadata: { role: finalRole, user_id: userId },
+        created_at: new Date().toISOString(),
+      });
+
+      return {
+        id: userId,
+        name: profile?.full_name || "Unknown",
+        email: profile?.email || "",
+        role: finalRole,
+        joined: data.joined_at || new Date().toISOString(),
+        left: data.left_at || undefined,
+      };
+    } catch (error) {
+      console.error("Error adding team member:", error);
+      throw error;
+    }
+  },
 
   updateTeamMemberRole: async (
     projectId: string,
@@ -451,15 +696,45 @@ export const dataService = {
     role: string,
   ): Promise<void> => {
     try {
+      const roleMap: Record<string, string> = {
+        developer: "Developer",
+        supervisor: "Supervisor",
+        admin: "Admin",
+        Developer: "Developer",
+        Supervisor: "Supervisor",
+        Admin: "Admin",
+      };
+
+      const normalizedInput = String(role || "developer").toLowerCase();
+      const finalRole = roleMap[normalizedInput] || "Developer";
+
+      const { data: existingMember, error: checkError } = await supabase
+        .from("team_members")
+        .select("id, role")
+        .eq("project_id", projectId)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (!existingMember) {
+        await dataService.addTeamMember(projectId, userId, finalRole);
+        return;
+      }
+
       const { error } = await supabase
         .from("team_members")
-        .update({ role })
+        .update({ role: finalRole })
         .eq("project_id", projectId)
         .eq("user_id", userId);
 
       if (error) throw error;
+
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
     } catch (error) {
-      console.error("Error updating team member:", error);
+      console.error("Error updating team member role:", error);
       throw error;
     }
   },
@@ -469,13 +744,24 @@ export const dataService = {
     userId: string,
   ): Promise<void> => {
     try {
+      console.log(`🗑️ Removing user ${userId} from project ${projectId} ONLY`);
+
       const { error } = await supabase
         .from("team_members")
         .delete()
         .eq("project_id", projectId)
         .eq("user_id", userId);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error removing team member:", error);
+        throw error;
+      }
+
+      // Invalidate cache
+      cache.invalidate("projects");
+      cache.invalidate(`project_${projectId}`);
+
+      console.log(`✅ User ${userId} removed from project ${projectId} only`);
     } catch (error) {
       console.error("Error removing team member:", error);
       throw error;
@@ -483,118 +769,165 @@ export const dataService = {
   },
 
   // ============================================
-  // USERS / PROFILES
+  // USERS / PROFILES - GLOBAL
   // ============================================
 
   getAllUsers: async (): Promise<User[]> => {
-    try {
-      console.log("👤 Fetching users...");
-
-      // Get user profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .order("full_name", { ascending: true });
-
-      if (profilesError) {
-        console.warn("Could not fetch user_profiles:", profilesError);
-        return [];
-      }
-
-      console.log(`👤 Found ${profiles?.length || 0} user profiles`);
-
-      // Get team members - SIMPLE QUERY
-      let memberships: any[] = [];
+    return cache.get("users", async () => {
       try {
-        const { data, error } = await supabase.from("team_members").select("*");
-        if (!error && data) {
-          memberships = data;
+        const { data: profiles, error: profilesError } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .order("full_name", { ascending: true });
+
+        if (profilesError) {
+          console.warn("Could not fetch user_profiles:", profilesError);
+          return [];
         }
-      } catch (error) {
-        console.warn("Could not fetch memberships:", error);
-      }
 
-      // Get projects separately to join in memory
-      let projects: any[] = [];
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("id, name");
-        if (!error && data) {
-          projects = data;
+        let memberships: any[] = [];
+        try {
+          const { data, error } = await supabase.from("team_members").select(`
+              *,
+              projects (id, name)
+            `);
+
+          if (!error && data) memberships = data;
+        } catch (error) {
+          console.warn("Could not fetch memberships:", error);
         }
-      } catch (error) {
-        console.warn("Could not fetch projects:", error);
-      }
 
-      // Transform users - join data in memory
-      return profiles.map((user: any) => {
-        const userMemberships =
-          memberships?.filter((m: any) => m.user_id === user.id) || [];
+        let projects: any[] = [];
+        try {
+          const { data, error } = await supabase
+            .from("projects")
+            .select("id, name");
 
-        // Get project names for each membership
-        const membershipsWithProjects = userMemberships.map((m: any) => {
-          const project = projects.find((p: any) => p.id === m.project_id);
+          if (!error && data) projects = data;
+        } catch (error) {
+          console.warn("Could not fetch projects:", error);
+        }
+
+        return (profiles || []).map((user: any) => {
+          const userMemberships = memberships.filter(
+            (m: any) => m.user_id === user.id,
+          );
+
+          const membershipsWithProjects = userMemberships.map((m: any) => {
+            const project =
+              m.projects || projects.find((p: any) => p.id === m.project_id);
+            return {
+              projectName: project?.name || "",
+              role: m.role || "Developer",
+            };
+          });
+
           return {
-            projectName: project?.name || "",
-            role: m.role || "developer",
+            id: user.id,
+            name: user.full_name || user.email || "Unknown",
+            email: user.email || "",
+            created: user.created || new Date().toISOString(),
+            role: user.role || "developer",
+            status: user.status || "active",
+            project: membershipsWithProjects[0]?.projectName || "",
+            projectId: userMemberships[0]?.project_id || "",
+            projectIds: userMemberships.map((m: any) => m.project_id),
+            memberships: membershipsWithProjects,
           };
         });
-
-        return {
-          id: user.id,
-          name: user.full_name || user.email || "Unknown",
-          email: user.email || "",
-          created: user.created || new Date().toISOString(),
-          role: user.role || "developer",
-          status: user.status || "active",
-          project: membershipsWithProjects[0]?.projectName || "",
-          projectId: userMemberships[0]?.project_id || "",
-          projectIds: userMemberships.map((m: any) => m.project_id),
-          memberships: membershipsWithProjects,
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      return [];
-    }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        return [];
+      }
+    });
   },
 
   getUserById: async (userId: string): Promise<User | null> => {
-    try {
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+    return cache.get(`user_${userId}`, async () => {
+      try {
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .select("*")
+          .eq("id", userId)
+          .single();
 
-      if (error) {
-        console.warn("User not found:", error);
+        if (error) {
+          console.warn("User not found:", error);
+          return null;
+        }
+
+        return {
+          id: data.id,
+          name: data.full_name || data.email || "Unknown",
+          email: data.email || "",
+          created: data.created || new Date().toISOString(),
+          role: data.role || "developer",
+          status: data.status || "active",
+        };
+      } catch (error) {
+        console.error("Error fetching user:", error);
         return null;
       }
-
-      return {
-        id: data.id,
-        name: data.full_name || data.email || "Unknown",
-        email: data.email || "",
-        created: data.created || new Date().toISOString(),
-        role: data.role || "developer",
-        status: data.status || "active",
-      };
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      return null;
-    }
+    });
   },
 
   createUserProfile: async (
     user: Partial<User> & { password?: string },
   ): Promise<User | null> => {
     try {
+      const normalizedRole = normalizeProfileRole(user.role || "developer");
+
+      const { data: existingProfile, error: checkError } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (checkError && checkError.code !== "PGRST116") {
+        console.error("Error checking existing profile:", checkError);
+      }
+
+      if (existingProfile) {
+        console.log(
+          `📝 User profile already exists for ${user.email}, updating...`,
+        );
+
+        const { data, error } = await supabase
+          .from("user_profiles")
+          .update({
+            full_name: user.name,
+            email: user.email,
+            role: normalizedRole,
+            status: user.status || "active",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error("Error updating user profile:", error);
+          return null;
+        }
+
+        // Invalidate cache
+        cache.invalidate("users");
+        cache.invalidate(`user_${user.id}`);
+
+        return {
+          id: data.id,
+          name: data.full_name || data.email || "Unknown",
+          email: data.email || "",
+          created: data.created || new Date().toISOString(),
+          role: data.role || "developer",
+          status: data.status || "active",
+        };
+      }
+
       const insertData: any = {
         full_name: user.name,
         email: user.email,
-        role: user.role || "developer",
+        role: normalizedRole,
         status: user.status || "active",
         created: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -602,6 +935,7 @@ export const dataService = {
       if (user.id) {
         insertData.id = user.id;
       }
+
       const { data, error } = await supabase
         .from("user_profiles")
         .insert(insertData)
@@ -612,6 +946,9 @@ export const dataService = {
         console.error("Error creating user profile:", error);
         return null;
       }
+
+      // Invalidate cache
+      cache.invalidate("users");
 
       return {
         id: data.id,
@@ -627,97 +964,31 @@ export const dataService = {
     }
   },
 
-  addTeamMember: async (
-    projectId: string,
-    userId: string,
-    role: string,
-  ): Promise<TeamMember> => {
-    try {
-      const normalizedRole = String(role || "developer").toLowerCase();
-
-      const { data: existingMembership } = await supabase
-        .from("team_members")
-        .select("id, role")
-        .eq("project_id", projectId)
-        .eq("user_id", userId)
-        .eq("role", normalizedRole)
-        .maybeSingle();
-
-      if (existingMembership) {
-        const { data: existingProfile } = await supabase
-          .from("user_profiles")
-          .select("full_name, email")
-          .eq("id", userId)
-          .single();
-
-        return {
-          id: userId,
-          name: existingProfile?.full_name || "Unknown",
-          email: existingProfile?.email || "",
-          role: normalizedRole,
-          joined: new Date().toISOString(),
-        };
-      }
-
-      // Get user profile
-      const { data: profile } = await supabase
-        .from("user_profiles")
-        .select("full_name, email")
-        .eq("id", userId)
-        .single();
-
-      const { data, error } = await supabase
-        .from("team_members")
-        .insert({
-          project_id: projectId,
-          user_id: userId,
-          role: normalizedRole,
-          joined_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      await recordTimelineEvent({
-        project_id: projectId,
-        user_id: userId,
-        event_type: "team_member_added",
-        description: `${profile?.full_name || "Team member"} added as ${normalizedRole}`,
-        metadata: { role: normalizedRole, user_id: userId },
-        created_at: new Date().toISOString(),
-      });
-
-      return {
-        id: userId,
-        name: profile?.full_name || "Unknown",
-        email: profile?.email || "",
-        role: normalizedRole,
-        joined: data.joined_at || new Date().toISOString(),
-        left: data.left_at || undefined,
-      };
-    } catch (error) {
-      console.error("Error adding team member:", error);
-      throw error;
-    }
-  },
-
   updateUser: async (userId: string, updates: Partial<User>): Promise<User> => {
     try {
+      const updateData: any = {
+        full_name: updates.name,
+        email: updates.email,
+        status: updates.status || "active",
+        updated_at: new Date().toISOString(),
+      };
+
+      if (updates.role) {
+        updateData.role = normalizeProfileRole(updates.role);
+      }
+
       const { data, error } = await supabase
         .from("user_profiles")
-        .update({
-          full_name: updates.name,
-          email: updates.email,
-          role: updates.role,
-          status: updates.status || "active",
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq("id", userId)
         .select()
         .single();
 
       if (error) throw error;
+
+      // Invalidate cache
+      cache.invalidate("users");
+      cache.invalidate(`user_${userId}`);
 
       return {
         id: data.id,
@@ -735,25 +1006,57 @@ export const dataService = {
 
   deleteUser: async (userId: string): Promise<void> => {
     try {
-      // Delete from team_members first
+      console.log(`🗑️ COMPLETELY DELETING user: ${userId} from ALL projects`);
+
+      // 1. Delete from team_members (all projects)
       const { error: teamError } = await supabase
         .from("team_members")
         .delete()
         .eq("user_id", userId);
 
-      if (teamError) throw teamError;
+      if (teamError) {
+        console.error("Error deleting from team_members:", teamError);
+        throw teamError;
+      }
+      console.log("✅ Removed from team_members (all projects)");
 
-      // Delete from user_profiles
+      // 2. Delete from user_profiles
       const { error: profileError } = await supabase
         .from("user_profiles")
         .delete()
         .eq("id", userId);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Error deleting from user_profiles:", profileError);
+        throw profileError;
+      }
+      console.log("✅ Removed from user_profiles");
 
-      // Delete from auth.users (requires admin privileges)
-      const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-      if (authError) throw authError;
+      // 3. Delete from auth.users using admin client
+      if (supabaseAdmin) {
+        try {
+          const { error: authError } =
+            await supabaseAdmin.auth.admin.deleteUser(userId);
+          if (authError) {
+            console.warn("Could not delete from auth.users:", authError);
+          } else {
+            console.log("✅ Removed from auth.users");
+          }
+        } catch (authError) {
+          console.warn("Could not delete from auth.users:", authError);
+        }
+      } else {
+        console.log(
+          "ℹ️ Admin client not available - skipping auth.users deletion",
+        );
+      }
+
+      // Invalidate cache
+      cache.invalidate("users");
+      cache.invalidate(`user_${userId}`);
+      cache.invalidate("projects");
+
+      console.log(`✅ User ${userId} completely deleted from ALL projects`);
     } catch (error) {
       console.error("Error deleting user:", error);
       throw error;
@@ -765,63 +1068,62 @@ export const dataService = {
   // ============================================
 
   getAllLogs: async (): Promise<LogEntry[]> => {
-    try {
-      console.log("📝 Fetching logs...");
-
-      // Get task logs - SIMPLE QUERY
-      let logs: any[] = [];
+    return cache.get("logs", async () => {
       try {
-        const { data, error } = await supabase
-          .from("task_logs")
-          .select("*")
-          .order("submitted_at", { ascending: false });
-        if (!error && data) {
-          logs = data;
-          console.log(`📝 Found ${logs.length} logs`);
-        } else {
-          console.warn("Could not fetch logs:", error);
+        console.log("📝 Fetching logs...");
+
+        let logs: any[] = [];
+        try {
+          const { data, error } = await supabase
+            .from("task_logs")
+            .select("*")
+            .order("submitted_at", { ascending: false });
+          if (!error && data) {
+            logs = data;
+            console.log(`📝 Found ${logs.length} logs`);
+          } else {
+            console.warn("Could not fetch logs:", error);
+            return [];
+          }
+        } catch (error) {
+          console.warn("Error fetching logs:", error);
           return [];
         }
+
+        let projects: any[] = [];
+        try {
+          const { data, error } = await supabase
+            .from("projects")
+            .select("id, name");
+          if (!error && data) {
+            projects = data;
+          }
+        } catch (error) {
+          console.warn("Could not fetch projects for logs:", error);
+        }
+
+        return logs.map((log: any) => {
+          const project = projects.find((p: any) => p.id === log.project_id);
+          return {
+            id: log.id,
+            project: project?.name || "",
+            projectId: log.project_id,
+            date: log.date,
+            status: log.status || "full",
+            hoursWorked: log.hours_worked || 0,
+            tasks: log.tasks || [],
+            partialReason: log.partial_reason,
+            unavailableReason: log.unavailable_reason,
+            submittedBy: log.submitted_by || "",
+            submittedById: log.user_id,
+            submittedAt: log.submitted_at,
+          };
+        });
       } catch (error) {
-        console.warn("Error fetching logs:", error);
+        console.error("Error fetching all logs:", error);
         return [];
       }
-
-      // Get projects separately to join in memory
-      let projects: any[] = [];
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("id, name");
-        if (!error && data) {
-          projects = data;
-        }
-      } catch (error) {
-        console.warn("Could not fetch projects for logs:", error);
-      }
-
-      // Transform logs - join project names in memory
-      return logs.map((log: any) => {
-        const project = projects.find((p: any) => p.id === log.project_id);
-        return {
-          id: log.id,
-          project: project?.name || "",
-          projectId: log.project_id,
-          date: log.date,
-          status: log.status || "full",
-          hoursWorked: log.hours_worked || 0,
-          tasks: log.tasks || [],
-          partialReason: log.partial_reason,
-          unavailableReason: log.unavailable_reason,
-          submittedBy: log.submitted_by || "",
-          submittedById: log.user_id,
-          submittedAt: log.submitted_at,
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching all logs:", error);
-      return [];
-    }
+    });
   },
 
   createLog: async (log: Partial<LogEntry>): Promise<LogEntry> => {
@@ -844,6 +1146,9 @@ export const dataService = {
         .single();
 
       if (error) throw error;
+
+      // Invalidate cache
+      cache.invalidate("logs");
 
       await recordTimelineEvent({
         project_id: log.projectId || "",
@@ -870,9 +1175,10 @@ export const dataService = {
         });
       }
 
-      // Update project used hours
       if (log.projectId) {
         await dataService.updateProjectTotals(log.projectId);
+        cache.invalidate("projects");
+        cache.invalidate(`project_${log.projectId}`);
       }
 
       return {
@@ -896,147 +1202,162 @@ export const dataService = {
   },
 
   getTaskLogs: async (projectId: string): Promise<LogEntry[]> => {
-    try {
-      let logs: any[] = [];
+    return cache.get(`logs_${projectId}`, async () => {
       try {
-        const { data, error } = await supabase
-          .from("task_logs")
-          .select("*")
-          .eq("project_id", projectId)
-          .order("submitted_at", { ascending: false });
-        if (!error && data) {
-          logs = data;
-        } else {
-          console.warn("Could not fetch task logs:", error);
+        let logs: any[] = [];
+        try {
+          const { data, error } = await supabase
+            .from("task_logs")
+            .select("*")
+            .eq("project_id", projectId)
+            .order("submitted_at", { ascending: false });
+          if (!error && data) {
+            logs = data;
+          } else {
+            console.warn("Could not fetch task logs:", error);
+            return [];
+          }
+        } catch (error) {
+          console.warn("Error fetching task logs:", error);
           return [];
         }
+
+        let projectName = "";
+        try {
+          const { data, error } = await supabase
+            .from("projects")
+            .select("name")
+            .eq("id", projectId)
+            .single();
+          if (!error && data) {
+            projectName = data.name;
+          }
+        } catch (error) {
+          console.warn("Could not fetch project name:", error);
+        }
+
+        return logs.map((log: any) => ({
+          id: log.id,
+          project: projectName || "",
+          projectId: log.project_id,
+          date: log.date,
+          status: log.status,
+          hoursWorked: log.hours_worked,
+          tasks: log.tasks || [],
+          partialReason: log.partial_reason,
+          unavailableReason: log.unavailable_reason,
+          submittedBy: log.submitted_by || "",
+          submittedById: log.user_id,
+          submittedAt: log.submitted_at,
+        }));
       } catch (error) {
-        console.warn("Error fetching task logs:", error);
+        console.error("Error fetching task logs:", error);
         return [];
       }
-
-      // Get project name
-      let projectName = "";
-      try {
-        const { data, error } = await supabase
-          .from("projects")
-          .select("name")
-          .eq("id", projectId)
-          .single();
-        if (!error && data) {
-          projectName = data.name;
-        }
-      } catch (error) {
-        console.warn("Could not fetch project name:", error);
-      }
-
-      return logs.map((log: any) => ({
-        id: log.id,
-        project: projectName || "",
-        projectId: log.project_id,
-        date: log.date,
-        status: log.status,
-        hoursWorked: log.hours_worked,
-        tasks: log.tasks || [],
-        partialReason: log.partial_reason,
-        unavailableReason: log.unavailable_reason,
-        submittedBy: log.submitted_by || "",
-        submittedById: log.user_id,
-        submittedAt: log.submitted_at,
-      }));
-    } catch (error) {
-      console.error("Error fetching task logs:", error);
-      return [];
-    }
+    });
   },
+
+  // ============================================
+  // TIMELINE & ACTIVITY
+  // ============================================
 
   getProjectTimeline: async (
     projectId?: string,
   ): Promise<ProjectTimelineEvent[]> => {
-    try {
-      let query = supabase
-        .from("project_timeline")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (projectId) {
-        query = query.eq("project_id", projectId);
-      }
+    const cacheKey = projectId ? `timeline_${projectId}` : "timeline";
+    return cache.get(cacheKey, async () => {
+      try {
+        let query = supabase
+          .from("project_timeline")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (projectId) {
+          query = query.eq("project_id", projectId);
+        }
 
-      const { data, error } = await query;
-      if (error) {
-        console.warn("Could not fetch project timeline:", error);
+        const { data, error } = await query;
+        if (error) {
+          console.warn("Could not fetch project timeline:", error);
+          return [];
+        }
+
+        const { data: projects } = await supabase
+          .from("projects")
+          .select("id, name");
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("id, full_name");
+
+        return (data || []).map((event: any) => ({
+          id: event.id,
+          project_id: event.project_id,
+          user_id: event.user_id,
+          event_type: event.event_type,
+          description: event.description,
+          metadata: event.metadata,
+          created_at: event.created_at,
+          project_name: projects?.find((p: any) => p.id === event.project_id)
+            ?.name,
+          user_name: profiles?.find((u: any) => u.id === event.user_id)
+            ?.full_name,
+        }));
+      } catch (error) {
+        console.error("Error fetching project timeline:", error);
         return [];
       }
-
-      const { data: projects } = await supabase
-        .from("projects")
-        .select("id, name");
-      const { data: profiles } = await supabase
-        .from("user_profiles")
-        .select("id, full_name");
-
-      return (data || []).map((event: any) => ({
-        id: event.id,
-        project_id: event.project_id,
-        user_id: event.user_id,
-        event_type: event.event_type,
-        description: event.description,
-        metadata: event.metadata,
-        created_at: event.created_at,
-        project_name: projects?.find((p: any) => p.id === event.project_id)
-          ?.name,
-        user_name: profiles?.find((u: any) => u.id === event.user_id)
-          ?.full_name,
-      }));
-    } catch (error) {
-      console.error("Error fetching project timeline:", error);
-      return [];
-    }
+    });
   },
 
   getUserActivity: async (projectId?: string): Promise<UserActivity[]> => {
-    try {
-      let query = supabase
-        .from("user_activity")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (projectId) {
-        query = query.eq("project_id", projectId);
-      }
+    const cacheKey = projectId ? `activity_${projectId}` : "activity";
+    return cache.get(cacheKey, async () => {
+      try {
+        let query = supabase
+          .from("user_activity")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (projectId) {
+          query = query.eq("project_id", projectId);
+        }
 
-      const { data, error } = await query;
-      if (error) {
-        console.warn("Could not fetch user activity:", error);
+        const { data, error } = await query;
+        if (error) {
+          console.warn("Could not fetch user activity:", error);
+          return [];
+        }
+
+        const { data: projects } = await supabase
+          .from("projects")
+          .select("id, name");
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("id, full_name");
+
+        return (data || []).map((activity: any) => ({
+          id: activity.id,
+          user_id: activity.user_id,
+          project_id: activity.project_id,
+          sub_project_id: activity.sub_project_id,
+          activity_type: activity.activity_type,
+          description: activity.description,
+          metadata: activity.metadata,
+          created_at: activity.created_at,
+          hours: activity.hours || 0,
+          user_name: profiles?.find((u: any) => u.id === activity.user_id)
+            ?.full_name,
+          project_name: projects?.find((p: any) => p.id === activity.project_id)
+            ?.name,
+        }));
+      } catch (error) {
+        console.error("Error fetching user activity:", error);
         return [];
       }
-
-      const { data: projects } = await supabase
-        .from("projects")
-        .select("id, name");
-      const { data: profiles } = await supabase
-        .from("user_profiles")
-        .select("id, full_name");
-
-      return (data || []).map((activity: any) => ({
-        id: activity.id,
-        user_id: activity.user_id,
-        project_id: activity.project_id,
-        sub_project_id: activity.sub_project_id,
-        activity_type: activity.activity_type,
-        description: activity.description,
-        metadata: activity.metadata,
-        created_at: activity.created_at,
-        hours: activity.hours || 0,
-        user_name: profiles?.find((u: any) => u.id === activity.user_id)
-          ?.full_name,
-        project_name: projects?.find((p: any) => p.id === activity.project_id)
-          ?.name,
-      }));
-    } catch (error) {
-      console.error("Error fetching user activity:", error);
-      return [];
-    }
+    });
   },
+
+  // ============================================
+  // REAL-TIME SUBSCRIPTIONS
+  // ============================================
 
   subscribeToDataChanges: (callback: () => void) => {
     const channel = supabase
@@ -1044,32 +1365,58 @@ export const dataService = {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "projects" },
-        callback,
+        () => {
+          cache.invalidate("projects");
+          callback();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "sub_projects" },
-        callback,
+        () => {
+          cache.invalidate("projects");
+          callback();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "team_members" },
-        callback,
+        () => {
+          cache.invalidate("projects");
+          callback();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "task_logs" },
-        callback,
+        () => {
+          cache.invalidate("logs");
+          callback();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "user_activity" },
-        callback,
+        () => {
+          cache.invalidate("activity");
+          callback();
+        }
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "project_timeline" },
-        callback,
+        () => {
+          cache.invalidate("timeline");
+          callback();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_profiles" },
+        () => {
+          cache.invalidate("users");
+          callback();
+        }
       )
       .subscribe();
 
@@ -1084,7 +1431,6 @@ export const dataService = {
 
   updateProjectTotals: async (projectId: string): Promise<void> => {
     try {
-      // Get sub-project totals
       const { data: subProjects, error } = await supabase
         .from("sub_projects")
         .select("time_used, time_total")
@@ -1178,6 +1524,8 @@ export const dataService = {
   },
 
   refreshData: async () => {
+    // Force clear cache and reload
+    cache.clear();
     return await dataService.getAllData();
   },
 };

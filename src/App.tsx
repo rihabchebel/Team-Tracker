@@ -71,6 +71,11 @@ const DashboardShell: React.FC = () => {
   const [timelineEvents, setTimelineEvents] = useState<ProjectTimelineEvent[]>([]);
   const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const forceRefresh = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -200,26 +205,34 @@ const DashboardShell: React.FC = () => {
   };
 
   const handleProjectsUpdate = async (updatedProjects: Project[]) => {
-    setProjectsData(updatedProjects);
-    const refreshedUsers = await dataService.getAllUsers();
-    setUsersData(refreshedUsers);
+    try {
+      const [freshUsers, freshProjects] = await Promise.all([
+        dataService.getAllUsers(),
+        dataService.getAllProjects(),
+      ]);
 
-    const stillExists = updatedProjects.some(
-      (project) => project.name === state.selectedProject,
-    );
-    if (!stillExists && updatedProjects.length > 0) {
-      setState({ ...state, selectedProject: "All Projects" });
+      setUsersData(freshUsers);
+      setProjectsData(freshProjects);
+      forceRefresh();
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      setProjectsData(updatedProjects);
     }
   };
 
   const handleUsersUpdate = async (updatedUsers: User[]) => {
-    setUsersData(updatedUsers);
-    for (const updatedUser of updatedUsers) {
-      try {
-        await dataService.updateUser(updatedUser.id, updatedUser);
-      } catch (updateError) {
-        console.error(`Error updating user ${updatedUser.name}:`, updateError);
-      }
+    try {
+      const [freshUsers, freshProjects] = await Promise.all([
+        dataService.getAllUsers(),
+        dataService.getAllProjects(),
+      ]);
+
+      setUsersData(freshUsers);
+      setProjectsData(freshProjects);
+      forceRefresh();
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      setUsersData(updatedUsers);
     }
   };
 
@@ -399,7 +412,7 @@ const DashboardShell: React.FC = () => {
         />
         <main className="main-content">
           {roleSwitchBanner}
-          {renderPage()}
+          <div key={refreshTrigger}>{renderPage()}</div>
         </main>
       </div>
       
@@ -463,3 +476,4 @@ function App() {
 }
 
 export default App;
+

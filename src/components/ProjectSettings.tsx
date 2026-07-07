@@ -1,10 +1,19 @@
-// components/ProjectSettings.tsx
+// components/ProjectSettings.tsx - Fixed for JSONB roles (NO INFINITE RECURSION)
+
 import React, { useState, useEffect, useRef } from 'react';
 import './ProjectSettings.css';
 import { formatDate } from '../utils/dateUtils';
 import { ViewMode, Project, SubProject, TeamMember } from '../types/models';
 import { dataService, supabase } from '../lib/dataService';
 import { Plus, Minus, Edit2, Trash2, X, Clock, Users, AlertTriangle } from 'lucide-react';
+// ✅ Import role utilities
+import {
+  getAllRoles,
+  hasMultipleRoles,
+  getRoleDisplayName,
+  getRoleBadgeClass,
+  getRolePriority
+} from '../utils/roleUtils';
 
 interface ProjectSettingsProps {
   view: ViewMode;
@@ -156,7 +165,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   // ============================================
   const recalculateProjectTotals = async (projectId: string) => {
     try {
-      // Get all sub-projects for this project
       const { data: allSubProjects, error: fetchError } = await supabase
         .from('sub_projects')
         .select('*')
@@ -164,11 +172,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
       if (fetchError) throw fetchError;
 
-      // Calculate totals
       const totalHours = allSubProjects.reduce((sum: number, sp: any) => sum + (sp.time_total || 0), 0);
       const totalUsed = allSubProjects.reduce((sum: number, sp: any) => sum + (sp.time_used || 0), 0);
 
-      // Update project totals
       const { error: updateError } = await supabase
         .from('projects')
         .update({
@@ -208,7 +214,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     
     setLoading(true);
     try {
-      // Add sub-project to database
       const { data: newSub, error } = await supabase
         .from('sub_projects')
         .insert({
@@ -224,10 +229,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
       console.log('✅ Sub-project created:', newSub);
 
-      // Recalculate project totals
       await recalculateProjectTotals(currentProject.id);
-
-      // Refresh projects
       await refreshProjects();
       
       setNewSubProject({ name: '', timeTotal: 50 });
@@ -245,7 +247,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     
     setLoading(true);
     try {
-      // Update sub-project
       const { error } = await supabase
         .from('sub_projects')
         .update({
@@ -259,10 +260,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
       if (error) throw error;
 
-      // Recalculate project totals
       await recalculateProjectTotals(currentProject.id);
-
-      // Refresh projects
       await refreshProjects();
       
       setEditingSubProject(null);
@@ -280,7 +278,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     
     setLoading(true);
     try {
-      // Delete sub-project
       const { error } = await supabase
         .from('sub_projects')
         .delete()
@@ -289,10 +286,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
       if (error) throw error;
 
-      // Recalculate project totals
       await recalculateProjectTotals(currentProject.id);
-
-      // Refresh projects
       await refreshProjects();
     } catch (error) {
       console.error('Error deleting sub-project:', error);
@@ -433,7 +427,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
     setIsAddingMember(true);
     try {
-      // First create the user profile
       const { data: userData, error: userError } = await supabase
         .from('user_profiles')
         .insert({
@@ -447,14 +440,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
       if (userError) throw userError;
 
-      // Add to team members
       await dataService.addTeamMember(
         currentProject.id,
         userData.id,
         newMember.role.toLowerCase()
       );
 
-      // Refresh data
       await refreshProjects();
 
       setNewMember({ name: '', email: '', role: 'Developer' });
@@ -482,7 +473,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   };
 
   // ============================================
-  // HELPERS
+  // HELPERS - FIXED FOR JSONB ROLES (NO RECURSION)
   // ============================================
   const getProgressPercentage = (used: number, total: number) => {
     return total > 0 ? Math.round((used / total) * 100) : 0;
@@ -495,18 +486,17 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       : 0;
   };
 
-  const getRoleBadgeClass = (role: string): string => {
-    const normalizedRole = role?.toLowerCase() || 'developer';
-    if (normalizedRole === 'admin') return 'role-admin';
-    if (normalizedRole === 'supervisor') return 'role-supervisor';
-    return 'role-developer';
-  };
+  // ✅ FIXED: Use the imported utility functions directly - NO local wrappers
+  // ✅ Simply use getRoleBadgeClass, getRoleDisplayName, getRolePriority, getAllRoles, hasMultipleRoles
+  // ✅ directly from the import at the top of the file
 
-  const getRoleDisplayName = (role: string): string => {
-    const normalizedRole = role?.toLowerCase() || 'developer';
-    if (normalizedRole === 'admin') return 'Admin';
-    if (normalizedRole === 'supervisor') return 'Supervisor';
-    return 'Developer';
+  // ✅ FIXED: Sort members by role priority
+  const sortMembersByRole = (members: TeamMember[]) => {
+    return [...members].sort((a, b) => {
+      const priorityA = getRolePriority(a.role);
+      const priorityB = getRolePriority(b.role);
+      return priorityA - priorityB;
+    });
   };
 
   // ============================================
@@ -566,6 +556,11 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       </div>
     );
   }
+
+  // ✅ FIXED: Sort members by role priority
+  const sortedMembers = currentProject.teamMembers 
+    ? sortMembersByRole(currentProject.teamMembers)
+    : [];
 
   return (
     <div className="project-settings-container">
@@ -706,7 +701,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         <div className="section-header">
           <h3>
             <Users size={16} />
-            Team Members ({currentProject.teamMembers?.length || 0})
+            Team Members ({sortedMembers.length})
           </h3>
           {(isAdmin || view === 'supervisor') && (
             <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
@@ -717,7 +712,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         </div>
 
         <div className="team-members-table">
-          {currentProject.teamMembers && currentProject.teamMembers.length > 0 ? (
+          {sortedMembers.length > 0 ? (
             <table>
               <thead>
                 <tr>
@@ -728,18 +723,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {[...currentProject.teamMembers]
-                  .sort((a, b) => {
-                    const roleValue = (role: string) => {
-                      const normalized = role?.toLowerCase();
-                      if (normalized === 'admin') return 0;
-                      if (normalized === 'supervisor') return 1;
-                      if (normalized === 'developer') return 2;
-                      return 3;
-                    };
-                    return roleValue(a.role) - roleValue(b.role);
-                  })
-                  .map((member) => (
+                {sortedMembers.map((member) => (
                   <tr key={member.id}>
                     <td>
                       <div className="member-info">
@@ -747,12 +731,31 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                           {member.name?.charAt(0) || '?'}
                         </div>
                         <span>{member.name}</span>
+                        {/* ✅ Show multiple roles indicator */}
+                        {hasMultipleRoles(member.role) && (
+                          <span className="multiple-roles-indicator" style={{ marginLeft: '8px' }}>
+                            <span className="green-dot"></span>
+                            <span className="roles-text" style={{ fontSize: '10px' }}>
+                              {getAllRoles(member.role).join(' + ')}
+                            </span>
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td>
-                      <span className={`role-badge ${getRoleBadgeClass(member.role)}`}>
-                        {getRoleDisplayName(member.role)}
-                      </span>
+                      {/* ✅ Show all roles - using imported getRoleBadgeClass and getRoleDisplayName */}
+                      {(() => {
+                        const roles = getAllRoles(member.role);
+                        return roles.map((role, idx) => (
+                          <span 
+                            key={idx}
+                            className={`role-badge ${getRoleBadgeClass(role)}`}
+                            style={{ marginRight: '4px' }}
+                          >
+                            {getRoleDisplayName(role)}
+                          </span>
+                        ));
+                      })()}
                     </td>
                     <td>{formatDate(member.joined)}</td>
                     <td>
@@ -777,7 +780,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       </div>
 
       {/* ============================================
-          MODALS
+          MODALS (unchanged)
           ============================================ */}
 
       {/* Add Sub-Project Modal */}

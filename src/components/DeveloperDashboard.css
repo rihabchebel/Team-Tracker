@@ -1,4 +1,5 @@
-/* components/DeveloperDashboard.css */
+/* components/DeveloperDashboard.css  */
+
 .developer-dashboard {
   padding: 24px;
   min-height: 100vh;
@@ -6,25 +7,40 @@
   flex-direction: column;
 }
 
-/* Header */
-.dashboard-header {
+/* Header - Original colors preserved */
+.page-header {
+  background: white;
+  padding: 24px 32px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.page-header-content {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eef0f5;
-  flex-shrink: 0;
+  align-items: center;
 }
 
-.project-info h2 {
-  font-size: 28px;
+.page-header h2 {
+  font-size: 24px;
   font-weight: 700;
   color: #1a1a2e;
-  margin: 0 0 4px 0;
+  margin: 0;
 }
 
-.project-description {
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #1a1a2e;
+}
+
+.user-role {
   color: #8888aa;
   font-size: 14px;
 }
@@ -53,11 +69,21 @@
   flex-shrink: 0;
 }
 
+/* Form row with proper grid */
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1.5fr 1fr;
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 16px;
+}
+
+/* Reason inputs container */
+.reason-inputs-container {
+  margin-bottom: 16px;
+}
+
+.reason-group {
+  margin-top: 8px;
 }
 
 .form-group {
@@ -72,6 +98,11 @@
   margin-bottom: 8px;
   font-size: 14px;
   flex-shrink: 0;
+}
+
+.required {
+  color: #e17055;
+  font-weight: 600;
 }
 
 .date-input {
@@ -89,7 +120,7 @@
   box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
 }
 
-/* Status Buttons */
+/* Status Buttons - Original colors preserved */
 .status-buttons {
   display: flex;
   gap: 8px;
@@ -110,6 +141,10 @@
   color: #1a1a2e;
   text-align: center;
   min-width: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .status-btn:hover {
@@ -135,16 +170,42 @@
   color: #e17055;
 }
 
-/* Hours Input */
+/* Hours input with proper layout */
 .hours-input-container {
   display: flex;
   align-items: center;
   gap: 16px;
-  flex: 1;
+  margin-bottom: 8px;
 }
 
-.hours-slider {
+.hours-input {
   flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  font-size: 16px;
+  transition: border-color 0.3s;
+  width: 100%;
+  min-width: 80px;
+}
+
+.hours-input:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+.hours-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #4f72e8;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* Hours slider */
+.hours-slider {
+  width: 100%;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -153,6 +214,7 @@
   background: #d0d3e0;
   outline: none;
   transition: background 0.3s;
+  margin: 4px 0;
 }
 
 .hours-slider::-webkit-slider-thumb {
@@ -181,14 +243,38 @@
   border: none;
 }
 
-.hours-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: #4f72e8;
-  min-width: 40px;
+/* Slider labels */
+.hours-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #8888aa;
+  padding: 0 4px;
 }
 
-/* Tasks Section - Grows to fill space */
+/* Reason input */
+.reason-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s;
+  background: white;
+}
+
+.reason-input:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+.reason-input::placeholder {
+  color: #b0b0c0;
+}
+
+/* Tasks Section */
 .tasks-section {
   flex: 1;
   margin-top: 8px;
@@ -211,6 +297,17 @@
   flex-direction: column;
   gap: 8px;
   flex: 1;
+  min-height: 60px;
+}
+
+.empty-tasks-message {
+  color: #b0b0c0;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+  background: #f8f9fc;
+  border-radius: 6px;
+  border: 1px dashed #d0d3e0;
 }
 
 .task-item {
@@ -231,7 +328,6 @@
   flex: 1;
   font-size: 14px;
   color: #1a1a2e;
-  transition: all 0.3s;
 }
 
 .delete-task-btn {
@@ -239,11 +335,11 @@
   border: none;
   color: #8888aa;
   cursor: pointer;
-  font-size: 18px;
-  padding: 0 4px;
+  padding: 4px;
   transition: all 0.3s;
-  line-height: 1;
-  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .delete-task-btn:hover {
@@ -284,6 +380,9 @@
   font-weight: 500;
   transition: all 0.3s;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .add-task-btn:hover {
@@ -291,7 +390,7 @@
   color: #4f72e8;
 }
 
-/* Save Log Button */
+/* Save Log Button - Original gradient preserved */
 .save-log-btn {
   width: 100%;
   padding: 14px;
@@ -307,13 +406,14 @@
   flex-shrink: 0;
 }
 
-.save-log-btn:hover {
+.save-log-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(79, 114, 232, 0.4);
 }
 
-.save-log-btn:active {
-  transform: translateY(0);
+.save-log-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Responsive */
@@ -329,14 +429,14 @@
     padding: 16px;
   }
 
-  .dashboard-header {
-    flex-direction: column;
-    gap: 16px;
+  .page-header {
+    padding: 16px 20px;
   }
 
-  .switch-view-btn {
-    width: 100%;
-    text-align: center;
+  .page-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 
   .dashboard-content {
@@ -361,17 +461,13 @@
     flex-direction: row;
   }
 
-  .hours-slider {
-    flex: 1;
-  }
-
   .add-task-row {
     flex-direction: column;
   }
 
   .add-task-btn {
     width: 100%;
-    text-align: center;
+    justify-content: center;
   }
 }
 
@@ -384,41 +480,12 @@
     width: 100%;
   }
 
-  .required {
-    color: #e17055;
-    font-weight: 600;
-  }
-
-  .reason-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid #d0d3e0;
-    border-radius: 6px;
+  .hours-input {
     font-size: 14px;
-    font-family: inherit;
-    transition: border-color 0.3s;
-    background: white;
   }
 
-  .reason-input:focus {
-    outline: none;
-    border-color: #4f72e8;
-    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
-  }
-
-  .reason-input::placeholder {
-    color: #b0b0c0;
-  }
-
-  .reason-input-container {
-    margin-bottom: 16px;
-  }
-
-  .reason-input-container label {
-    display: block;
-    font-weight: 500;
-    color: #1a1a2e;
-    margin-bottom: 8px;
-    font-size: 14px;
+  .hours-value {
+    font-size: 16px;
+    min-width: 40px;
   }
 }

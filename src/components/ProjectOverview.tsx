@@ -2,6 +2,7 @@
 import React from 'react';
 import { Project } from '../types/models';
 import './ProjectOverview.css';
+import { hasRole, getAllRoles, getRoleDisplayName } from '../utils/roleUtils';
 
 interface Props {
   project: Project | null;
@@ -10,11 +11,24 @@ interface Props {
 const ProjectOverview: React.FC<Props> = ({ project }) => {
   if (!project) return null;
 
-  const supervisors = project.teamMembers.filter(
-    (m) => m.role?.toLowerCase() === 'supervisor',
-  ).length;
+  // ✅ FIXED: Use hasRole utility to check for supervisor
+  const supervisors = project.teamMembers.filter((m) => {
+    return hasRole(m.role, 'supervisor');
+  }).length;
 
   const teamCount = project.teamMembers.length;
+
+  // ✅ Get all unique roles for display
+  const getUniqueRoles = () => {
+    const roles = new Set<string>();
+    project.teamMembers.forEach((m) => {
+      const memberRoles = getAllRoles(m.role);
+      memberRoles.forEach(r => roles.add(getRoleDisplayName(r)));
+    });
+    return Array.from(roles);
+  };
+
+  const uniqueRoles = getUniqueRoles();
 
   return (
     <div className="project-overview">
@@ -38,6 +52,12 @@ const ProjectOverview: React.FC<Props> = ({ project }) => {
       <div className="po-row">
         <div className="po-label">Supervisors</div>
         <div className="po-value">{supervisors}</div>
+      </div>
+      <div className="po-row">
+        <div className="po-label">Roles</div>
+        <div className="po-value">
+          {uniqueRoles.length > 0 ? uniqueRoles.join(', ') : '—'}
+        </div>
       </div>
       <div className="po-subprojects">
         <div className="po-subprojects-title">Sub-projects</div>

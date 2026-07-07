@@ -1,5 +1,6 @@
-// components/PerformanceDashboard.tsx
-import React, { useState, useEffect } from "react";
+// components/PerformanceDashboard.tsx - Fixed for JSONB roles
+
+import React, { useState } from "react";
 import {
   Search,
   ChevronDown,
@@ -75,9 +76,67 @@ interface HeatmapDetailData {
 }
 
 // ============================================
+// ✅ HELPER: Get primary role from JSONB array or string
+// ============================================
+const getPrimaryRole = (role: any): string => {
+  if (!role) return 'developer';
+  
+  // If it's an array, get the first element
+  if (Array.isArray(role)) {
+    return role.length > 0 ? String(role[0]).toLowerCase() : 'developer';
+  }
+  
+  // If it's a string, try to parse it as JSON
+  if (typeof role === 'string') {
+    try {
+      const parsed = JSON.parse(role);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return String(parsed[0]).toLowerCase();
+      }
+      if (typeof parsed === 'string') {
+        return parsed.toLowerCase();
+      }
+    } catch {
+      // Not JSON, treat as string
+      return role.toLowerCase();
+    }
+  }
+  
+  return 'developer';
+};
+
+// ============================================
+// ✅ HELPER: Get all roles from JSONB array or string
+// ============================================
+const getAllRoles = (role: any): string[] => {
+  if (!role) return ['developer'];
+  
+  // If it's an array
+  if (Array.isArray(role)) {
+    return role.map(r => String(r).toLowerCase());
+  }
+  
+  // If it's a string
+  if (typeof role === 'string') {
+    try {
+      const parsed = JSON.parse(role);
+      if (Array.isArray(parsed)) {
+        return parsed.map(r => String(r).toLowerCase());
+      }
+      return [String(parsed).toLowerCase()];
+    } catch {
+      return [role.toLowerCase()];
+    }
+  }
+  
+  return ['developer'];
+};
+
+// ============================================
 // HELPER: Get role badge class
 // ============================================
 const getRoleBadgeClass = (role: string): string => {
+  const normalizedRole = getPrimaryRole(role);
   const roleMap: Record<string, string> = {
     supervisor: "role-supervisor",
     developer: "role-developer",
@@ -103,7 +162,6 @@ const getRoleBadgeClass = (role: string): string => {
     consultant: "role-consultant",
   };
 
-  const normalizedRole = role?.toLowerCase() || "developer";
   return roleMap[normalizedRole] || "role-developer";
 };
 
@@ -111,6 +169,7 @@ const getRoleBadgeClass = (role: string): string => {
 // HELPER: Get role display name
 // ============================================
 const getRoleDisplayName = (role: string): string => {
+  const normalizedRole = getPrimaryRole(role);
   const displayMap: Record<string, string> = {
     supervisor: "Supervisor",
     developer: "Developer",
@@ -136,8 +195,15 @@ const getRoleDisplayName = (role: string): string => {
     consultant: "Consultant",
   };
 
-  const normalizedRole = role?.toLowerCase() || "developer";
   return displayMap[normalizedRole] || role || "Developer";
+};
+
+// ============================================
+// HELPER: Check if user has multiple roles
+// ============================================
+const hasMultipleRoles = (role: any): boolean => {
+  const roles = getAllRoles(role);
+  return roles.length > 1;
 };
 
 const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
@@ -179,10 +245,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const isAll = project === "All Projects";
-
-  useEffect(() => {
-    console.log("PerformanceDashboard: Project changed to:", project);
-  }, [project]);
 
   // Helper functions
   const hashString = (s: string) => {
@@ -235,11 +297,30 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     status: string,
   ) => {
     if (status === "Left" || member.left) return 0;
-    const role = member.role?.toLowerCase() || "developer";
+    const role = getPrimaryRole(member.role);
     const seed = hashString(`${member.id}|hours|${project}`);
     const base = role === "supervisor" || role === "admin" ? 36 : 28;
     const variation = Math.floor(randFromSeed(seed) * 18);
     return base + variation;
+  };
+
+  // ✅ FIXED: Role priority function - handles JSONB arrays
+  const rolePriority = (role: any): number => {
+    const primaryRole = getPrimaryRole(role);
+    switch (primaryRole) {
+      case "admin":
+        return 0;
+      case "supervisor":
+        return 1;
+      case "developer":
+        return 2;
+      default:
+        return 3;
+    }
+  };
+
+  const sortByRolePriority = (a: DashboardMember, b: DashboardMember) => {
+    return rolePriority(a.role) - rolePriority(b.role);
   };
 
   // Build project data
@@ -382,23 +463,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       return ["All Projects", ...projectsData.map((p) => p.name)];
     }
     return ["All Projects", project];
-  };
-
-  const rolePriority = (role: string) => {
-    switch (role?.toLowerCase()) {
-      case "admin":
-        return 0;
-      case "supervisor":
-        return 1;
-      case "developer":
-        return 2;
-      default:
-        return 3;
-    }
-  };
-
-  const sortByRolePriority = (a: DashboardMember, b: DashboardMember) => {
-    return rolePriority(a.role) - rolePriority(b.role);
   };
 
   const filteredMembers = teamMembers
@@ -623,7 +687,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   // Add Member Handler
-
   const handleAddMember = async () => {
     if (!isAdmin) {
       alert("You do not have permission to add members.");
@@ -850,7 +913,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           <div className="page-header-content">
             <div>
               <h2>{project}</h2>
-              {/* Description removed from error state too */}
             </div>
           </div>
         </div>
@@ -876,7 +938,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             >
               {project}
             </h2>
-            {/* ❌ DESCRIPTION COMPLETELY REMOVED FROM HERE */}
           </div>
           {isAdmin && !isAll && (
             <button
@@ -1036,6 +1097,14 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                           {getInitials(member.name)}
                         </div>
                         {member.name}
+                        {hasMultipleRoles(member.role) && (
+                          <span className="multiple-roles-indicator" style={{ marginLeft: '8px' }}>
+                            <span className="green-dot"></span>
+                            <span className="roles-text" style={{ fontSize: '10px' }}>
+                              {getAllRoles(member.role).join(' + ')}
+                            </span>
+                          </span>
+                        )}
                       </td>
                       <td>{member.email}</td>
                       <td>

@@ -31,6 +31,83 @@ export const supabaseAdmin = supabaseServiceKey
   : null;
 
 // ============================================
+// ROLE HELPERS - Handle JSONB arrays and strings
+// ============================================
+
+/**
+ * Get the primary role from either a string or JSONB array
+ */
+export const getPrimaryRole = (role: any): string => {
+  if (!role) return 'developer';
+  
+  // If it's an array, get the first element
+  if (Array.isArray(role)) {
+    return role.length > 0 ? String(role[0]).toLowerCase() : 'developer';
+  }
+  
+  // If it's a string, try to parse it as JSON
+  if (typeof role === 'string') {
+    try {
+      const parsed = JSON.parse(role);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return String(parsed[0]).toLowerCase();
+      }
+      if (typeof parsed === 'string') {
+        return parsed.toLowerCase();
+      }
+    } catch {
+      // Not JSON, treat as string
+      return role.toLowerCase();
+    }
+  }
+  
+  return 'developer';
+};
+
+/**
+ * Get all roles from either a string or JSONB array
+ */
+export const getAllRoles = (role: any): string[] => {
+  if (!role) return ['developer'];
+  
+  // If it's an array
+  if (Array.isArray(role)) {
+    return role.map(r => String(r).toLowerCase());
+  }
+  
+  // If it's a string
+  if (typeof role === 'string') {
+    try {
+      const parsed = JSON.parse(role);
+      if (Array.isArray(parsed)) {
+        return parsed.map(r => String(r).toLowerCase());
+      }
+      return [String(parsed).toLowerCase()];
+    } catch {
+      return [role.toLowerCase()];
+    }
+  }
+  
+  return ['developer'];
+};
+
+/**
+ * Check if a user has a specific role
+ */
+export const hasRole = (role: any, roleToCheck: string): boolean => {
+  const roles = getAllRoles(role);
+  return roles.includes(roleToCheck.toLowerCase());
+};
+
+/**
+ * Check if a user has multiple roles
+ */
+export const hasMultipleRoles = (role: any): boolean => {
+  const roles = getAllRoles(role);
+  return roles.length > 1;
+};
+
+// ============================================
 // ADMIN HELPERS (for backend operations)
 // ============================================
 export const adminAuth = {
@@ -60,13 +137,17 @@ export const adminAuth = {
       throw new Error("Service role key not configured.");
     }
     
+    // ✅ Store role as JSONB array
+    const rolesArray = [role.toLowerCase()];
+    
     const { data, error } = await supabaseAdmin
       .from('user_profiles')
       .insert({
         id: userId,
         full_name: fullName,
         email: email,
-        role: role.toLowerCase(),
+        role: rolesArray, // Store as JSONB array
+        roles: rolesArray, // Also store in roles column
         status: 'active',
         created: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -92,6 +173,30 @@ export const adminAuth = {
       throw error;
     }
     console.log("✅ User deleted:", userId);
+  },
+
+  // ✅ Update user roles
+  updateUserRoles: async (userId: string, roles: string[]) => {
+    if (!supabaseAdmin) {
+      throw new Error("Service role key not configured.");
+    }
+    
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles')
+      .update({
+        role: roles,
+        roles: roles,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("❌ Admin update roles error:", error);
+      throw error;
+    }
+    return data;
   },
 };
 
@@ -262,18 +367,16 @@ export type {
   Session as SupabaseSession,
 } from "@supabase/supabase-js";
 
-
 // ============================================
 // DATABASE TYPES
 // ============================================
 export type Tables = {
-  // REMOVED: users table (legacy)
-  // Use user_profiles instead
   user_profiles: {
     id: string;
     full_name: string;
     email: string;
-    role: string;
+    role: string | string[]; // ✅ Can be string or array
+    roles: string[]; // ✅ JSONB array of roles
     status: string;
     created: string;
     updated_at: string;
@@ -308,7 +411,7 @@ export type Tables = {
     id: string;
     project_id: string;
     user_id: string;
-    role: string;
+    role: string | string[]; // ✅ Can be string or array
     joined_at: string;
     left_at: string | null;
   };
@@ -401,6 +504,7 @@ export const getCurrentSession = async () => {
   }
 };
 
+// ✅ FIXED: Get user profile with proper role handling
 export const getUserProfile = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -413,6 +517,39 @@ export const getUserProfile = async (userId: string) => {
       console.error("Error getting user profile:", error);
       return null;
     }
+    
+    // ✅ Normalize the role field
+    if (data) {
+      // Process role field
+      if (data.role) {
+        // If role is a string, try to parse it
+        if (typeof data.role === 'string') {
+          try {
+            const parsed = JSON.parse(data.role);
+            if (Array.isArray(parsed)) {
+              data.role = parsed;
+            }
+          } catch {
+            // Keep as string
+          }
+        }
+      }
+      
+      // If roles field exists and is a string, try to parse it
+      if (data.roles) {
+        if (typeof data.roles === 'string') {
+          try {
+            const parsed = JSON.parse(data.roles);
+            if (Array.isArray(parsed)) {
+              data.roles = parsed;
+            }
+          } catch {
+            // Keep as is
+          }
+        }
+      }
+    }
+
     return data;
   } catch (error) {
     console.error("Error getting user profile:", error);

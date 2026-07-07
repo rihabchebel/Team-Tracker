@@ -9,19 +9,16 @@ export type PageType =
 
 export interface User {
   id: string;
-  name: string;        // Maps to full_name in DB
+  name: string;
   email: string;
-  created: string;     // Maps to created in DB
-  role?: string;       // Maps to role in DB
-  password?: string;
+  created: string;
+  role: string; // Primary role (for backward compatibility)
+  roles?: string[]; // All roles (new)
+  status: string;
   project?: string;
   projectId?: string;
   projectIds?: string[];
-  status?: string;     // Maps to status in DB
-  memberships?: {
-    projectName: string;
-    role: string;
-  }[];
+  memberships?: Array<{ projectName: string; role: string }>;
 }
 
 export type MemberStatus = "Active" | "Left";

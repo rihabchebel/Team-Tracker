@@ -14,6 +14,7 @@ import {
 import './Sidebar.css';
 import ProjectOverview from './ProjectOverview';
 import { Project } from '../types/models';
+import { hasRole } from '../utils/roleUtils';
 
 export type ViewMode = 'supervisor' | 'developer';
 export type PageType = 'dashboard' | 'users' | 'timeline' | 'settings' | 'tasks';
@@ -26,11 +27,13 @@ interface SidebarProps {
   onViewSwitch: (view: ViewMode) => void;
   onPageChange: (page: PageType) => void;
   onProjectSelect: (project: string) => void;
-  onLogout?: () => void; // Add this
+  onLogout?: () => void;
   isAdmin?: boolean;
   hasSupervisor?: boolean;
   hasDeveloper?: boolean;
   projectsData?: Project[];
+  // ✅ Add current user's role for proper checking
+  currentUserRole?: any;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -41,13 +44,19 @@ const Sidebar: React.FC<SidebarProps> = ({
   onViewSwitch,
   onPageChange,
   onProjectSelect,
-  onLogout // Add this
-  ,
+  onLogout,
   isAdmin = false,
   hasSupervisor = false,
   hasDeveloper = false,
   projectsData = [],
+  currentUserRole,
 }) => {
+  // ✅ Determine actual roles using utility functions
+  const userIsAdmin = isAdmin || (currentUserRole ? hasRole(currentUserRole, 'admin') : false);
+  const userHasSupervisor = hasSupervisor || (currentUserRole ? hasRole(currentUserRole, 'supervisor') : false);
+  const userHasDeveloper = hasDeveloper || (currentUserRole ? hasRole(currentUserRole, 'developer') : false);
+
+  // ✅ Get primary role for display
   const adminLinks = [
     { id: 'dashboard' as PageType, label: 'Admin Dashboard', icon: LayoutDashboard },
     { id: 'users' as PageType, label: 'Manage Users', icon: Users },
@@ -105,29 +114,32 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <aside className="sidebar">
       <div className="sidebar-content">
-        {/* View Switcher - only show role buttons if user has that role */}
-        <div className="view-switcher">
-          <div className="view-label">View Mode</div>
-          {(isAdmin || hasSupervisor) && (
-            <button
-              className={`view-btn ${view === 'supervisor' ? 'active' : ''}`}
-              onClick={() => onViewSwitch('supervisor')}
-            >
-              <Eye className="view-icon" size={16} />
-              Supervisor View
-            </button>
-          )}
+      {/* View Switcher - only show role buttons if user has that role */}
+<div className="view-switcher">
+  <div className="view-label">View Mode</div>
+  
+  {/* ✅ Show Supervisor View if user is Admin OR has Supervisor role */}
+  {(userIsAdmin || userHasSupervisor) && (
+    <button
+      className={`view-btn ${view === 'supervisor' ? 'active' : ''}`}
+      onClick={() => onViewSwitch('supervisor')}
+    >
+      <Eye className="view-icon" size={16} />
+      Supervisor View
+    </button>
+  )}
 
-          {(isAdmin || hasDeveloper) && (
-            <button
-              className={`view-btn ${view === 'developer' ? 'active' : ''}`}
-              onClick={() => onViewSwitch('developer')}
-            >
-              <Code2 className="view-icon" size={16} />
-              Developer View
-            </button>
-          )}
-        </div>
+  {/* ✅ Show Developer View if user has Developer role */}
+  {userHasDeveloper && (
+    <button
+      className={`view-btn ${view === 'developer' ? 'active' : ''}`}
+      onClick={() => onViewSwitch('developer')}
+    >
+      <Code2 className="view-icon" size={16} />
+      Developer View
+    </button>
+  )}
+</div>
 
         {/* Projects Section - Only actual projects */}
         {projects.length > 0 && (
@@ -160,10 +172,10 @@ const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Navigation Items */}
-        {isAdmin && renderNavSection('Admin', adminLinks)}
-        {hasSupervisor && renderNavSection('Supervisor', supervisorLinks)}
-        {hasDeveloper && renderNavSection('Developer', developerLinks)}
-        {!isAdmin && !hasSupervisor && !hasDeveloper && (
+        {userIsAdmin && renderNavSection('Admin', adminLinks)}
+        {userHasSupervisor && renderNavSection('Supervisor', supervisorLinks)}
+        {userHasDeveloper && renderNavSection('Developer', developerLinks)}
+        {!userIsAdmin && !userHasSupervisor && !userHasDeveloper && (
           <div className="nav-section">
             <p className="nav-note">No project role assigned. Contact an admin.</p>
           </div>

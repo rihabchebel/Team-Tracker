@@ -758,3 +758,119 @@
 .modal {
   transition: all 0.3s ease;
 }
+/* Add these styles to your existing UserManagement.css */
+
+/* ============================================
+   MULTIPLE ROLES GREEN INDICATOR
+   ============================================ */
+.multiple-roles-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 2px 8px;
+  background: #dcfce7;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #166534;
+}
+
+.green-dot {
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+}
+
+.roles-text {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================
+   GLOBAL ROLES DISPLAY
+   ============================================ */
+.global-roles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.global-roles-label {
+  font-size: 10px;
+  color: #8888aa;
+  font-weight: 500;
+}
+
+.role-badge-small {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* ============================================
+   ROLE BADGE COLORS - ENHANCED
+   ============================================ */
+.role-admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.role-supervisor {
+  background: #e8e0f0;
+  color: #6c3b8c;
+}
+
+.role-developer {
+  background: #e0f0ec;
+  color: #1a7a6a;
+}
+
+/* ============================================
+   ROLES CONTAINER
+   ============================================ */
+.roles-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* ============================================
+   ROLE BADGE WITH PROJECT
+   ============================================ */
+.role-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+/* Hover effects */
+.role-badge:hover,
+.role-badge-small:hover {
+  opacity: 0.85;
+  transform: scale(1.02);
+  transition: all 0.2s;
+}
