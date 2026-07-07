@@ -9,15 +9,15 @@ export type PageType =
 
 export interface User {
   id: string;
-  name: string;
+  name: string;        // Maps to full_name in DB
   email: string;
-  created: string;
-  role?: string;
+  created: string;     // Maps to created in DB
+  role?: string;       // Maps to role in DB
   password?: string;
   project?: string;
   projectId?: string;
   projectIds?: string[];
-  status?: string;
+  status?: string;     // Maps to status in DB
   memberships?: {
     projectName: string;
     role: string;

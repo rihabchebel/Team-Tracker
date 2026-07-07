@@ -3,11 +3,13 @@ import { createClient, Session } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn("⚠️ Supabase credentials not found. Using mock data.");
 }
 
+// Regular client for frontend
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -18,8 +20,83 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+// Admin client for backend operations (requires service role key)
+export const supabaseAdmin = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  : null;
+
 // ============================================
-// AUTH HELPERS
+// ADMIN HELPERS (for backend operations)
+// ============================================
+export const adminAuth = {
+  createUser: async (email: string, password: string, userData?: any) => {
+    if (!supabaseAdmin) {
+      throw new Error("Service role key not configured. Cannot create user.");
+    }
+    
+    console.log("📝 Creating user via admin API:", email);
+    const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: userData || {},
+    });
+    
+    if (error) {
+      console.error("❌ Admin create user error:", error);
+      throw error;
+    }
+    console.log("✅ User created via admin API:", data.user.id);
+    return data;
+  },
+
+  createUserProfile: async (userId: string, fullName: string, email: string, role: string) => {
+    if (!supabaseAdmin) {
+      throw new Error("Service role key not configured.");
+    }
+    
+    const { data, error } = await supabaseAdmin
+      .from('user_profiles')
+      .insert({
+        id: userId,
+        full_name: fullName,
+        email: email,
+        role: role.toLowerCase(),
+        status: 'active',
+        created: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error("❌ Admin create profile error:", error);
+      throw error;
+    }
+    return data;
+  },
+
+  deleteUser: async (userId: string) => {
+    if (!supabaseAdmin) {
+      throw new Error("Service role key not configured.");
+    }
+    
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    if (error) {
+      console.error("❌ Admin delete user error:", error);
+      throw error;
+    }
+    console.log("✅ User deleted:", userId);
+  },
+};
+
+// ============================================
+// AUTH HELPERS (frontend)
 // ============================================
 export const auth = {
   signUp: async (
@@ -30,7 +107,6 @@ export const auth = {
   ) => {
     console.log("📝 Signing up:", email);
     
-    // FIXED: Use the new API format
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -185,6 +261,7 @@ export type {
   User as SupabaseUser,
   Session as SupabaseSession,
 } from "@supabase/supabase-js";
+
 
 // ============================================
 // DATABASE TYPES

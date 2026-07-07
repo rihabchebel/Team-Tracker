@@ -11,11 +11,18 @@ import {
   Clock,
   Calendar,
 } from "lucide-react";
-import { dataService, supabase } from '../lib/dataService';
+import { supabase } from "../lib/dataService";
 import "./PerformanceDashboard.css";
-import { ViewMode, User, Project, LogEntry, UserActivity, ProjectTimelineEvent } from "../types/models";
+import {
+  ViewMode,
+  User,
+  Project,
+  LogEntry,
+  UserActivity,
+  ProjectTimelineEvent,
+} from "../types/models";
 import { formatDate, formatDateLong } from "../utils/dateUtils";
-
+import { adminAuth } from "@/lib/supabase";
 
 type MemberStatus = "Active" | "Left" | "On Leave";
 
@@ -215,7 +222,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     if (explicitStatus) {
       const s = String(explicitStatus).toLowerCase();
       if (s === "left") return "Left";
-      if (s === "on leave" || s === "on_leave" || s === "onleave") return "On Leave";
+      if (s === "on leave" || s === "on_leave" || s === "onleave")
+        return "On Leave";
       return "Active";
     }
 
@@ -349,12 +357,14 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const projectActivities = userActivity.filter((activity) =>
     isAll
       ? true
-      : activity.project_name === project || activity.project_id === currentProjectData?.id,
+      : activity.project_name === project ||
+        activity.project_id === currentProjectData?.id,
   );
   const projectTimeline = timelineEvents.filter((event) =>
     isAll
       ? true
-      : event.project_name === project || event.project_id === currentProjectData?.id,
+      : event.project_name === project ||
+        event.project_id === currentProjectData?.id,
   );
   const heatmapDates = Array.from({ length: 30 }, (_, index) => {
     const date = new Date();
@@ -479,8 +489,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const budgetPercentage =
     budget > 0 ? Math.round((hoursSpent / budget) * 100) : 0;
 
-  const totalLoggedHours = projectTaskLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
-  const completionPercentage = budget > 0 ? Math.min(100, Math.round((hoursSpent / budget) * 100)) : 0;
+  const totalLoggedHours = projectTaskLogs.reduce(
+    (sum, log) => sum + (log.hoursWorked || 0),
+    0,
+  );
+  const completionPercentage =
+    budget > 0 ? Math.min(100, Math.round((hoursSpent / budget) * 100)) : 0;
   const productivityByUser = teamMembers
     .map((member) => {
       const memberHours = projectTaskLogs
@@ -609,12 +623,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   // Add Member Handler
+
   const handleAddMember = async () => {
     if (!isAdmin) {
-      alert("Only admins can add members.");
+      alert("You do not have permission to add members.");
       return;
     }
-
     if (!newMember.name.trim() || !newMember.email.trim()) {
       alert("Please fill in all fields");
       return;
@@ -628,36 +642,196 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         return;
       }
 
-      const { data: userData, error: userError } = await supabase
-        .from('user_profiles')
-        .insert({
-          full_name: newMember.name,
-          email: newMember.email,
-          role: newMember.role.toLowerCase(),
-        })
-        .select()
-        .single();
+      let userId: string;
+      let isNewUser = false;
 
-      if (userError) throw userError;
+      // 1. CHECK IF USER EXISTS IN user_profiles
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from("user_profiles")
+        .select("id, full_name, email")
+        .eq("email", newMember.email)
+        .maybeSingle();
 
-      await dataService.addTeamMember(
-        currentProject.id,
-        userData.id,
-        newMember.role.toLowerCase()
+      if (profileCheckError && profileCheckError.code !== "PGRST116") {
+        console.error("Error checking existing profile:", profileCheckError);
+        alert("Error checking user. Please try again.");
+        return;
+      }
+
+      if (existingProfile) {
+        userId = existingProfile.id;
+        isNewUser = false;
+        console.log("✅ User already exists:", existingProfile);
+      } else {
+        // 2. CREATE USER USING ADMIN API
+        console.log("📝 Creating user via admin API...");
+
+        // Generate a temporary password
+        const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
+
+        try {
+          // Create auth user
+          const { user } = await adminAuth.createUser(
+            newMember.email,
+            tempPassword,
+            {
+              name: newMember.name,
+              role: newMember.role.toLowerCase(),
+            },
+          );
+
+          userId = user.id;
+          isNewUser = true;
+          console.log("✅ Auth user created:", userId);
+
+          // Create user profile
+          await adminAuth.createUserProfile(
+            userId,
+            newMember.name,
+            newMember.email,
+            newMember.role,
+          );
+          console.log("✅ User profile created");
+        } catch (adminError: any) {
+          console.error("❌ Admin API error:", adminError);
+
+          // If user already exists in auth, try to get their ID
+          if (adminError.message?.includes("already exists")) {
+            const { data: existingAuth } = await supabase
+              .from("auth.users")
+              .select("id")
+              .eq("email", newMember.email)
+              .single();
+
+            if (existingAuth) {
+              userId = existingAuth.id;
+              isNewUser = false;
+            } else {
+              throw new Error("User exists but could not be found.");
+            }
+          } else {
+            throw adminError;
+          }
+        }
+      }
+
+      // 3. CHECK PROJECT MEMBERSHIP
+      const { data: existingMember, error: memberCheckError } = await supabase
+        .from("team_members")
+        .select("id, role")
+        .eq("project_id", currentProject.id)
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (memberCheckError && memberCheckError.code !== "PGRST116") {
+        console.error("Error checking membership:", memberCheckError);
+        alert("Error checking membership. Please try again.");
+        return;
+      }
+
+      // 4. VALIDATE ROLE
+      const validRoles = ["Supervisor", "Developer", "Admin"];
+      const roleMap: Record<string, string> = {
+        developer: "Developer",
+        supervisor: "Supervisor",
+        admin: "Admin",
+      };
+
+      const finalRole = roleMap[newMember.role.toLowerCase()] || "Developer";
+
+      if (!validRoles.includes(finalRole)) {
+        alert(`Invalid role. Please use one of: ${validRoles.join(", ")}`);
+        return;
+      }
+
+      if (existingMember) {
+        // Update role
+        const { error: updateError } = await supabase
+          .from("team_members")
+          .update({
+            role: finalRole,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingMember.id);
+
+        if (updateError) {
+          console.error("Error updating member role:", updateError);
+          alert("Failed to update member role. Please try again.");
+          return;
+        }
+
+        // Update local state
+        const updatedProject = {
+          ...currentProject,
+          teamMembers: currentProject.teamMembers.map((m) =>
+            m.id === userId ? { ...m, role: finalRole } : m,
+          ),
+        };
+
+        const updatedProjects = projectsData.map((p) =>
+          p.id === currentProject.id ? updatedProject : p,
+        );
+
+        if (onProjectsUpdate) {
+          onProjectsUpdate(updatedProjects);
+        }
+
+        setNewMember({ name: "", email: "", role: "Developer" });
+        setShowAddMember(false);
+        alert(
+          `${newMember.name}'s role has been updated to "${finalRole}" in ${currentProject.name}!`,
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // 5. ADD NEW TEAM MEMBER
+      const { error: teamError } = await supabase.from("team_members").insert({
+        project_id: currentProject.id,
+        user_id: userId,
+        role: finalRole,
+        joined_at: new Date().toISOString(),
+      });
+
+      if (teamError) {
+        console.error("Error adding team member:", teamError);
+        alert(`Failed to add member: ${teamError.message}`);
+        return;
+      }
+
+      // Update local state
+      const updatedProject = {
+        ...currentProject,
+        teamMembers: [
+          ...currentProject.teamMembers,
+          {
+            id: userId,
+            name: newMember.name,
+            role: finalRole,
+            joined: new Date().toLocaleDateString("en-GB"),
+          },
+        ],
+      };
+
+      const updatedProjects = projectsData.map((p) =>
+        p.id === currentProject.id ? updatedProject : p,
       );
 
-      const refreshedProjects = await dataService.getAllProjects();
       if (onProjectsUpdate) {
-        onProjectsUpdate(refreshedProjects);
+        onProjectsUpdate(updatedProjects);
       }
 
       setNewMember({ name: "", email: "", role: "Developer" });
       setShowAddMember(false);
-      
-      alert("Member added successfully!");
-    } catch (error) {
-      console.error("Error adding member:", error);
-      alert("Failed to add member. Please try again.");
+
+      const successMessage = isNewUser
+        ? `${newMember.name} has been created and added to ${currentProject.name}!`
+        : `${newMember.name} has been added to ${currentProject.name}!`;
+
+      alert(successMessage);
+    } catch (error: any) {
+      console.error("Unexpected error:", error);
+      alert(error.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -977,7 +1151,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               </div>
             </div>
 
-            <div className="stats-grid" style={{ marginBottom: '16px' }}>
+            <div className="stats-grid" style={{ marginBottom: "16px" }}>
               <div className="stat-card">
                 <div className="stat-card-header">
                   <div className="stat-info">
@@ -985,7 +1159,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   </div>
                 </div>
                 <div className="stat-details">
-                  <div className="stat-item"><span className="stat-value">{totalLoggedHours}h</span></div>
+                  <div className="stat-item">
+                    <span className="stat-value">{totalLoggedHours}h</span>
+                  </div>
                 </div>
               </div>
               <div className="stat-card">
@@ -995,7 +1171,9 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   </div>
                 </div>
                 <div className="stat-details">
-                  <div className="stat-item"><span className="stat-value">{completionPercentage}%</span></div>
+                  <div className="stat-item">
+                    <span className="stat-value">{completionPercentage}%</span>
+                  </div>
                 </div>
               </div>
               <div className="stat-card">
@@ -1005,7 +1183,11 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   </div>
                 </div>
                 <div className="stat-details">
-                  <div className="stat-item"><span className="stat-value">{projectActivities.length}</span></div>
+                  <div className="stat-item">
+                    <span className="stat-value">
+                      {projectActivities.length}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1163,10 +1345,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           className="modal-overlay-centered"
           onClick={() => setShowAddMember(false)}
         >
-          <div
-            className="modal-centered"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Member to {project}</h3>
               <button
@@ -1235,9 +1414,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               <button
                 className="create-btn"
                 onClick={handleAddMember}
-                disabled={
-                  !newMember.name || !newMember.email || isLoading
-                }
+                disabled={!newMember.name || !newMember.email || isLoading}
               >
                 {isLoading ? "Adding..." : "Add Member"}
               </button>
