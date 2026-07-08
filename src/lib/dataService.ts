@@ -899,11 +899,11 @@ const deleteUser = async (userId: string): Promise<boolean> => {
     return false;
   }
 };
-const updateUser = async (
-  userId: string,
-  updates: Partial<User>,
-): Promise<User> => {
+// updateUser function
+
+const updateUser= async (userId: string, updates: Partial<User>): Promise<User> => {
   try {
+    // ✅ Build update data with proper JSONB handling
     const updateData: any = {
       full_name: updates.name,
       email: updates.email,
@@ -911,54 +911,34 @@ const updateUser = async (
       updated_at: new Date().toISOString(),
     };
 
+    // ✅ Handle role updates properly for JSONB array
     if (updates.role) {
-      if (typeof updates.role === "string") {
-        if (updates.role.includes(",")) {
-          const roles = updates.role
-            .split(",")
-            .map((r) => r.trim().toLowerCase());
-          updateData.role = roles;
-          updateData.roles = roles; // ✅ Keep in sync
+      let finalRoles: string[] = [];
+
+      // 1. Parse the roles into an array
+      if (typeof updates.role === 'string') {
+        if (updates.role.includes(',')) {
+          // Comma-separated roles: "developer,supervisor"
+          finalRoles = updates.role.split(',').map(r => r.trim().toLowerCase());
         } else {
-          const role = updates.role.toLowerCase();
-          const { data: existingProfile } = await supabase
-            .from("user_profiles")
-            .select("role, roles")
-            .eq("id", userId)
-            .single();
-
-          if (existingProfile) {
-            let existingRoles: string[] = [];
-            if (existingProfile.roles && Array.isArray(existingProfile.roles)) {
-              existingRoles = existingProfile.roles;
-            } else if (existingProfile.role) {
-              if (Array.isArray(existingProfile.role)) {
-                existingRoles = existingProfile.role;
-              } else if (typeof existingProfile.role === "string") {
-                try {
-                  const parsed = JSON.parse(existingProfile.role);
-                  if (Array.isArray(parsed)) existingRoles = parsed;
-                } catch {
-                  existingRoles = [existingProfile.role];
-                }
-              }
-            }
-            if (!existingRoles.includes(role)) existingRoles.push(role);
-
-            updateData.role = existingRoles;
-            updateData.roles = existingRoles; // ✅ Keep in sync
-          } else {
-            updateData.role = [role];
-            updateData.roles = [role]; // ✅ Keep in sync
-          }
+          // Single role: "developer" -> ["developer"]
+          finalRoles = [updates.role.toLowerCase()];
         }
       } else if (Array.isArray(updates.role)) {
-        updateData.role = updates.role;
-        updateData.roles = updates.role; // ✅ Keep in sync
+        // Already an array
+        finalRoles = updates.role;
       }
+
+      // 2. Remove any duplicate roles
+      finalRoles = [...new Set(finalRoles)];
+
+      // 3. ⚠️ CRITICAL FIX: Assign the roles directly, replacing the existing ones completely.
+      // We do NOT fetch existing roles or append. The user selected the role, so we set it.
+      updateData.role = finalRoles;
+      updateData.roles = finalRoles;
     }
 
-    console.log("📝 Updating user with data:", updateData);
+    console.log('📝 Updating user with data:', updateData);
 
     const { data, error } = await supabase
       .from("user_profiles")

@@ -112,6 +112,7 @@ const DashboardShell: React.FC = () => {
     loadData();
   }, [user]);
 
+  // ✅ FIX: Subscribe to Realtime changes and force React to remount the page
   useEffect(() => {
     if (!user) return;
 
@@ -123,6 +124,9 @@ const DashboardShell: React.FC = () => {
         setTaskLogs(logs);
         setTimelineEvents(timeline);
         setUserActivity(activity);
+        
+        // ⚡ Force the key on <div key={refreshTrigger}> to increment
+        forceRefresh(); 
       })();
     });
 
@@ -141,6 +145,9 @@ const DashboardShell: React.FC = () => {
       setTaskLogs(logs);
       setTimelineEvents(timeline);
       setUserActivity(activity);
+      
+      // ⚡ Force React to remount the page after a manual refresh
+      forceRefresh(); 
       console.log("✅ Data refreshed successfully");
     } catch (refreshError) {
       console.error("❌ Error refreshing data:", refreshError);
@@ -412,10 +419,10 @@ const DashboardShell: React.FC = () => {
         />
         <main className="main-content">
           {roleSwitchBanner}
+          {/* ✅ The key forces the entire page to reset whenever refreshTrigger increments */}
           <div key={refreshTrigger}>{renderPage()}</div>
         </main>
       </div>
-      
     </div>
   );
 };
@@ -476,4 +483,3 @@ function App() {
 }
 
 export default App;
-
