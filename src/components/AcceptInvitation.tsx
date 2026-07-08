@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { mailerSendService } from '../lib/mailerSend';
-import { Invitation } from '../types/models';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { supabase } from "../lib/supabase";
+import { mailerSendService } from "../lib/mailerSend";
+import { Invitation } from "../types/models";
+import { getPrimaryRole } from "../utils/roleUtils";
 
 type InvitationWithProject = Invitation & {
   projects?: {
@@ -15,9 +16,11 @@ export const AcceptInvitation = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [invitation, setInvitation] = useState<InvitationWithProject | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [invitation, setInvitation] = useState<InvitationWithProject | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,32 +29,32 @@ export const AcceptInvitation = () => {
 
   const validateInvitation = async () => {
     if (!token) {
-      setError('Invalid invitation token');
+      setError("Invalid invitation token");
       setLoading(false);
       return;
     }
 
     try {
       const { data, error: lookupError } = await supabase
-        .from('invitations')
-        .select('*, projects(name)')
-        .eq('token', token)
+        .from("invitations")
+        .select("*, projects(name)")
+        .eq("token", token)
         .single();
 
       if (lookupError || !data) {
-        setError('Invalid invitation token');
+        setError("Invalid invitation token");
         setLoading(false);
         return;
       }
 
-      if (data.status !== 'pending') {
+      if (data.status !== "pending") {
         setError(`This invitation has already been ${data.status}`);
         setLoading(false);
         return;
       }
 
       if (new Date(data.expires_at) < new Date()) {
-        setError('This invitation has expired');
+        setError("This invitation has expired");
         setLoading(false);
         return;
       }
@@ -59,8 +62,8 @@ export const AcceptInvitation = () => {
       setInvitation(data as InvitationWithProject);
       setLoading(false);
     } catch (validationError) {
-      console.error('Error validating invitation:', validationError);
-      setError('Failed to validate invitation');
+      console.error("Error validating invitation:", validationError);
+      setError("Failed to validate invitation");
       setLoading(false);
     }
   };
@@ -69,17 +72,17 @@ export const AcceptInvitation = () => {
     event.preventDefault();
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError("Password must be at least 6 characters");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       return;
     }
 
     if (!token || !invitation) {
-      setError('Invalid invitation token');
+      setError("Invalid invitation token");
       return;
     }
 
@@ -87,12 +90,29 @@ export const AcceptInvitation = () => {
     setError(null);
 
     try {
-      const { error: acceptError } = await supabase.rpc('accept_invitation', {
-        p_token: token,
-        p_password: password,
-      });
+      // ✅ FIX 2: Use native supabase.auth.signUp first
+      const { data: signUpData, error: signUpError } =
+        await supabase.auth.signUp({
+          email: invitation.email,
+          password: password,
+          options: {
+            data: { full_name: invitation.full_name },
+          },
+        });
 
-      if (acceptError) throw acceptError;
+      if (signUpError) throw signUpError;
+      if (!signUpData.user) throw new Error("Failed to create user account");
+
+      // ✅ FIX 3: Call RPC to claim the invitation and assign the profile/team
+      const { error: claimError } = await supabase.rpc(
+        "accept_invitation_claim",
+        {
+          p_token: token,
+          p_user_id: signUpData.user.id,
+        },
+      );
+
+      if (claimError) throw claimError;
 
       try {
         await mailerSendService.sendWelcome({
@@ -100,17 +120,19 @@ export const AcceptInvitation = () => {
           full_name: invitation.full_name,
         });
       } catch (welcomeError) {
-        console.warn('Welcome email failed:', welcomeError);
+        console.warn("Welcome email failed:", welcomeError);
       }
 
-      navigate('/login', {
+      navigate("/login", {
         state: {
-          message: '✅ Account created successfully! Please log in.',
+          message: "✅ Account created successfully! Please log in.",
         },
       });
     } catch (acceptError: any) {
-      console.error('Error accepting invitation:', acceptError);
-      setError(acceptError.message || 'Failed to accept invitation. Please try again.');
+      console.error("Error accepting invitation:", acceptError);
+      setError(
+        acceptError.message || "Failed to accept invitation. Please try again.",
+      );
     } finally {
       setAccepting(false);
     }
@@ -118,22 +140,22 @@ export const AcceptInvitation = () => {
 
   const handleReject = async () => {
     if (!token) {
-      setError('Invalid invitation token');
+      setError("Invalid invitation token");
       return;
     }
 
-    if (!confirm('Are you sure you want to reject this invitation?')) return;
+    if (!confirm("Are you sure you want to reject this invitation?")) return;
 
     try {
-      await supabase.rpc('reject_invitation', { p_token: token });
-      navigate('/login', {
+      await supabase.rpc("reject_invitation", { p_token: token });
+      navigate("/login", {
         state: {
-          message: 'Invitation rejected.',
+          message: "Invitation rejected.",
         },
       });
     } catch (rejectError) {
-      console.error('Error rejecting invitation:', rejectError);
-      setError('Failed to reject invitation. Please try again.');
+      console.error("Error rejecting invitation:", rejectError);
+      setError("Failed to reject invitation. Please try again.");
     }
   };
 
@@ -153,10 +175,14 @@ export const AcceptInvitation = () => {
       <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Invalid Invitation</h1>
-          <p className="text-gray-600 mb-6">{error || 'This invitation link is invalid or has expired.'}</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            Invalid Invitation
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {error || "This invitation link is invalid or has expired."}
+          </p>
           <button
-            onClick={() => navigate('/login')}
+            onClick={() => navigate("/login")}
             className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Go to Login
@@ -170,8 +196,12 @@ export const AcceptInvitation = () => {
     <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4 py-8">
       <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Accept Invitation</h1>
-          <p className="text-gray-600 text-sm mt-1">Join TeamTracker and start collaborating</p>
+          <h1 className="text-2xl font-bold text-gray-800">
+            Accept Invitation
+          </h1>
+          <p className="text-gray-600 text-sm mt-1">
+            Join TeamTracker and start collaborating
+          </p>
         </div>
 
         <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
@@ -185,7 +215,9 @@ export const AcceptInvitation = () => {
           </p>
           <p className="flex justify-between">
             <span className="text-gray-600">Role:</span>
-            <span className="font-medium capitalize">{invitation.role}</span>
+            <span className="font-medium capitalize">
+              {getPrimaryRole(invitation.role)}
+            </span>
           </p>
           {invitation.projects?.name && (
             <p className="flex justify-between">
@@ -199,11 +231,17 @@ export const AcceptInvitation = () => {
           </p>
         </div>
 
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">{error}</div>}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleAccept} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Choose a Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Choose a Password
+            </label>
             <input
               type="password"
               value={password}
@@ -217,7 +255,9 @@ export const AcceptInvitation = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Confirm Password
+            </label>
             <input
               type="password"
               value={confirmPassword}
@@ -236,7 +276,7 @@ export const AcceptInvitation = () => {
               disabled={accepting}
               className="flex-1 px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {accepting ? 'Creating Account...' : 'Accept Invitation'}
+              {accepting ? "Creating Account..." : "Accept Invitation"}
             </button>
             <button
               type="button"

@@ -28,7 +28,7 @@ export const mailerSendService = {
 
     return response;
   },
-
+  
   // ✅ Resend invitation (reuse existing token or generate new one)
   resendInvitation: async (invitationId: string) => {
     // Get the existing invitation

@@ -9,10 +9,7 @@ import {
   ProjectTimelineEvent,
   UserActivity,
 } from "../types/models";
-import {
-  getPrimaryRole,
-  getAllRoles,
-} from "../utils/roleUtils";
+import { getPrimaryRole, getAllRoles } from "../utils/roleUtils";
 
 // ============================================
 // CACHE MANAGER
@@ -26,7 +23,7 @@ class DataCache {
   async get<T>(
     key: string,
     fetcher: () => Promise<T>,
-    ttl: number = this.TTL
+    ttl: number = this.TTL,
   ): Promise<T> {
     // Check if there's a pending request for this key
     if (this.pendingRequests.has(key)) {
@@ -220,7 +217,7 @@ const getAllProjects = async (): Promise<Project[]> => {
             name: sp.name,
             timeUsed: sp.time_used || 0,
             timeTotal: sp.time_total || 0,
-          })
+          }),
         );
 
         const projectTeamMembers = (teamMembersMap.get(project.id) || []).map(
@@ -238,7 +235,7 @@ const getAllProjects = async (): Promise<Project[]> => {
               joined: tm.joined_at || new Date().toISOString(),
               left: tm.left_at || undefined,
             };
-          }
+          },
         );
 
         return {
@@ -328,7 +325,9 @@ const getProjectById = async (projectId: string): Promise<Project | null> => {
   });
 };
 
-const createProject = async (projectData: Partial<Project>): Promise<Project> => {
+const createProject = async (
+  projectData: Partial<Project>,
+): Promise<Project> => {
   try {
     const {
       data: { user },
@@ -680,7 +679,7 @@ const addTeamMember = async (
       .insert({
         project_id: projectId,
         user_id: userId,
-        role: rolesArray, // ✅ Store as JSONB array
+        role: rolesArray, // ✅ Only role
         joined_at: new Date().toISOString(),
       })
       .select()
@@ -775,7 +774,7 @@ const updateTeamMemberRole = async (
     cache.invalidate("projects");
     cache.invalidate("users");
     cache.invalidate(`project_${projectId}`);
-    
+
     console.log(`✅ Team member role updated to ${finalRole}`);
   } catch (error) {
     console.error("Error updating team member role:", error);
@@ -880,10 +879,7 @@ const getUserById = async (userId: string): Promise<User | null> => {
 const deleteUser = async (userId: string): Promise<boolean> => {
   try {
     // First delete related team memberships to avoid FK errors
-    await supabase
-      .from("team_members")
-      .delete()
-      .eq("user_id", userId);
+    await supabase.from("team_members").delete().eq("user_id", userId);
 
     const { error } = await supabase
       .from("user_profiles")
@@ -903,10 +899,11 @@ const deleteUser = async (userId: string): Promise<boolean> => {
     return false;
   }
 };
-
-const updateUser = async (userId: string, updates: Partial<User>): Promise<User> => {
+const updateUser = async (
+  userId: string,
+  updates: Partial<User>,
+): Promise<User> => {
   try {
-    // ✅ Build update data with proper JSONB handling
     const updateData: any = {
       full_name: updates.name,
       email: updates.email,
@@ -914,67 +911,54 @@ const updateUser = async (userId: string, updates: Partial<User>): Promise<User>
       updated_at: new Date().toISOString(),
     };
 
-    // ✅ Handle role updates properly for JSONB array
     if (updates.role) {
-      // If role is a string, convert to JSONB array
-      if (typeof updates.role === 'string') {
-        // Check if it's a single role or comma-separated
-        if (updates.role.includes(',')) {
-          // Comma-separated roles
-          const roles = updates.role.split(',').map(r => r.trim().toLowerCase());
+      if (typeof updates.role === "string") {
+        if (updates.role.includes(",")) {
+          const roles = updates.role
+            .split(",")
+            .map((r) => r.trim().toLowerCase());
           updateData.role = roles;
-          updateData.roles = roles;
+          updateData.roles = roles; // ✅ Keep in sync
         } else {
-          // Single role
           const role = updates.role.toLowerCase();
-          // First, get existing roles from the user profile
           const { data: existingProfile } = await supabase
-            .from('user_profiles')
-            .select('role, roles')
-            .eq('id', userId)
+            .from("user_profiles")
+            .select("role, roles")
+            .eq("id", userId)
             .single();
-          
+
           if (existingProfile) {
-            // Get existing roles as array
             let existingRoles: string[] = [];
             if (existingProfile.roles && Array.isArray(existingProfile.roles)) {
               existingRoles = existingProfile.roles;
             } else if (existingProfile.role) {
               if (Array.isArray(existingProfile.role)) {
                 existingRoles = existingProfile.role;
-              } else if (typeof existingProfile.role === 'string') {
+              } else if (typeof existingProfile.role === "string") {
                 try {
                   const parsed = JSON.parse(existingProfile.role);
-                  if (Array.isArray(parsed)) {
-                    existingRoles = parsed;
-                  }
+                  if (Array.isArray(parsed)) existingRoles = parsed;
                 } catch {
                   existingRoles = [existingProfile.role];
                 }
               }
             }
-            
-            // Add new role if not already present
-            if (!existingRoles.includes(role)) {
-              existingRoles.push(role);
-            }
-            
+            if (!existingRoles.includes(role)) existingRoles.push(role);
+
             updateData.role = existingRoles;
-            updateData.roles = existingRoles;
+            updateData.roles = existingRoles; // ✅ Keep in sync
           } else {
-            // No existing profile, create new array
             updateData.role = [role];
-            updateData.roles = [role];
+            updateData.roles = [role]; // ✅ Keep in sync
           }
         }
       } else if (Array.isArray(updates.role)) {
-        // If role is already an array, use it directly
         updateData.role = updates.role;
-        updateData.roles = updates.role;
+        updateData.roles = updates.role; // ✅ Keep in sync
       }
     }
 
-    console.log('📝 Updating user with data:', updateData);
+    console.log("📝 Updating user with data:", updateData);
 
     const { data, error } = await supabase
       .from("user_profiles")
@@ -1021,9 +1005,7 @@ const createUserProfile = async (
 ): Promise<User | null> => {
   try {
     const normalizedRole = normalizeProfileRole(user.role || "developer");
-    
-    // ✅ Store role as JSONB array
-    const rolesArray = [normalizedRole];
+    const rolesArray = [normalizedRole]; // Single string to array
 
     // First, check if user profile already exists
     const { data: existingProfile, error: checkError } = await supabase
@@ -1038,15 +1020,17 @@ const createUserProfile = async (
 
     if (existingProfile) {
       // User profile already exists - update it
-      console.log(`📝 User profile already exists for ${user.email}, updating...`);
+      console.log(
+        `📝 User profile already exists for ${user.email}, updating...`,
+      );
 
       const { data, error } = await supabase
         .from("user_profiles")
         .update({
           full_name: user.name,
           email: user.email,
-          role: rolesArray, // ✅ Store as JSONB array
-          roles: rolesArray, // ✅ Store as JSONB array
+          role: rolesArray,
+          roles: rolesArray, // ✅ Keep in sync
           status: user.status || "active",
           updated_at: new Date().toISOString(),
         })
@@ -1077,8 +1061,8 @@ const createUserProfile = async (
     const insertData: any = {
       full_name: user.name,
       email: user.email,
-      role: rolesArray, // ✅ Store as JSONB array
-      roles: rolesArray, // ✅ Store as JSONB array
+      role: rolesArray,
+      roles: rolesArray, // ✅ Keep in sync
       status: user.status || "active",
       created: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -1227,6 +1211,8 @@ const createLog = async (log: Partial<LogEntry>): Promise<LogEntry> => {
 
     if (log.projectId) {
       // ⚠️ Fixed: referenced module-scoped function instead of dataService.updateProjectTotals
+      // ⚠️ FIX: Do not use `dataService.updateProjectTotals`.
+      // Call the module-scoped function directly: `updateProjectTotals`
       await updateProjectTotals(log.projectId);
       cache.invalidate("projects");
       cache.invalidate(`project_${log.projectId}`);
@@ -1415,7 +1401,7 @@ const subscribeToDataChanges = (callback: () => void) => {
       () => {
         cache.invalidate("projects");
         callback();
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -1423,7 +1409,7 @@ const subscribeToDataChanges = (callback: () => void) => {
       () => {
         cache.invalidate("projects");
         callback();
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -1431,7 +1417,7 @@ const subscribeToDataChanges = (callback: () => void) => {
       () => {
         cache.invalidate("projects");
         callback();
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -1439,7 +1425,7 @@ const subscribeToDataChanges = (callback: () => void) => {
       () => {
         cache.invalidate("logs");
         callback();
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -1447,7 +1433,7 @@ const subscribeToDataChanges = (callback: () => void) => {
       () => {
         cache.invalidate("activity");
         callback();
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -1455,7 +1441,7 @@ const subscribeToDataChanges = (callback: () => void) => {
       () => {
         cache.invalidate("timeline");
         callback();
-      }
+      },
     )
     .on(
       "postgres_changes",
@@ -1463,7 +1449,7 @@ const subscribeToDataChanges = (callback: () => void) => {
       () => {
         cache.invalidate("users");
         callback();
-      }
+      },
     )
     .subscribe();
 
