@@ -1,4 +1,3 @@
-// src/lib/mailerSend.ts
 import { supabase } from "./supabase";
 
 export const mailerSendService = {
@@ -225,5 +224,26 @@ export const mailerSendService = {
         error: "Failed to reject invitation" 
       };
     }
+  },
+
+  // ✅ FIX ADDED: Send welcome email method (resolves ts(2339))
+  sendWelcome: async (data: { email: string; full_name: string }) => {
+    const { data: response, error } = await supabase.functions.invoke(
+      "send-welcome",
+      {
+        body: {
+          email: data.email,
+          full_name: data.full_name,
+          type: "welcome",
+        },
+      },
+    );
+
+    if (error) {
+      console.error("Error sending welcome email:", error);
+      throw new Error(error.message || "Failed to send welcome email");
+    }
+
+    return response;
   },
 };

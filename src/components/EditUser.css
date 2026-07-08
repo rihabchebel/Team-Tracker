@@ -214,5 +214,87 @@
   .save-btn {
     width: 100%;
     justify-content: center;
-  }
+  } 
+}
+/* EditUser.css - Add these styles */
+
+.current-roles-display {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+}
+
+.role-badge-small {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #e8e0f0;
+  color: #6c3b8c;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.radio-label:hover {
+  border-color: #4f72e8;
+  background: #f8f9fc;
+}
+
+.radio-label input[type="radio"] {
+  margin-top: 2px;
+  accent-color: #4f72e8;
+}
+
+.radio-title {
+  display: block;
+  font-weight: 500;
+  color: #1a1a2e;
+  font-size: 14px;
+}
+
+.radio-description {
+  display: block;
+  font-size: 12px;
+  color: #8888aa;
+}
+
+.role-select,
+.status-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  transition: border-color 0.3s;
+}
+
+.role-select:focus,
+.status-select:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+.form-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8888aa;
 }

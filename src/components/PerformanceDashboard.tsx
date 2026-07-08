@@ -1,4 +1,4 @@
-// components/PerformanceDashboard.tsx - Fixed for JSONB roles
+// components/PerformanceDashboard.tsx - Matches UserManagement styling
 
 import React, { useState } from "react";
 import {
@@ -24,6 +24,16 @@ import {
 } from "../types/models";
 import { formatDate, formatDateLong } from "../utils/dateUtils";
 import { adminAuth } from "@/lib/supabase";
+// ✅ Import role utilities
+import {
+  getPrimaryRole,
+  getAllRoles,
+  hasRole,
+  hasMultipleRoles,
+  getRoleDisplayName,
+  getRoleBadgeClass,
+  getRolePriority,
+} from "../utils/roleUtils";
 
 type MemberStatus = "Active" | "Left" | "On Leave";
 
@@ -76,134 +86,10 @@ interface HeatmapDetailData {
 }
 
 // ============================================
-// ✅ HELPER: Get primary role from JSONB array or string
+// HELPER: Format role display
 // ============================================
-const getPrimaryRole = (role: any): string => {
-  if (!role) return 'developer';
-  
-  // If it's an array, get the first element
-  if (Array.isArray(role)) {
-    return role.length > 0 ? String(role[0]).toLowerCase() : 'developer';
-  }
-  
-  // If it's a string, try to parse it as JSON
-  if (typeof role === 'string') {
-    try {
-      const parsed = JSON.parse(role);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return String(parsed[0]).toLowerCase();
-      }
-      if (typeof parsed === 'string') {
-        return parsed.toLowerCase();
-      }
-    } catch {
-      // Not JSON, treat as string
-      return role.toLowerCase();
-    }
-  }
-  
-  return 'developer';
-};
-
-// ============================================
-// ✅ HELPER: Get all roles from JSONB array or string
-// ============================================
-const getAllRoles = (role: any): string[] => {
-  if (!role) return ['developer'];
-  
-  // If it's an array
-  if (Array.isArray(role)) {
-    return role.map(r => String(r).toLowerCase());
-  }
-  
-  // If it's a string
-  if (typeof role === 'string') {
-    try {
-      const parsed = JSON.parse(role);
-      if (Array.isArray(parsed)) {
-        return parsed.map(r => String(r).toLowerCase());
-      }
-      return [String(parsed).toLowerCase()];
-    } catch {
-      return [role.toLowerCase()];
-    }
-  }
-  
-  return ['developer'];
-};
-
-// ============================================
-// HELPER: Get role badge class
-// ============================================
-const getRoleBadgeClass = (role: string): string => {
-  const normalizedRole = getPrimaryRole(role);
-  const roleMap: Record<string, string> = {
-    supervisor: "role-supervisor",
-    developer: "role-developer",
-    guest: "role-guest",
-    admin: "role-admin",
-    "project manager": "role-project-manager",
-    "project-manager": "role-project-manager",
-    pm: "role-pm",
-    lead: "role-lead",
-    "team lead": "role-team-lead",
-    "team-lead": "role-team-lead",
-    designer: "role-designer",
-    "ui/ux": "role-ui-ux",
-    "ui-ux": "role-ui-ux",
-    qa: "role-qa",
-    tester: "role-tester",
-    devops: "role-devops",
-    analyst: "role-analyst",
-    "business analyst": "role-business-analyst",
-    "business-analyst": "role-business-analyst",
-    contractor: "role-contractor",
-    intern: "role-intern",
-    consultant: "role-consultant",
-  };
-
-  return roleMap[normalizedRole] || "role-developer";
-};
-
-// ============================================
-// HELPER: Get role display name
-// ============================================
-const getRoleDisplayName = (role: string): string => {
-  const normalizedRole = getPrimaryRole(role);
-  const displayMap: Record<string, string> = {
-    supervisor: "Supervisor",
-    developer: "Developer",
-    guest: "Guest",
-    admin: "Admin",
-    "project manager": "Project Manager",
-    "project-manager": "Project Manager",
-    pm: "Project Manager",
-    lead: "Team Lead",
-    "team lead": "Team Lead",
-    "team-lead": "Team Lead",
-    designer: "Designer",
-    "ui/ux": "UI/UX Designer",
-    "ui-ux": "UI/UX Designer",
-    qa: "QA Engineer",
-    tester: "Tester",
-    devops: "DevOps Engineer",
-    analyst: "Analyst",
-    "business analyst": "Business Analyst",
-    "business-analyst": "Business Analyst",
-    contractor: "Contractor",
-    intern: "Intern",
-    consultant: "Consultant",
-  };
-
-  return displayMap[normalizedRole] || role || "Developer";
-};
-
-// ============================================
-// HELPER: Check if user has multiple roles
-// ============================================
-const hasMultipleRoles = (role: any): boolean => {
-  const roles = getAllRoles(role);
-  return roles.length > 1;
+const formatRoleDisplay = (role: string): string => {
+  return getRoleDisplayName(role);
 };
 
 const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
@@ -306,17 +192,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   // ✅ FIXED: Role priority function - handles JSONB arrays
   const rolePriority = (role: any): number => {
-    const primaryRole = getPrimaryRole(role);
-    switch (primaryRole) {
-      case "admin":
-        return 0;
-      case "supervisor":
-        return 1;
-      case "developer":
-        return 2;
-      default:
-        return 3;
-    }
+    return getRolePriority(role);
   };
 
   const sortByRolePriority = (a: DashboardMember, b: DashboardMember) => {
@@ -957,18 +833,18 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           {!isAll && (
             <div className="dashboard-tabs">
               <button
-                className={`tab-btn ${activeTab === "heatmap" ? "active" : ""}`}
-                onClick={() => setActiveTab("heatmap")}
-              >
-                <Calendar size={14} />
-                Heatmap
-              </button>
-              <button
                 className={`tab-btn ${activeTab === "roster" ? "active" : ""}`}
                 onClick={() => setActiveTab("roster")}
               >
                 <Users size={14} />
                 Team Roster
+              </button>
+              <button
+                className={`tab-btn ${activeTab === "heatmap" ? "active" : ""}`}
+                onClick={() => setActiveTab("heatmap")}
+              >
+                <Calendar size={14} />
+                Heatmap
               </button>
               <button
                 className={`tab-btn ${activeTab === "analytics" ? "active" : ""}`}
@@ -982,173 +858,212 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         </div>
 
         {activeTab === "roster" && (
-          <div className="roster-section">
-            <div className="timeline-filters">
-              <div className="filter-group">
-                <label>User</label>
-                <select
-                  value={selectedUser}
-                  onChange={(e) => setSelectedUser(e.target.value)}
-                  className="filter-select"
-                >
-                  {getAvailableUsers().map((user) => (
-                    <option key={user} value={user}>
-                      {user}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Project</label>
-                <select
-                  value={selectedProjectFilter}
-                  onChange={(e) => setSelectedProjectFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  {getAvailableProjects().map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Role</label>
-                <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="All">All Roles</option>
-                  <option value="Supervisor">Supervisor</option>
-                  <option value="Developer">Developer</option>
-                  <option value="Admin">Admin</option>
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Status</label>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="filter-select"
-                >
-                  <option value="All">All Status</option>
-                  <option value="Active">Active</option>
-                  <option value="Left">Left</option>
-                  <option value="On Leave">On Leave</option>
-                </select>
-              </div>
-              <div className="filter-group">
-                <label>Search</label>
-                <div className="search-box">
-                  <Search size={16} className="search-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search members..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
+  <div className="roster-section">
+    <div className="timeline-filters">
+      <div className="filter-group">
+        <label>User</label>
+        <select
+          value={selectedUser}
+          onChange={(e) => setSelectedUser(e.target.value)}
+          className="filter-select"
+        >
+          {getAvailableUsers().map((user) => (
+            <option key={user} value={user}>
+              {user}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="filter-group">
+        <label>Project</label>
+        <select
+          value={selectedProjectFilter}
+          onChange={(e) => setSelectedProjectFilter(e.target.value)}
+          className="filter-select"
+        >
+          {getAvailableProjects().map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="filter-group">
+        <label>Role</label>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+          className="filter-select"
+        >
+          <option value="All">All Roles</option>
+          <option value="Supervisor">Supervisor</option>
+          <option value="Developer">Developer</option>
+          <option value="Admin">Admin</option>
+        </select>
+      </div>
+      <div className="filter-group">
+        <label>Status</label>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="filter-select"
+        >
+          <option value="All">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Left">Left</option>
+          <option value="On Leave">On Leave</option>
+        </select>
+      </div>
+      <div className="filter-group">
+        <label>Search</label>
+        <div className="search-box">
+          <Search size={16} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Search members..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+    </div>
 
-            <div className="table-container">
-              <table className="roster-table">
-                <thead>
-                  <tr>
-                    <th
-                      onClick={() => handleSort("name")}
-                      className="sortable-header"
-                    >
-                      Member {getSortIcon("name")}
-                    </th>
-                    <th
-                      onClick={() => handleSort("email")}
-                      className="sortable-header"
-                    >
-                      Email {getSortIcon("email")}
-                    </th>
-                    <th>Role / Projects</th>
-                    <th
-                      onClick={() => handleSort("memberSince")}
-                      className="sortable-header"
-                    >
-                      Member Since {getSortIcon("memberSince")}
-                    </th>
-                    <th
-                      onClick={() => handleSort("activeHours")}
-                      className="sortable-header"
-                    >
-                      Active Hours {getSortIcon("activeHours")}
-                    </th>
-                    <th
-                      onClick={() => handleSort("status")}
-                      className="sortable-header"
-                    >
-                      Status {getSortIcon("status")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredMembers.map((member) => (
-                    <tr key={member.id}>
-                      <td className="member-cell">
-                        <div className="member-avatar">
-                          {getInitials(member.name)}
-                        </div>
-                        {member.name}
-                        {hasMultipleRoles(member.role) && (
-                          <span className="multiple-roles-indicator" style={{ marginLeft: '8px' }}>
-                            <span className="green-dot"></span>
-                            <span className="roles-text" style={{ fontSize: '10px' }}>
-                              {getAllRoles(member.role).join(' + ')}
-                            </span>
-                          </span>
-                        )}
-                      </td>
-                      <td>{member.email}</td>
-                      <td>
-                        {isAll && member.memberships ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: 8,
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            {member.memberships.map((m) => (
+    <div className="table-container">
+      <table className="roster-table">
+        <thead>
+          <tr>
+            <th
+              onClick={() => handleSort("name")}
+              className="sortable-header"
+            >
+              Name {getSortIcon("name")}
+            </th>
+            <th
+              onClick={() => handleSort("email")}
+              className="sortable-header"
+            >
+              Email {getSortIcon("email")}
+            </th>
+            <th>Role / Projects</th>
+            <th
+              onClick={() => handleSort("memberSince")}
+              className="sortable-header"
+            >
+              Member Since {getSortIcon("memberSince")}
+            </th>
+            <th
+              onClick={() => handleSort("activeHours")}
+              className="sortable-header"
+            >
+              Active Hours {getSortIcon("activeHours")}
+            </th>
+            <th
+              onClick={() => handleSort("status")}
+              className="sortable-header"
+            >
+              Status {getSortIcon("status")}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredMembers.map((member) => {
+            const hasMultiple = hasMultipleRoles(member.role);
+            const allRoles = getAllRoles(member.role);
+            const primaryRole = getPrimaryRole(member.role);
+            
+            return (
+              <tr key={member.id}>
+                <td className="member-cell">
+                  <div className="member-avatar">
+                    {getInitials(member.name)}
+                  </div>
+                  <div>
+                    <div>{member.name}</div>
+                    {/* ✅ Green indicator for multiple roles - matching UserManagement */}
+                    {hasMultiple && (
+                      <div className="multiple-roles-indicator">
+                        <span className="green-dot"></span>
+                        <span className="roles-text">
+                          {allRoles.map(r => formatRoleDisplay(r)).join(' + ')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </td>
+                <td>{member.email}</td>
+                <td>
+                  {isAll && member.memberships ? (
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {member.memberships.map((m) => (
+                        <span
+                          key={`${member.id}-${m.projectName}`}
+                          className={`role-badge ${getRoleBadgeClass(m.role)}`}
+                        >
+                          {formatRoleDisplay(m.role)} · {m.projectName}
+                        </span>
+                      ))}
+                      {/* ✅ Show "Also:" with all roles for All Projects view */}
+                      {hasMultiple && (
+                        <div className="global-roles" style={{ marginTop: '4px', width: '100%' }}>
+                          <span className="global-roles-label">Also:</span>
+                          {allRoles
+                            .filter((r: string) => r !== primaryRole)
+                            .map((role: string, idx: number) => (
                               <span
-                                key={`${member.id}-${m.projectName}`}
-                                className={`role-badge ${getRoleBadgeClass(m.role)}`}
+                                key={idx}
+                                className={`role-badge-small ${getRoleBadgeClass(role)}`}
                               >
-                                {getRoleDisplayName(m.role)} · {m.projectName}
+                                {formatRoleDisplay(role)}
                               </span>
                             ))}
-                          </div>
-                        ) : (
-                          <span
-                            className={`role-badge ${getRoleBadgeClass(member.role)}`}
-                          >
-                            {getRoleDisplayName(member.role)}
-                          </span>
-                        )}
-                      </td>
-                      <td>{formatDate(member.memberSince)}</td>
-                      <td>{member.activeHours}h</td>
-                      <td>
-                        <span
-                          className={`status-badge ${getStatusBadgeClass(member.status)}`}
-                        >
-                          {member.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div>
+                      {/* ✅ Show primary role with project */}
+                      <span
+                        className={`role-badge ${getRoleBadgeClass(member.role)}`}
+                      >
+                        {formatRoleDisplay(member.role)}
+                      </span>
+                      
+                      {/* ✅ Show "Also:" with additional roles - matching UserManagement */}
+                      {hasMultiple && (
+                        <div className="global-roles" style={{ marginTop: '4px' }}>
+                          <span className="global-roles-label">Also:</span>
+                          {allRoles
+                            .filter((r: string) => r !== primaryRole)
+                            .map((role: string, idx: number) => (
+                              <span
+                                key={idx}
+                                className={`role-badge-small ${getRoleBadgeClass(role)}`}
+                              >
+                                {formatRoleDisplay(role)}
+                              </span>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </td>
+                <td>{formatDate(member.memberSince)}</td>
+                <td>{member.activeHours}h</td>
+                <td>
+                  <span
+                    className={`status-badge ${getStatusBadgeClass(member.status)}`}
+                  >
+                    {member.status}
+                  </span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
         {!isAll && activeTab === "heatmap" && (
           <div className="heatmap-section">
@@ -1164,7 +1079,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                           <span className="member-status-left"> (left)</span>
                         )}
                       </span>
-                      {member.role === "Supervisor" && (
+                      {hasRole(member.role, 'supervisor') && (
                         <span className="member-role-badge supervisor-badge">
                           Supervisor
                         </span>
@@ -1275,7 +1190,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                         className={`role-badge ${getRoleBadgeClass(member.role)}`}
                         style={{ fontSize: "11px", padding: "2px 10px" }}
                       >
-                        {getRoleDisplayName(member.role)}
+                        {formatRoleDisplay(member.role)}
                       </span>
                     </div>
                   </div>
@@ -1326,7 +1241,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   className={`role-badge ${getRoleBadgeClass(selectedCell.role)}`}
                   style={{ fontSize: "11px", padding: "2px 12px" }}
                 >
-                  {getRoleDisplayName(selectedCell.role)}
+                  {formatRoleDisplay(selectedCell.role)}
                 </span>
                 <span className={`status-badge-small ${selectedCell.status}`}>
                   {selectedCell.status.charAt(0).toUpperCase() +
@@ -1470,6 +1385,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 >
                   <option value="Developer">Developer</option>
                   <option value="Supervisor">Supervisor</option>
+                  <option value="Admin">Admin</option>
                 </select>
               </div>
             </div>

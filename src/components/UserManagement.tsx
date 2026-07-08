@@ -16,6 +16,7 @@ import {
   getRolePriority
 } from "../utils/roleUtils";
 
+
 interface UserManagementProps {
   view: ViewMode;
   project: string;
@@ -858,7 +859,6 @@ const UserManagement: React.FC<UserManagementProps> = ({
         isOpen={showEditModal}
         onClose={handleCloseEditModal}
         onSave={handleSaveUser}
-        projects={projects}
         currentProject={isAllProjects ? undefined : project}
       />
 

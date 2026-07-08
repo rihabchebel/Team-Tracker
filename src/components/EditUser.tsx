@@ -1,17 +1,21 @@
-// components/EditUser.tsx - Complete updated version
+// components/EditUser.tsx - Fixed for JSONB roles and Lint error
 
 import React, { useState, useEffect } from "react";
-import { X } from "lucide-react";
-import "./UserManagement.css";
 import { User } from "../types/models";
-import { dataService } from "../lib/dataService";
+import { X } from "lucide-react";
+import "./EditUser.css";
+// ✅ Import role utilities
+import {
+  getPrimaryRole,
+  getAllRoles,
+  getRoleDisplayName,
+} from "../utils/roleUtils";
 
 interface EditUserProps {
   user: User | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedUser: User) => void;
-  projects: string[];
   currentProject?: string;
 }
 
@@ -20,117 +24,92 @@ const EditUser: React.FC<EditUserProps> = ({
   isOpen,
   onClose,
   onSave,
-  projects,
   currentProject,
 }) => {
-  const [editedUser, setEditedUser] = useState<User | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [updateType, setUpdateType] = useState<"global" | "project">("project");
-  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<User | null>(null);
+  const [roleUpdateType, setRoleUpdateType] = useState<"project" | "all">(
+    "project",
+  );
+  const [projectRole, setProjectRole] = useState<string>("Developer");
 
   useEffect(() => {
     if (user) {
-      setEditedUser({ ...user });
-      setUpdateType("project");
-      setError(null);
-    }
-  }, [user]);
-
-  if (!isOpen || !editedUser || !user) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setIsSaving(true);
-
-    try {
-      console.log('📝 Submitting edit for user:', editedUser);
-      console.log('Update type:', updateType);
-      console.log('Current project:', currentProject);
-
-      if (updateType === "project" && currentProject) {
-        // Update role ONLY for this project
-        const project = projects.find(p => p === currentProject);
-        if (!project) {
-          throw new Error(`Project "${currentProject}" not found`);
-        }
-        
-        const projectData = await dataService.getProjects();
-        const projectObj = projectData.find(p => p.name === project);
-        
-        if (!projectObj) {
-          throw new Error(`Project "${project}" not found in database`);
-        }
-        
-        console.log(`📝 Updating role for user ${user.id} in project ${projectObj.id}`);
-        
-        // Update project-specific role
-        await dataService.updateTeamMemberRole(
-          projectObj.id,
-          user.id,
-          editedUser.role || "Developer"
+      // ✅ Get primary role from JSONB array or string
+      const primaryRole = getPrimaryRole(user.role);
+      const allRoles = getAllRoles(user.role);
+      
+      setFormData({
+        ...user,
+        role: primaryRole, // Store primary role as string for display
+        roles: allRoles, // Store all roles for reference
+      });
+      
+      // Set project role based on current project membership
+      if (currentProject && user.memberships) {
+        const membership = (user.memberships || []).find(
+          (m: any) => m.projectName === currentProject
         );
-        console.log(`✅ Role updated for project ${project} only`);
-        
-        // Also update user profile if name or email changed
-        if (editedUser.name !== user.name || editedUser.email !== user.email) {
-          await dataService.updateUser(user.id, {
-            name: editedUser.name,
-            email: editedUser.email,
-          });
-        }
+        setProjectRole(membership?.role || "Developer");
       } else {
-        // Update user globally (all projects)
-        console.log('📝 Updating user globally');
-        await dataService.updateUser(user.id, {
-          name: editedUser.name,
-          email: editedUser.email,
-          role: editedUser.role,
-          status: editedUser.status,
-        });
-        console.log(`✅ User updated globally`);
+        setProjectRole(primaryRole || "Developer");
       }
-
-      // Refresh data
-      const [] = await Promise.all([
-        dataService.getAllUsers(),
-        dataService.getAllProjects(),
-      ]);
-      
-      // Call onSave with updated user
-      onSave(editedUser);
-      
-      // Close modal
-      onClose();
-      
-      alert(`✅ User updated successfully!`);
-    } catch (error: any) {
-      console.error("Error updating user:", error);
-      setError(error.message || "Failed to update user. Please try again.");
-    } finally {
-      setIsSaving(false);
     }
+  }, [user, currentProject]);
+
+  if (!isOpen || !formData) return null;
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => (prev ? { ...prev, [name]: value } : null));
   };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData) return;
+
+    let updatedUser = { ...formData };
+
+    if (roleUpdateType === "project" && currentProject) {
+      // Only update role for this project
+      updatedUser = {
+        ...updatedUser,
+        role: projectRole,
+        project: currentProject,
+      };
+    } else {
+      // Update role for all projects
+      updatedUser = {
+        ...updatedUser,
+        role: projectRole,
+      };
+    }
+
+    onSave(updatedUser);
+  };
+
+  // ✅ Get role options
+  const roleOptions = ["Developer", "Supervisor", "Admin"];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal edit-user-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Edit User</h3>
+          <button className="close-btn" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
         <form onSubmit={handleSubmit}>
-          <div className="modal-header">
-            <h3>Edit User</h3>
-            <button type="button" className="close-btn" onClick={onClose}>
-              <X size={18} />
-            </button>
-          </div>
           <div className="modal-body">
             <div className="form-group">
               <label>Full Name</label>
               <input
                 type="text"
-                value={editedUser.name}
-                onChange={(e) =>
-                  setEditedUser({ ...editedUser, name: e.target.value })
-                }
+                name="name"
+                value={formData.name || ""}
+                onChange={handleChange}
                 placeholder="Enter full name"
                 required
               />
@@ -140,105 +119,121 @@ const EditUser: React.FC<EditUserProps> = ({
               <label>Email</label>
               <input
                 type="email"
-                value={editedUser.email}
-                onChange={(e) =>
-                  setEditedUser({ ...editedUser, email: e.target.value })
-                }
+                name="email"
+                value={formData.email || ""}
+                onChange={handleChange}
                 placeholder="Enter email address"
                 required
               />
             </div>
 
+            {/* ✅ Show current roles */}
             <div className="form-group">
-              <label>Role Update Type</label>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    value="project"
-                    checked={updateType === "project"}
-                    onChange={() => setUpdateType("project")}
-                  />
-                  This Project Only
-                  <span style={{ fontSize: '11px', color: '#8888aa', marginLeft: '4px' }}>
-                    ({currentProject || 'Current Project'})
+              <label>Current Roles</label>
+              <div className="current-roles-display">
+                {getAllRoles(user?.role).map((role, idx) => (
+                  <span key={idx} className="role-badge-small">
+                    {getRoleDisplayName(role)}
                   </span>
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                  <input
-                    type="radio"
-                    value="global"
-                    checked={updateType === "global"}
-                    onChange={() => setUpdateType("global")}
-                  />
-                  All Projects
-                </label>
+                ))}
               </div>
             </div>
 
             <div className="form-group">
-              <label>
-                {updateType === "project" 
-                  ? `Role in ${currentProject || 'this project'}` 
-                  : "Global Role (All Projects)"}
-              </label>
-              <select
-                value={editedUser.role}
-                onChange={(e) =>
-                  setEditedUser({ ...editedUser, role: e.target.value })
-                }
-              >
-                <option value="Developer">Developer</option>
-                <option value="Supervisor">Supervisor</option>
-                <option value="Admin">Admin</option>
-              </select>
-              {updateType === "project" && (
-                <p style={{ fontSize: '12px', color: '#8888aa', marginTop: '4px' }}>
-                  Only changes the role for {currentProject || 'this project'}
-                </p>
-              )}
-              {updateType === "global" && (
-                <p style={{ fontSize: '12px', color: '#ff6b6b', marginTop: '4px' }}>
-                  ⚠️ Changes role for ALL projects
-                </p>
-              )}
+              <label>Role Update Type</label>
+              <div className="radio-group">
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="roleUpdateType"
+                    value="project"
+                    checked={roleUpdateType === "project"}
+                    onChange={() => setRoleUpdateType("project")}
+                  />
+                  <div>
+                    <span className="radio-title">This Project Only</span>
+                    <span className="radio-description">
+                      (Current Project: {currentProject || "None"})
+                    </span>
+                  </div>
+                </label>
+                <label className="radio-label">
+                  <input
+                    type="radio"
+                    name="roleUpdateType"
+                    value="all"
+                    checked={roleUpdateType === "all"}
+                    onChange={() => setRoleUpdateType("all")}
+                  />
+                  <div>
+                    <span className="radio-title">All Projects</span>
+                    <span className="radio-description">
+                      Changes role for all projects
+                    </span>
+                  </div>
+                </label>
+              </div>
             </div>
+
+            {roleUpdateType === "project" && currentProject ? (
+              <div className="form-group">
+                <label>Role in this project</label>
+                <select
+                  value={projectRole}
+                  onChange={(e) => setProjectRole(e.target.value)}
+                  className="role-select"
+                >
+                  {roleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                <small className="form-hint">
+                  Only changes the role for this project
+                </small>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label>Role (All Projects)</label>
+                <select
+                  name="role"
+                  value={projectRole}
+                  onChange={(e) => setProjectRole(e.target.value)}
+                  className="role-select"
+                >
+                  {roleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {role}
+                    </option>
+                  ))}
+                </select>
+                <small className="form-hint">
+                  Changes role for all projects
+                </small>
+              </div>
+            )}
 
             <div className="form-group">
               <label>Status</label>
               <select
-                value={editedUser.status}
-                onChange={(e) =>
-                  setEditedUser({ ...editedUser, status: e.target.value })
-                }
+                name="status"
+                value={formData.status || "Active"}
+                onChange={handleChange}
+                className="status-select"
               >
                 <option value="Active">Active</option>
                 <option value="On Leave">On Leave</option>
                 <option value="Left">Left</option>
               </select>
             </div>
-
-            {error && (
-              <div className="error-message" style={{ color: '#dc3545', marginTop: '8px' }}>
-                {error}
-              </div>
-            )}
           </div>
           <div className="modal-footer">
-            <button
-              type="button"
-              className="cancel-btn"
-              onClick={onClose}
-              disabled={isSaving}
-            >
-              Cancel
+            <button type="button" className="cancel-btn" onClick={onClose}>
+              CANCEL
             </button>
-            <button
-              type="submit"
-              className="create-btn"
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving..." : "Save Changes"}
+            <button type="submit" className="save-btn">
+              Save Changes
             </button>
           </div>
         </form>
