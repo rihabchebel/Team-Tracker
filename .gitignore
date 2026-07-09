@@ -11,7 +11,7 @@
 /dist
 /.vercel
 
-# Environment variables (keep .env.example committed)
+# Environment variables
 .env
 .env.local
 .env.development.local
@@ -47,17 +47,5 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 
-vite.config.ts
-tsconfig.node.json
-tsconfig.json
-package.json
-package-lock.json
 .env.example
-node_modules/
-.env
-.env.local
-.env.*.local
-package-lock.json
 yarn.lock
-tsconfig.json
-vite.config.ts
