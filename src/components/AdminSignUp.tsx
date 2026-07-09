@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { auth } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
+
 export const AdminSignUp = () => {
     const navigate = useNavigate();
     const { user } = useAuth();

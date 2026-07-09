@@ -3,7 +3,7 @@ import { createClient, Session } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || '';
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || "";
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn("⚠️ Supabase credentials not found. Using mock data.");
@@ -21,7 +21,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Admin client for backend operations (requires service role key)
-export const supabaseAdmin = supabaseServiceKey 
+export const supabaseAdmin = supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
@@ -38,21 +38,21 @@ export const supabaseAdmin = supabaseServiceKey
  * Get the primary role from either a string or JSONB array
  */
 export const getPrimaryRole = (role: any): string => {
-  if (!role) return 'developer';
-  
+  if (!role) return "developer";
+
   // If it's an array, get the first element
   if (Array.isArray(role)) {
-    return role.length > 0 ? String(role[0]).toLowerCase() : 'developer';
+    return role.length > 0 ? String(role[0]).toLowerCase() : "developer";
   }
-  
+
   // If it's a string, try to parse it as JSON
-  if (typeof role === 'string') {
+  if (typeof role === "string") {
     try {
       const parsed = JSON.parse(role);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return String(parsed[0]).toLowerCase();
       }
-      if (typeof parsed === 'string') {
+      if (typeof parsed === "string") {
         return parsed.toLowerCase();
       }
     } catch {
@@ -60,35 +60,35 @@ export const getPrimaryRole = (role: any): string => {
       return role.toLowerCase();
     }
   }
-  
-  return 'developer';
+
+  return "developer";
 };
 
 /**
  * Get all roles from either a string or JSONB array
  */
 export const getAllRoles = (role: any): string[] => {
-  if (!role) return ['developer'];
-  
+  if (!role) return ["developer"];
+
   // If it's an array
   if (Array.isArray(role)) {
-    return role.map(r => String(r).toLowerCase());
+    return role.map((r) => String(r).toLowerCase());
   }
-  
+
   // If it's a string
-  if (typeof role === 'string') {
+  if (typeof role === "string") {
     try {
       const parsed = JSON.parse(role);
       if (Array.isArray(parsed)) {
-        return parsed.map(r => String(r).toLowerCase());
+        return parsed.map((r) => String(r).toLowerCase());
       }
       return [String(parsed).toLowerCase()];
     } catch {
       return [role.toLowerCase()];
     }
   }
-  
-  return ['developer'];
+
+  return ["developer"];
 };
 
 /**
@@ -115,7 +115,7 @@ export const adminAuth = {
     if (!supabaseAdmin) {
       throw new Error("Service role key not configured. Cannot create user.");
     }
-    
+
     console.log("📝 Creating user via admin API:", email);
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -123,7 +123,7 @@ export const adminAuth = {
       email_confirm: true,
       user_metadata: userData || {},
     });
-    
+
     if (error) {
       console.error("❌ Admin create user error:", error);
       throw error;
@@ -132,29 +132,34 @@ export const adminAuth = {
     return data;
   },
 
-  createUserProfile: async (userId: string, fullName: string, email: string, role: string) => {
+  createUserProfile: async (
+    userId: string,
+    fullName: string,
+    email: string,
+    role: string,
+  ) => {
     if (!supabaseAdmin) {
       throw new Error("Service role key not configured.");
     }
-    
+
     // ✅ Store role as JSONB array
     const rolesArray = [role.toLowerCase()];
-    
+
     const { data, error } = await supabaseAdmin
-      .from('user_profiles')
+      .from("user_profiles")
       .insert({
         id: userId,
         full_name: fullName,
         email: email,
         role: rolesArray, // Store as JSONB array
         roles: rolesArray, // Also store in roles column
-        status: 'active',
+        status: "active",
         created: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .select()
       .single();
-    
+
     if (error) {
       console.error("❌ Admin create profile error:", error);
       throw error;
@@ -166,7 +171,7 @@ export const adminAuth = {
     if (!supabaseAdmin) {
       throw new Error("Service role key not configured.");
     }
-    
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
     if (error) {
       console.error("❌ Admin delete user error:", error);
@@ -180,18 +185,18 @@ export const adminAuth = {
     if (!supabaseAdmin) {
       throw new Error("Service role key not configured.");
     }
-    
+
     const { data, error } = await supabaseAdmin
-      .from('user_profiles')
+      .from("user_profiles")
       .update({
         role: roles,
         roles: roles,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', userId)
+      .eq("id", userId)
       .select()
       .single();
-    
+
     if (error) {
       console.error("❌ Admin update roles error:", error);
       throw error;
@@ -211,7 +216,7 @@ export const auth = {
     redirectTo?: string,
   ) => {
     console.log("📝 Signing up:", email);
-    
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -220,7 +225,7 @@ export const auth = {
         emailRedirectTo: redirectTo,
       },
     });
-    
+
     if (error) {
       console.error("❌ Sign up error:", error);
       throw error;
@@ -504,7 +509,7 @@ export const getCurrentSession = async () => {
   }
 };
 
-// ✅ FIXED: Get user profile with proper role handling
+// Get user profile with role handling matching database schema
 export const getUserProfile = async (userId: string) => {
   try {
     const { data, error } = await supabase
@@ -517,40 +522,22 @@ export const getUserProfile = async (userId: string) => {
       console.error("Error getting user profile:", error);
       return null;
     }
-    
-    // ✅ Normalize the role field
-    if (data) {
-      // Process role field
-      if (data.role) {
-        // If role is a string, try to parse it
-        if (typeof data.role === 'string') {
-          try {
-            const parsed = JSON.parse(data.role);
-            if (Array.isArray(parsed)) {
-              data.role = parsed;
-            }
-          } catch {
-            // Keep as string
-          }
-        }
-      }
-      
-      // If roles field exists and is a string, try to parse it
-      if (data.roles) {
-        if (typeof data.roles === 'string') {
-          try {
-            const parsed = JSON.parse(data.roles);
-            if (Array.isArray(parsed)) {
-              data.roles = parsed;
-            }
-          } catch {
-            // Keep as is
-          }
-        }
-      }
+
+    if (!data) {
+      return null;
     }
 
-    return data;
+    // Normalize roles as arrays
+    return {
+      ...data,
+      role: Array.isArray(data.role) ? data.role : data.role ? [data.role] : [],
+
+      roles: Array.isArray(data.roles)
+        ? data.roles
+        : data.roles
+          ? data.roles
+          : [],
+    };
   } catch (error) {
     console.error("Error getting user profile:", error);
     return null;
