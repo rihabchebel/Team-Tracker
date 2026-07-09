@@ -1,4 +1,4 @@
-// src/components/Login.tsx
+// src/pages/Login.tsx
 import React, { useState, useEffect } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";

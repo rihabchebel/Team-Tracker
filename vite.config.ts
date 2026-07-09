@@ -1,14 +1,22 @@
+<<<<<<< HEAD
 ﻿import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 
 // https://vitejs.dev/config/
+=======
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'node:path'
+
+>>>>>>> modalFix/fix/modal-not-opening
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+<<<<<<< HEAD
       '@components': path.resolve(__dirname, './src/components'),
       '@lib': path.resolve(__dirname, './src/lib'),
       '@types': path.resolve(__dirname, './src/types'),
@@ -54,3 +62,10 @@ export default defineConfig({
 
   envPrefix: 'VITE_',
 });
+=======
+      '@lib': path.resolve(__dirname, './src/lib'),
+      '@types': path.resolve(__dirname, './src/types'),
+    },
+  },
+})
+>>>>>>> modalFix/fix/modal-not-opening

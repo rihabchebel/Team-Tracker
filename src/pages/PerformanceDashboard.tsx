@@ -1,4 +1,4 @@
-// components/PerformanceDashboard.tsx - Matches UserManagement styling
+// pages/PerformanceDashboard.tsx - Matches UserManagement styling
 
 import React, { useState } from "react";
 import {

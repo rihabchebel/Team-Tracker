@@ -1,4 +1,4 @@
-// components/AllTasks.tsx
+// pages/AllTasks.tsx
 import React, { useState, useEffect } from 'react';
 import './AllTasks.css';
 import { ViewMode, Project, User, LogEntry } from '../types/models';

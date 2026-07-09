@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 ﻿// tsconfig.json
+=======
+>>>>>>> modalFix/fix/modal-not-opening
 {
   "compilerOptions": {
     "target": "ES2020",

@@ -1,8 +1,8 @@
-// components/UserManagement.tsx - Fixed for JSONB roles
+// pages/UserManagement.tsx - Fixed for JSONB roles
 
 import React, { useState } from "react";
 import { Edit3, Trash2, X, Plus } from "lucide-react";
-import EditUser from "./EditUser";
+import EditUser from "../components/EditUser";
 import { formatDate } from "../utils/dateUtils";
 import "./UserManagement.css";
 import { ViewMode, User, Project } from "../types/models";

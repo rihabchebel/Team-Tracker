@@ -1,4 +1,4 @@
-// components/ProjectSettings.tsx - Fixed for JSONB roles (NO INFINITE RECURSION)
+// pages/ProjectSettings.tsx - Fixed for JSONB roles (NO INFINITE RECURSION)
 
 import React, { useState, useEffect, useRef } from 'react';
 import './ProjectSettings.css';
@@ -548,16 +548,58 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
           </button>
         </div>
 
+<<<<<<< HEAD:src/components/ProjectSettings.tsx
         <div>
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
               Project Name
             </label>
+=======
+  const getTotalProgress = () => {
+    if (!currentProject) return 0;
+    return currentProject.totalHours > 0 
+      ? Math.round((currentProject.usedHours / currentProject.totalHours) * 100)
+      : 0;
+  };
+
+  // ✅ FIXED: Use the imported utility functions directly - NO local wrappers
+  // ✅ Simply use getRoleBadgeClass, getRoleDisplayName, getRolePriority, getAllRoles, hasMultipleRoles
+  // ✅ directly from the import at the top of the file
+
+  // ✅ FIXED: Sort members by role priority
+  const sortMembersByRole = (members: TeamMember[]) => {
+    return [...members].sort((a, b) => {
+      const priorityA = getRolePriority(a.role);
+      const priorityB = getRolePriority(b.role);
+      return priorityA - priorityB;
+    });
+  };
+
+  // ============================================
+  // RENDER
+  // ============================================
+  // ============================================
+  // ADD PROJECT MODAL (shared across all render branches)
+  // ============================================
+  const addProjectModal = showAddProject && (
+    <div className="modal-overlay-centered" onClick={() => setShowAddProject(false)}>
+      <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Create New Project</h3>
+          <button className="close-btn" onClick={() => setShowAddProject(false)}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Project Name</label>
+>>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
             <input
               type="text"
               value={newProject.name}
               onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
               placeholder="Enter project name"
+<<<<<<< HEAD:src/components/ProjectSettings.tsx
               style={{
                 width: '100%',
                 padding: '8px 12px',
@@ -566,6 +608,50 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                 fontSize: '14px',
               }}
             />
+=======
+            />
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <input
+              type="text"
+              value={newProject.description}
+              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+              placeholder="Enter project description"
+            />
+          </div>
+          <div className="form-group">
+            <label>Total Hours</label>
+            <input
+              type="number"
+              value={newProject.totalHours}
+              onChange={(e) => setNewProject({ ...newProject, totalHours: parseInt(e.target.value) || 300 })}
+              min="1"
+              step="10"
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="cancel-btn" onClick={() => setShowAddProject(false)}>Cancel</button>
+          <button className="create-btn" onClick={handleAddProject} disabled={loading}>
+            {loading ? 'Creating...' : 'Create Project'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!localProjects || localProjects.length === 0) {
+    return (
+      <div className="project-settings-container">
+        <div className="project-selector">
+          <div className="project-selector-header">
+            <h3>Projects</h3>
+            <button className="add-project-btn" onClick={() => setShowAddProject(true)}>
+              <Plus size={16} />
+              New Project
+            </button>
+>>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
           </div>
 
           <div style={{ marginBottom: '16px' }}>
@@ -607,6 +693,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             />
           </div>
         </div>
+<<<<<<< HEAD:src/components/ProjectSettings.tsx
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
           <button
@@ -638,6 +725,9 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             {loading ? 'Creating...' : 'Create Project'}
           </button>
         </div>
+=======
+        {addProjectModal}
+>>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
       </div>
     </div>
   );
@@ -761,12 +851,65 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
 
         {/* Time Tracking Section */}
         <div className="time-tracking-section">
+<<<<<<< HEAD:src/components/ProjectSettings.tsx
           <div className="section-header">
             <h3>{currentProject.name} - Time Tracking</h3>
             <div className="total-time">
               <Clock size={16} />
               <span className="time-label">Total Time:</span>
               <span className="time-value">{currentProject.usedHours}/{currentProject.totalHours}h</span>
+=======
+          <p>Project not found. Please select a different project.</p>
+        </div>
+        {addProjectModal}
+      </div>
+    );
+  }
+
+  // ✅ FIXED: Sort members by role priority
+  const sortedMembers = currentProject.teamMembers 
+    ? sortMembersByRole(currentProject.teamMembers)
+    : [];
+
+  return (
+    <div className="project-settings-container">
+      {/* Project Selector */}
+      <div className="project-selector">
+        <div className="project-selector-header">
+          <h3>Projects</h3>
+          <button className="add-project-btn" onClick={() => setShowAddProject(true)}>
+            <Plus size={16} />
+            New Project
+          </button>
+        </div>
+        
+        <div className="project-list">
+          {localProjects.map((p) => (
+            <div
+              key={p.id}
+              className={`project-item ${selectedProjectId === p.id ? 'active' : ''}`}
+              onClick={() => handleProjectClick(p.name)}
+            >
+              <div className="project-item-header">
+                <div className="project-item-info">
+                  <span className="project-item-name">{p.name}</span>
+                  <span className="project-item-hours">{p.totalHours}h</span>
+                </div>
+                {localProjects.length > 1 && (
+                  <button 
+                    className="delete-project-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      confirmDelete('project', p.id, p.name, p.description);
+                    }}
+                    title="Delete project"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+              <div className="project-item-description">{p.description}</div>
+>>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
             </div>
           </div>
 
@@ -988,6 +1131,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
           </div>
         )}
 
+<<<<<<< HEAD:src/components/ProjectSettings.tsx
         {/* Edit Sub-Project Modal */}
         {editingSubProject && editSubProjectData && (
           <div className="modal-overlay-centered" onClick={() => {
@@ -1065,6 +1209,10 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             </div>
           </div>
         )}
+=======
+      {/* Add Project Modal */}
+      {addProjectModal}
+>>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
 
         {/* Add Member Modal */}
         {showAddMember && (
