@@ -1,4 +1,4 @@
-// components/UserTimeline.tsx
+// pages/UserTimeline.tsx
 import React, { useState, useEffect } from 'react';
 import { formatDate } from '../utils/dateUtils';
 import { Briefcase, Flag, FileText, Calendar } from 'lucide-react';

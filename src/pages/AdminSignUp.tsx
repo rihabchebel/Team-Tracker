@@ -1,4 +1,4 @@
-// components/AdminSignUp.tsx
+// pages/AdminSignUp.tsx
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';

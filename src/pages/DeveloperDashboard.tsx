@@ -1,4 +1,4 @@
-// components/DeveloperDashboard.tsx
+// pages/DeveloperDashboard.tsx
 import React, { useState } from "react";
 import "./DeveloperDashboard.css";
 import { Plus, Trash2, CheckCircle, AlertCircle, XCircle } from "lucide-react";

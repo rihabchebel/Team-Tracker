@@ -1,20 +1,28 @@
 // src/App.tsx
 import React, { useEffect, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import "./App.css";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
-import UserManagement from "./components/UserManagement";
-import ProjectSettings from "./components/ProjectSettings";
-import UserTimeline from "./components/UserTimeline";
-import AllTasks from "./components/AllTasks";
-import PerformanceDashboard from "./components/PerformanceDashboard";
-import DeveloperDashboard from "./components/DeveloperDashboard";
-import Login from "./components/Login";
-import { AdminSignUp } from "./components/AdminSignUp";
-import { AcceptInvitation } from "./components/AcceptInvitation";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { SetupGuard } from "./components/SetupGuard";
+import UserManagement from "./pages/UserManagement";
+import ProjectSettings from "./pages/ProjectSettings";
+import UserTimeline from "./pages/UserTimeline";
+import AllTasks from "./pages/AllTasks";
+import PerformanceDashboard from "./pages/PerformanceDashboard";
+import DeveloperDashboard from "./pages/DeveloperDashboard";
+import Login from "./pages/Login";
+import { AdminSignUp } from "./pages/AdminSignUp";
+import { AcceptInvitation } from "./pages/AcceptInvitation";
+import { ProtectedRoute } from "./guards/ProtectedRoute";
+import { SetupGuard } from "./guards/SetupGuard";
 import {
   ViewMode,
   PageType,
@@ -26,13 +34,27 @@ import {
 } from "./types/models";
 import { dataService } from "./lib/dataService";
 import { useAuth } from "./context/AuthContext";
-import { AuthGuard } from "./components/AuthGuard";
+import { AuthGuard } from "./guards/AuthGuard";
 
 interface AppState {
   view: ViewMode;
-  currentPage: PageType;
   selectedProject: string;
 }
+
+const PAGE_PATHS: Record<PageType, string> = {
+  dashboard: "/dashboard",
+  users: "/dashboard/users",
+  timeline: "/dashboard/timeline",
+  settings: "/dashboard/settings",
+  tasks: "/dashboard/tasks",
+};
+
+const pageFromPathname = (pathname: string): PageType => {
+  const entry = (Object.entries(PAGE_PATHS) as [PageType, string][]).find(
+    ([, path]) => path === pathname,
+  );
+  return entry ? entry[0] : "dashboard";
+};
 
 const DashboardShell: React.FC = () => {
   const {
@@ -47,10 +69,15 @@ const DashboardShell: React.FC = () => {
     setDashboardMode,
   } = useAuth();
 
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const currentPage = pageFromPathname(location.pathname);
+
   const [state, setState] = useState<AppState>({
     view: "supervisor",
-    currentPage: "dashboard",
-    selectedProject: "All Projects",
+    selectedProject: searchParams.get("project") || "All Projects",
   });
 
   useEffect(() => {
@@ -198,16 +225,27 @@ const DashboardShell: React.FC = () => {
   };
 
   const handlePageChange = (page: PageType) => {
-    setState({ ...state, currentPage: page });
+    navigate({
+      pathname: PAGE_PATHS[page],
+      search: searchParams.toString() ? `?${searchParams.toString()}` : "",
+    });
   };
 
   const handleProjectSelect = (project: string) => {
-    const shouldStayOnPage = state.currentPage === "settings";
+    const shouldStayOnPage = currentPage === "settings";
 
-    setState({
-      ...state,
-      selectedProject: project,
-      ...(shouldStayOnPage ? {} : { currentPage: "dashboard" }),
+    setState({ ...state, selectedProject: project });
+
+    const nextParams = new URLSearchParams(searchParams);
+    if (project === "All Projects") {
+      nextParams.delete("project");
+    } else {
+      nextParams.set("project", project);
+    }
+
+    navigate({
+      pathname: shouldStayOnPage ? location.pathname : PAGE_PATHS.dashboard,
+      search: nextParams.toString() ? `?${nextParams.toString()}` : "",
     });
   };
 
@@ -272,7 +310,7 @@ const DashboardShell: React.FC = () => {
       );
     }
 
-    if (state.view === "developer" && state.currentPage === "dashboard") {
+    if (state.view === "developer" && currentPage === "dashboard") {
       const effectiveProject =
         state.selectedProject === "All Projects"
           ? projectsData[0]?.name || ""
@@ -290,7 +328,7 @@ const DashboardShell: React.FC = () => {
       );
     }
 
-    switch (state.currentPage) {
+    switch (currentPage) {
       case "dashboard":
         return (
           <PerformanceDashboard
@@ -405,7 +443,7 @@ const DashboardShell: React.FC = () => {
       <div className="main-layout">
         <Sidebar
           view={state.view}
-          currentPage={state.currentPage}
+          currentPage={currentPage}
           selectedProject={state.selectedProject}
           projects={projectNames}
           projectsData={projectsData}
@@ -455,17 +493,39 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            
-            {/* Admin-only routes */}
             <Route
-              path="/users"
+              path="/dashboard/users"
               element={
-                <ProtectedRoute requireAdmin>
+                <ProtectedRoute>
                   <DashboardShell />
                 </ProtectedRoute>
               }
             />
-            
+            <Route
+              path="/dashboard/timeline"
+              element={
+                <ProtectedRoute>
+                  <DashboardShell />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/settings"
+              element={
+                <ProtectedRoute>
+                  <DashboardShell />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/tasks"
+              element={
+                <ProtectedRoute>
+                  <DashboardShell />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Catch all */}
             <Route
               path="*"

@@ -1,4 +1,4 @@
-// components/ProjectSettings.tsx - Fixed for JSONB roles (NO INFINITE RECURSION)
+// pages/ProjectSettings.tsx - Fixed for JSONB roles (NO INFINITE RECURSION)
 
 import React, { useState, useEffect, useRef } from 'react';
 import './ProjectSettings.css';
@@ -502,6 +502,58 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   // ============================================
   // RENDER
   // ============================================
+  // ============================================
+  // ADD PROJECT MODAL (shared across all render branches)
+  // ============================================
+  const addProjectModal = showAddProject && (
+    <div className="modal-overlay-centered" onClick={() => setShowAddProject(false)}>
+      <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Create New Project</h3>
+          <button className="close-btn" onClick={() => setShowAddProject(false)}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label>Project Name</label>
+            <input
+              type="text"
+              value={newProject.name}
+              onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+              placeholder="Enter project name"
+            />
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <input
+              type="text"
+              value={newProject.description}
+              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+              placeholder="Enter project description"
+            />
+          </div>
+          <div className="form-group">
+            <label>Total Hours</label>
+            <input
+              type="number"
+              value={newProject.totalHours}
+              onChange={(e) => setNewProject({ ...newProject, totalHours: parseInt(e.target.value) || 300 })}
+              min="1"
+              step="10"
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="cancel-btn" onClick={() => setShowAddProject(false)}>Cancel</button>
+          <button className="create-btn" onClick={handleAddProject} disabled={loading}>
+            {loading ? 'Creating...' : 'Create Project'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (!localProjects || localProjects.length === 0) {
     return (
       <div className="project-settings-container">
@@ -517,6 +569,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
             <div className="no-projects">No projects available. Create one!</div>
           </div>
         </div>
+        {addProjectModal}
       </div>
     );
   }
@@ -553,6 +606,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         <div className="time-tracking-section">
           <p>Project not found. Please select a different project.</p>
         </div>
+        {addProjectModal}
       </div>
     );
   }
@@ -915,54 +969,7 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
       )}
 
       {/* Add Project Modal */}
-      {showAddProject && (
-        <div className="modal-overlay-centered" onClick={() => setShowAddProject(false)}>
-          <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Create New Project</h3>
-              <button className="close-btn" onClick={() => setShowAddProject(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Project Name</label>
-                <input
-                  type="text"
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  placeholder="Enter project name"
-                />
-              </div>
-              <div className="form-group">
-                <label>Description</label>
-                <input
-                  type="text"
-                  value={newProject.description}
-                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-                  placeholder="Enter project description"
-                />
-              </div>
-              <div className="form-group">
-                <label>Total Hours</label>
-                <input
-                  type="number"
-                  value={newProject.totalHours}
-                  onChange={(e) => setNewProject({ ...newProject, totalHours: parseInt(e.target.value) || 300 })}
-                  min="1"
-                  step="10"
-                />
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="cancel-btn" onClick={() => setShowAddProject(false)}>Cancel</button>
-              <button className="create-btn" onClick={handleAddProject} disabled={loading}>
-                {loading ? 'Creating...' : 'Create Project'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {addProjectModal}
 
       {/* Add Member Modal */}
       {showAddMember && (
