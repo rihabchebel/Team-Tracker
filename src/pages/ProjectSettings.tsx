@@ -133,9 +133,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   });
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // ============================================
-  // EFFECTS
-  // ============================================
   useEffect(() => {
     if (!isInternalUpdate.current) {
       setLocalProjects(projectsData);
@@ -151,31 +148,6 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
     }
   }, [currentProject]);
 
-  // ============================================
-  // HELPERS
-  // ============================================
-  const sortMembersByRole = (members: TeamMember[]) => {
-    return [...members].sort((a, b) => {
-      const priorityA = getRolePriority(a.role);
-      const priorityB = getRolePriority(b.role);
-      return priorityA - priorityB;
-    });
-  };
-
-  const getProgressPercentage = (used: number, total: number) => {
-    return total > 0 ? Math.round((used / total) * 100) : 0;
-  };
-
-  const getTotalProgress = () => {
-    if (!currentProject) return 0;
-    return currentProject.totalHours > 0 
-      ? Math.round((currentProject.usedHours / currentProject.totalHours) * 100)
-      : 0;
-  };
-
-  // ============================================
-  // HANDLERS
-  // ============================================
   const handleProjectClick = (projectName: string) => {
     if (projectName === project) return;
     
@@ -501,60 +473,12 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
   };
 
   // ============================================
-  // ✅ HOISTED MODAL - Rendered in ALL branches
+  // HELPERS - FIXED FOR JSONB ROLES (NO RECURSION)
   // ============================================
-  const addProjectModal = showAddProject && (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 99999,
-        pointerEvents: 'auto',
-      }}
-      onClick={() => setShowAddProject(false)}
-    >
-      <div
-        style={{
-          backgroundColor: '#fff',
-          padding: '24px',
-          borderRadius: '12px',
-          maxWidth: '500px',
-          width: '90%',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
-          maxHeight: '90vh',
-          overflow: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0 }}>Create New Project</h3>
-          <button
-            onClick={() => setShowAddProject(false)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
+  const getProgressPercentage = (used: number, total: number) => {
+    return total > 0 ? Math.round((used / total) * 100) : 0;
+  };
 
-<<<<<<< HEAD:src/components/ProjectSettings.tsx
-        <div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-              Project Name
-            </label>
-=======
   const getTotalProgress = () => {
     if (!currentProject) return 0;
     return currentProject.totalHours > 0 
@@ -593,22 +517,11 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
         <div className="modal-body">
           <div className="form-group">
             <label>Project Name</label>
->>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
             <input
               type="text"
               value={newProject.name}
               onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
               placeholder="Enter project name"
-<<<<<<< HEAD:src/components/ProjectSettings.tsx
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-            />
-=======
             />
           </div>
           <div className="form-group">
@@ -651,164 +564,19 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               <Plus size={16} />
               New Project
             </button>
->>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
           </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-              Description
-            </label>
-            <input
-              type="text"
-              value={newProject.description}
-              onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              placeholder="Enter project description"
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', marginBottom: '4px', fontWeight: 500 }}>
-              Total Hours
-            </label>
-            <input
-              type="number"
-              value={newProject.totalHours}
-              onChange={(e) => setNewProject({ ...newProject, totalHours: parseInt(e.target.value) || 300 })}
-              min="1"
-              step="10"
-              style={{
-                width: '100%',
-                padding: '8px 12px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px',
-              }}
-            />
+          <div className="project-list">
+            <div className="no-projects">No projects available. Create one!</div>
           </div>
         </div>
-<<<<<<< HEAD:src/components/ProjectSettings.tsx
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-          <button
-            onClick={() => setShowAddProject(false)}
-            style={{
-              padding: '8px 16px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              background: '#fff',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleAddProject}
-            disabled={loading}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              background: loading ? '#ccc' : '#4CAF50',
-              color: '#fff',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            {loading ? 'Creating...' : 'Create Project'}
-          </button>
-        </div>
-=======
         {addProjectModal}
->>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
       </div>
-    </div>
-  );
-
-  // ============================================
-  // RENDER BRANCHES
-  // ============================================
-
-  // BRANCH 1: No projects exist
-  if (!localProjects || localProjects.length === 0) {
-    return (
-      <>
-        <div className="project-settings-container">
-          <div className="project-selector">
-            <div className="project-selector-header">
-              <h3>Projects</h3>
-              <button className="add-project-btn" onClick={() => setShowAddProject(true)}>
-                <Plus size={16} />
-                New Project
-              </button>
-            </div>
-            <div className="project-list">
-              <div className="no-projects">No projects available. Create one!</div>
-            </div>
-          </div>
-        </div>
-        {addProjectModal}
-      </>
     );
   }
 
-  // BRANCH 2: Project not found
   if (!currentProject) {
     return (
-      <>
-        <div className="project-settings-container">
-          <div className="project-selector">
-            <div className="project-selector-header">
-              <h3>Projects</h3>
-              <button className="add-project-btn" onClick={() => setShowAddProject(true)}>
-                <Plus size={16} />
-                New Project
-              </button>
-            </div>
-            <div className="project-list">
-              {localProjects.map((p) => (
-                <div
-                  key={p.id}
-                  className="project-item"
-                  onClick={() => handleProjectClick(p.name)}
-                >
-                  <div className="project-item-header">
-                    <div className="project-item-info">
-                      <span className="project-item-name">{p.name}</span>
-                      <span className="project-item-hours">{p.totalHours}h</span>
-                    </div>
-                  </div>
-                  <div className="project-item-description">{p.description}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="time-tracking-section">
-            <p>Project not found. Please select a different project.</p>
-          </div>
-        </div>
-        {addProjectModal}
-      </>
-    );
-  }
-
-  // BRANCH 3: Main render
-  // ✅ Sorted members - only defined here since it's only used in this branch
-  const sortedMembers = currentProject.teamMembers 
-    ? sortMembersByRole(currentProject.teamMembers)
-    : [];
-
-  return (
-    <>
       <div className="project-settings-container">
-        {/* Project Selector */}
         <div className="project-selector">
           <div className="project-selector-header">
             <h3>Projects</h3>
@@ -817,12 +585,11 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
               New Project
             </button>
           </div>
-          
           <div className="project-list">
             {localProjects.map((p) => (
               <div
                 key={p.id}
-                className={`project-item ${selectedProjectId === p.id ? 'active' : ''}`}
+                className="project-item"
                 onClick={() => handleProjectClick(p.name)}
               >
                 <div className="project-item-header">
@@ -830,35 +597,13 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                     <span className="project-item-name">{p.name}</span>
                     <span className="project-item-hours">{p.totalHours}h</span>
                   </div>
-                  {localProjects.length > 1 && (
-                    <button 
-                      className="delete-project-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        confirmDelete('project', p.id, p.name, p.description);
-                      }}
-                      title="Delete project"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
                 </div>
                 <div className="project-item-description">{p.description}</div>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Time Tracking Section */}
         <div className="time-tracking-section">
-<<<<<<< HEAD:src/components/ProjectSettings.tsx
-          <div className="section-header">
-            <h3>{currentProject.name} - Time Tracking</h3>
-            <div className="total-time">
-              <Clock size={16} />
-              <span className="time-label">Total Time:</span>
-              <span className="time-value">{currentProject.usedHours}/{currentProject.totalHours}h</span>
-=======
           <p>Project not found. Please select a different project.</p>
         </div>
         {addProjectModal}
@@ -909,414 +654,424 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                 )}
               </div>
               <div className="project-item-description">{p.description}</div>
->>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          <div className="total-progress-bar">
-            <div 
-              className="total-progress-fill" 
-              style={{ width: `${getTotalProgress()}%` }}
-            />
-            <span className="progress-text">{getTotalProgress()}%</span>
+      {/* Time Tracking Section */}
+      <div className="time-tracking-section">
+        <div className="section-header">
+          <h3>{currentProject.name} - Time Tracking</h3>
+          <div className="total-time">
+            <Clock size={16} />
+            <span className="time-label">Total Time:</span>
+            <span className="time-value">{currentProject.usedHours}/{currentProject.totalHours}h</span>
           </div>
+        </div>
 
-          <div className="sub-projects-list">
-            {currentProject.subProjects && currentProject.subProjects.length > 0 ? (
-              currentProject.subProjects.map((subProject) => (
-                <div key={subProject.id} className="sub-project-item">
-                  <div className="sub-project-header">
-                    <div className="sub-project-info">
-                      <span className="sub-project-name">{subProject.name}</span>
-                      <span className="sub-project-time">
-                        {subProject.timeUsed}/{subProject.timeTotal}h
-                      </span>
-                    </div>
-                    <div className="sub-project-actions">
-                      <button 
-                        className="action-btn time-btn minus"
-                        onClick={() => handleUpdateSubProject(subProject.id, { timeUsed: Math.max(0, subProject.timeUsed - 1) })}
-                        title="Subtract 1 hour"
-                        disabled={loading || subProject.timeUsed <= 0}
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <button 
-                        className="action-btn time-btn plus"
-                        onClick={() => handleUpdateSubProject(subProject.id, { timeUsed: Math.min(subProject.timeTotal, subProject.timeUsed + 1) })}
-                        title="Add 1 hour"
-                        disabled={loading || subProject.timeUsed >= subProject.timeTotal}
-                      >
-                        <Plus size={14} />
-                      </button>
-                      <button 
-                        className="action-btn edit-btn"
-                        onClick={() => {
-                          setEditingSubProject(subProject.id);
-                          setEditSubProjectData({ ...subProject });
-                        }}
-                        title="Edit sub-project"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button 
-                        className="action-btn delete-btn"
-                        onClick={() => confirmDelete('subproject', subProject.id, subProject.name, `${subProject.timeUsed}/${subProject.timeTotal}h`)}
-                        title="Delete sub-project"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="sub-project-progress">
-                    <div 
-                      className="sub-project-progress-fill" 
-                      style={{ width: `${getProgressPercentage(subProject.timeUsed, subProject.timeTotal)}%` }}
-                    />
-                    <span className="progress-text-small">
-                      {getProgressPercentage(subProject.timeUsed, subProject.timeTotal)}%
+        <div className="total-progress-bar">
+          <div 
+            className="total-progress-fill" 
+            style={{ width: `${getTotalProgress()}%` }}
+          />
+          <span className="progress-text">{getTotalProgress()}%</span>
+        </div>
+
+        <div className="sub-projects-list">
+          {currentProject.subProjects && currentProject.subProjects.length > 0 ? (
+            currentProject.subProjects.map((subProject) => (
+              <div key={subProject.id} className="sub-project-item">
+                <div className="sub-project-header">
+                  <div className="sub-project-info">
+                    <span className="sub-project-name">{subProject.name}</span>
+                    <span className="sub-project-time">
+                      {subProject.timeUsed}/{subProject.timeTotal}h
                     </span>
                   </div>
+                  <div className="sub-project-actions">
+                    <button 
+                      className="action-btn time-btn minus"
+                      onClick={() => handleUpdateSubProject(subProject.id, { timeUsed: Math.max(0, subProject.timeUsed - 1) })}
+                      title="Subtract 1 hour"
+                      disabled={loading || subProject.timeUsed <= 0}
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <button 
+                      className="action-btn time-btn plus"
+                      onClick={() => handleUpdateSubProject(subProject.id, { timeUsed: Math.min(subProject.timeTotal, subProject.timeUsed + 1) })}
+                      title="Add 1 hour"
+                      disabled={loading || subProject.timeUsed >= subProject.timeTotal}
+                    >
+                      <Plus size={14} />
+                    </button>
+                    <button 
+                      className="action-btn edit-btn"
+                      onClick={() => {
+                        setEditingSubProject(subProject.id);
+                        setEditSubProjectData({ ...subProject });
+                      }}
+                      title="Edit sub-project"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                    <button 
+                      className="action-btn delete-btn"
+                      onClick={() => confirmDelete('subproject', subProject.id, subProject.name, `${subProject.timeUsed}/${subProject.timeTotal}h`)}
+                      title="Delete sub-project"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-              ))
-            ) : (
-              <div className="no-sub-projects">No sub-projects yet</div>
-            )}
+                <div className="sub-project-progress">
+                  <div 
+                    className="sub-project-progress-fill" 
+                    style={{ width: `${getProgressPercentage(subProject.timeUsed, subProject.timeTotal)}%` }}
+                  />
+                  <span className="progress-text-small">
+                    {getProgressPercentage(subProject.timeUsed, subProject.timeTotal)}%
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="no-sub-projects">No sub-projects yet</div>
+          )}
 
-            <button 
-              className="add-sub-project-btn"
-              onClick={() => setShowAddSubProject(true)}
-            >
-              <Plus size={16} />
-              Add Sub-Project
-            </button>
-          </div>
+          <button 
+            className="add-sub-project-btn"
+            onClick={() => setShowAddSubProject(true)}
+          >
+            <Plus size={16} />
+            Add Sub-Project
+          </button>
         </div>
+      </div>
 
-        {/* Team Members Section */}
-        <div className="team-members-section">
-          <div className="section-header">
-            <h3>
+      {/* Team Members Section */}
+      <div className="team-members-section">
+        <div className="section-header">
+          <h3>
+            <Users size={16} />
+            Team Members ({sortedMembers.length})
+          </h3>
+          {(isAdmin || view === 'supervisor') && (
+            <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
               <Users size={16} />
-              Team Members ({sortedMembers.length})
-            </h3>
-            {(isAdmin || view === 'supervisor') && (
-              <button className="add-member-btn" onClick={() => setShowAddMember(true)}>
-                <Users size={16} />
-                Add Member
-              </button>
-            )}
-          </div>
-
-          <div className="team-members-table">
-            {sortedMembers.length > 0 ? (
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Joined</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedMembers.map((member) => (
-                    <tr key={member.id}>
-                      <td>
-                        <div className="member-info">
-                          <div className="member-avatar">
-                            {member.name?.charAt(0) || '?'}
-                          </div>
-                          <span>{member.name}</span>
-                          {hasMultipleRoles(member.role) && (
-                            <span className="multiple-roles-indicator" style={{ marginLeft: '8px' }}>
-                              <span className="green-dot"></span>
-                              <span className="roles-text" style={{ fontSize: '10px' }}>
-                                {getAllRoles(member.role).join(' + ')}
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        {(() => {
-                          const roles = getAllRoles(member.role);
-                          return roles.map((role, idx) => (
-                            <span 
-                              key={idx}
-                              className={`role-badge ${getRoleBadgeClass(role)}`}
-                              style={{ marginRight: '4px' }}
-                            >
-                              {getRoleDisplayName(role)}
-                            </span>
-                          ));
-                        })()}
-                      </td>
-                      <td>{formatDate(member.joined)}</td>
-                      <td>
-                        <div className="action-buttons">
-                          <button 
-                            className="action-btn delete-btn" 
-                            onClick={() => confirmDelete('member', member.id, member.name, member.role)}
-                            title="Remove member"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="no-members">No team members yet</div>
-            )}
-          </div>
+              Add Member
+            </button>
+          )}
         </div>
 
-        {/* ============================================
-            MODALS
-            ============================================ */}
+        <div className="team-members-table">
+          {sortedMembers.length > 0 ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Joined</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedMembers.map((member) => (
+                  <tr key={member.id}>
+                    <td>
+                      <div className="member-info">
+                        <div className="member-avatar">
+                          {member.name?.charAt(0) || '?'}
+                        </div>
+                        <span>{member.name}</span>
+                        {/* ✅ Show multiple roles indicator */}
+                        {hasMultipleRoles(member.role) && (
+                          <span className="multiple-roles-indicator" style={{ marginLeft: '8px' }}>
+                            <span className="green-dot"></span>
+                            <span className="roles-text" style={{ fontSize: '10px' }}>
+                              {getAllRoles(member.role).join(' + ')}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      {/* ✅ Show all roles - using imported getRoleBadgeClass and getRoleDisplayName */}
+                      {(() => {
+                        const roles = getAllRoles(member.role);
+                        return roles.map((role, idx) => (
+                          <span 
+                            key={idx}
+                            className={`role-badge ${getRoleBadgeClass(role)}`}
+                            style={{ marginRight: '4px' }}
+                          >
+                            {getRoleDisplayName(role)}
+                          </span>
+                        ));
+                      })()}
+                    </td>
+                    <td>{formatDate(member.joined)}</td>
+                    <td>
+                      <div className="action-buttons">
+                        <button 
+                          className="action-btn delete-btn" 
+                          onClick={() => confirmDelete('member', member.id, member.name, member.role)}
+                          title="Remove member"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="no-members">No team members yet</div>
+          )}
+        </div>
+      </div>
 
-        {/* Add Sub-Project Modal */}
-        {showAddSubProject && (
-          <div className="modal-overlay-centered" onClick={() => setShowAddSubProject(false)}>
-            <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>Add Sub-Project</h3>
-                <button className="close-btn" onClick={() => setShowAddSubProject(false)}>
-                  <X size={18} />
-                </button>
+      {/* ============================================
+          MODALS (unchanged)
+          ============================================ */}
+
+      {/* Add Sub-Project Modal */}
+      {showAddSubProject && (
+        <div className="modal-overlay-centered" onClick={() => setShowAddSubProject(false)}>
+          <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Sub-Project</h3>
+              <button className="close-btn" onClick={() => setShowAddSubProject(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Sub-Project Name</label>
+                <input
+                  type="text"
+                  value={newSubProject.name}
+                  onChange={(e) => setNewSubProject({ ...newSubProject, name: e.target.value })}
+                  placeholder="Enter sub-project name"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddSubProject();
+                    }
+                  }}
+                />
               </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Sub-Project Name</label>
-                  <input
-                    type="text"
-                    value={newSubProject.name}
-                    onChange={(e) => setNewSubProject({ ...newSubProject, name: e.target.value })}
-                    placeholder="Enter sub-project name"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSubProject();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Time Allocation (hours)</label>
-                  <input
-                    type="number"
-                    value={newSubProject.timeTotal}
-                    onChange={(e) => setNewSubProject({ ...newSubProject, timeTotal: parseInt(e.target.value) || 0 })}
-                    min="1"
-                    step="1"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSubProject();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="cancel-btn" onClick={() => setShowAddSubProject(false)}>Cancel</button>
-                <button className="create-btn" onClick={handleAddSubProject} disabled={loading}>
-                  {loading ? 'Adding...' : 'Add Sub-Project'}
-                </button>
+              <div className="form-group">
+                <label>Time Allocation (hours)</label>
+                <input
+                  type="number"
+                  value={newSubProject.timeTotal}
+                  onChange={(e) => setNewSubProject({ ...newSubProject, timeTotal: parseInt(e.target.value) || 0 })}
+                  min="1"
+                  step="1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddSubProject();
+                    }
+                  }}
+                />
               </div>
             </div>
-          </div>
-        )}
-
-<<<<<<< HEAD:src/components/ProjectSettings.tsx
-        {/* Edit Sub-Project Modal */}
-        {editingSubProject && editSubProjectData && (
-          <div className="modal-overlay-centered" onClick={() => {
-            setEditingSubProject(null);
-            setEditSubProjectData(null);
-          }}>
-            <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>Edit Sub-Project</h3>
-                <button className="close-btn" onClick={() => {
-                  setEditingSubProject(null);
-                  setEditSubProjectData(null);
-                }}>
-                  <X size={18} />
-                </button>
-              </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Sub-Project Name</label>
-                  <input
-                    type="text"
-                    value={editSubProjectData.name}
-                    onChange={(e) => setEditSubProjectData({ ...editSubProjectData, name: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSaveEditedSubProject();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Total Hours</label>
-                  <input
-                    type="number"
-                    value={editSubProjectData.timeTotal}
-                    onChange={(e) => setEditSubProjectData({ ...editSubProjectData, timeTotal: parseInt(e.target.value) || 0 })}
-                    min="1"
-                    step="1"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSaveEditedSubProject();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Used Hours</label>
-                  <input
-                    type="number"
-                    value={editSubProjectData.timeUsed}
-                    onChange={(e) => setEditSubProjectData({ ...editSubProjectData, timeUsed: parseInt(e.target.value) || 0 })}
-                    min="0"
-                    max={editSubProjectData.timeTotal}
-                    step="1"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSaveEditedSubProject();
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="cancel-btn" onClick={() => {
-                  setEditingSubProject(null);
-                  setEditSubProjectData(null);
-                }}>Cancel</button>
-                <button className="create-btn" onClick={handleSaveEditedSubProject} disabled={loading}>
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => setShowAddSubProject(false)}>Cancel</button>
+              <button className="create-btn" onClick={handleAddSubProject} disabled={loading}>
+                {loading ? 'Adding...' : 'Add Sub-Project'}
+              </button>
             </div>
           </div>
-        )}
-=======
+        </div>
+      )}
+
+      {/* Edit Sub-Project Modal */}
+      {editingSubProject && editSubProjectData && (
+        <div className="modal-overlay-centered" onClick={() => {
+          setEditingSubProject(null);
+          setEditSubProjectData(null);
+        }}>
+          <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Edit Sub-Project</h3>
+              <button className="close-btn" onClick={() => {
+                setEditingSubProject(null);
+                setEditSubProjectData(null);
+              }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Sub-Project Name</label>
+                <input
+                  type="text"
+                  value={editSubProjectData.name}
+                  onChange={(e) => setEditSubProjectData({ ...editSubProjectData, name: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveEditedSubProject();
+                    }
+                  }}
+                />
+              </div>
+              <div className="form-group">
+                <label>Total Hours</label>
+                <input
+                  type="number"
+                  value={editSubProjectData.timeTotal}
+                  onChange={(e) => setEditSubProjectData({ ...editSubProjectData, timeTotal: parseInt(e.target.value) || 0 })}
+                  min="1"
+                  step="1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveEditedSubProject();
+                    }
+                  }}
+                />
+              </div>
+              <div className="form-group">
+                <label>Used Hours</label>
+                <input
+                  type="number"
+                  value={editSubProjectData.timeUsed}
+                  onChange={(e) => setEditSubProjectData({ ...editSubProjectData, timeUsed: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  max={editSubProjectData.timeTotal}
+                  step="1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSaveEditedSubProject();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={() => {
+                setEditingSubProject(null);
+                setEditSubProjectData(null);
+              }}>Cancel</button>
+              <button className="create-btn" onClick={handleSaveEditedSubProject} disabled={loading}>
+                {loading ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Add Project Modal */}
       {addProjectModal}
->>>>>>> modalFix/fix/modal-not-opening:src/pages/ProjectSettings.tsx
 
-        {/* Add Member Modal */}
-        {showAddMember && (
-          <div className="modal-overlay-centered" onClick={() => setShowAddMember(false)}>
-            <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h3>Add Member to {currentProject.name}</h3>
-                <button className="close-btn" onClick={() => setShowAddMember(false)}>
-                  <X size={20} />
-                </button>
+      {/* Add Member Modal */}
+      {showAddMember && (
+        <div className="modal-overlay-centered" onClick={() => setShowAddMember(false)}>
+          <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add Member to {currentProject.name}</h3>
+              <button className="close-btn" onClick={() => setShowAddMember(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>
+                  Member Name <span className="required">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={newMember.name}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      name: e.target.value,
+                    })
+                  }
+                  placeholder="Enter member name"
+                />
               </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>
-                    Member Name <span className="required">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={newMember.name}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        name: e.target.value,
-                      })
-                    }
-                    placeholder="Enter member name"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>
-                    Email <span className="required">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={newMember.email}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        email: e.target.value,
-                      })
-                    }
-                    placeholder="Enter email address"
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Role</label>
-                  <select
-                    value={newMember.role}
-                    onChange={(e) =>
-                      setNewMember({
-                        ...newMember,
-                        role: e.target.value,
-                      })
-                    }
-                  >
-                    <option value="Developer">Developer</option>
-                    <option value="Supervisor">Supervisor</option>
-                    <option value="Admin">Admin</option>
-                  </select>
-                </div>
+              <div className="form-group">
+                <label>
+                  Email <span className="required">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={newMember.email}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      email: e.target.value,
+                    })
+                  }
+                  placeholder="Enter email address"
+                />
               </div>
-              <div className="modal-footer">
-                <button
-                  className="cancel-btn"
-                  onClick={() => setShowAddMember(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="create-btn"
-                  onClick={handleAddMember}
-                  disabled={
-                    !newMember.name || !newMember.email || isAddingMember
+              <div className="form-group">
+                <label>Role</label>
+                <select
+                  value={newMember.role}
+                  onChange={(e) =>
+                    setNewMember({
+                      ...newMember,
+                      role: e.target.value,
+                    })
                   }
                 >
-                  {isAddingMember ? 'Adding...' : 'Add Member'}
-                </button>
+                  <option value="Developer">Developer</option>
+                  <option value="Supervisor">Supervisor</option>
+                  <option value="Admin">Admin</option>
+                </select>
               </div>
             </div>
+            <div className="modal-footer">
+              <button
+                className="cancel-btn"
+                onClick={() => setShowAddMember(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="create-btn"
+                onClick={handleAddMember}
+                disabled={
+                  !newMember.name || !newMember.email || isAddingMember
+                }
+              >
+                {isAddingMember ? 'Adding...' : 'Add Member'}
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Delete Confirmation Modal */}
-        <DeleteConfirmModal
-          isOpen={deleteModal.isOpen}
-          onClose={() => setDeleteModal({ isOpen: false, type: 'project', id: '', name: '', detail: '' })}
-          onConfirm={handleDeleteConfirmed}
-          title={
-            deleteModal.type === 'project' ? 'Delete Project' :
-            deleteModal.type === 'subproject' ? 'Delete Sub-Project' :
-            'Remove Member'
-          }
-          message={
-            deleteModal.type === 'project' ? 'Are you sure you want to delete this project?' :
-            deleteModal.type === 'subproject' ? 'Are you sure you want to delete this sub-project?' :
-            'Are you sure you want to remove this team member?'
-          }
-          itemName={deleteModal.name}
-          itemDetail={deleteModal.detail}
-          isLoading={isDeleting}
-        />
-      </div>
-      {addProjectModal}
-    </>
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={deleteModal.isOpen}
+        onClose={() => setDeleteModal({ isOpen: false, type: 'project', id: '', name: '', detail: '' })}
+        onConfirm={handleDeleteConfirmed}
+        title={
+          deleteModal.type === 'project' ? 'Delete Project' :
+          deleteModal.type === 'subproject' ? 'Delete Sub-Project' :
+          'Remove Member'
+        }
+        message={
+          deleteModal.type === 'project' ? 'Are you sure you want to delete this project?' :
+          deleteModal.type === 'subproject' ? 'Are you sure you want to delete this sub-project?' :
+          'Are you sure you want to remove this team member?'
+        }
+        itemName={deleteModal.name}
+        itemDetail={deleteModal.detail}
+        isLoading={isDeleting}
+      />
+    </div>
   );
 };
 
