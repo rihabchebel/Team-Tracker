@@ -18,7 +18,7 @@ import { getPrimaryRole, getAllRoles } from "../utils/roleUtils";
 class DataCache {
   private cache: Map<string, { data: any; timestamp: number }> = new Map();
   private pendingRequests: Map<string, Promise<any>> = new Map();
-  private readonly TTL = 5 * 60 * 1000; // 5 minutes default
+  private readonly TTL = 0.01 * 60 * 1000; // 0.6 seconds default (0.01 minutes)
 
   async get<T>(
     key: string,
@@ -338,9 +338,8 @@ const createProject = async (
       .insert({
         name: projectData.name,
         description: projectData.description || "",
-        total_hours: projectData.totalHours || 0,
+        total_hours: projectData.totalHours || 300,
         used_hours: 0,
-        created_by: user?.id,
       })
       .select()
       .single();
@@ -365,7 +364,7 @@ const createProject = async (
       description: data.description || "",
       status: (data.status || "active") as any,
       priority: (data.priority || "medium") as any,
-      totalHours: data.total_hours || 0,
+      totalHours: data.total_hours || 300,
       usedHours: data.used_hours || 0,
       subProjects: [],
       teamMembers: [],
@@ -375,21 +374,27 @@ const createProject = async (
     throw error;
   }
 };
-
 const updateProject = async (
   projectId: string,
   updates: Partial<Project>,
 ): Promise<Project> => {
   try {
+    // ✅ Build payload safely
+    const updatePayload: any = {
+      name: updates.name,
+      description: updates.description,
+      used_hours: updates.usedHours,
+      updated_at: new Date().toISOString(),
+    };
+    
+    // ✅ ONLY update total_hours if the frontend explicitly sent it!
+    if (updates.totalHours !== undefined) {
+      updatePayload.total_hours = updates.totalHours;
+    }
+
     const { data, error } = await supabase
       .from("projects")
-      .update({
-        name: updates.name,
-        description: updates.description,
-        total_hours: updates.totalHours,
-        used_hours: updates.usedHours,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updatePayload)
       .eq("id", projectId)
       .select()
       .single();
@@ -493,7 +498,7 @@ const addSubProject = async (
         project_id: projectId,
         name: subProject.name,
         time_used: subProject.timeUsed || 0,
-        time_total: subProject.timeTotal || 0,
+        time_total: subProject.timeTotal || 50, // Defaulting to 50 per earlier fix
       })
       .select()
       .single();
@@ -504,14 +509,28 @@ const addSubProject = async (
     cache.invalidate("projects");
     cache.invalidate(`project_${projectId}`);
 
+    const { data: { user } } = await supabase.auth.getUser();
+
     await updateProjectTotals(projectId);
 
+    // ✅ RECORD: Project Timeline Event
     await recordTimelineEvent({
       project_id: projectId,
-      user_id: (await supabase.auth.getUser()).data.user?.id || null,
+      user_id: user?.id || null,
       event_type: "sub_project_created",
       description: `Sub-project ${data.name} created`,
       metadata: { sub_project_id: data.id, time_total: data.time_total },
+      created_at: new Date().toISOString(),
+    });
+
+    // ✅ ADDED: User Activity Event (Task Created)
+    await recordUserActivity({
+      user_id: user?.id || null,
+      project_id: projectId,
+      sub_project_id: data.id,
+      activity_type: "task_created",
+      description: `Sub-project ${data.name} created with ${data.time_total}h total`,
+      metadata: { name: data.name, time_total: data.time_total },
       created_at: new Date().toISOString(),
     });
 
@@ -526,7 +545,6 @@ const addSubProject = async (
     throw error;
   }
 };
-
 const updateSubProject = async (
   projectId: string,
   subProjectId: string,
@@ -552,16 +570,33 @@ const updateSubProject = async (
     cache.invalidate("projects");
     cache.invalidate(`project_${projectId}`);
 
+    const { data: { user } } = await supabase.auth.getUser();
+
     await updateProjectTotals(projectId);
 
+    // ✅ RECORD: Project Timeline Event
     await recordTimelineEvent({
       project_id: projectId,
-      user_id: (await supabase.auth.getUser()).data.user?.id || null,
+      user_id: user?.id || null,
       event_type: "sub_project_updated",
       description: `Sub-project ${data.name} updated`,
       metadata: { sub_project_id: subProjectId, ...updates },
       created_at: new Date().toISOString(),
     });
+
+    // ✅ ADDED: User Activity Event (Specifically logging Hours)
+    if (updates.timeUsed !== undefined) {
+      await recordUserActivity({
+        user_id: user?.id || null,
+        project_id: projectId,
+        sub_project_id: subProjectId,
+        activity_type: "hours_logged",
+        description: `Logged ${updates.timeUsed}h on sub-project ${data.name}`,
+        metadata: { time_used: updates.timeUsed, action: updates.timeUsed > 0 ? 'added' : 'subtracted' },
+        hours: updates.timeUsed, // Store the numeric value in the hours column
+        created_at: new Date().toISOString(),
+      });
+    }
 
     return {
       id: data.id,
@@ -592,11 +627,13 @@ const deleteSubProject = async (
     cache.invalidate("projects");
     cache.invalidate(`project_${projectId}`);
 
+    const { data: { user } } = await supabase.auth.getUser();
+
     await updateProjectTotals(projectId);
 
     await recordTimelineEvent({
       project_id: projectId,
-      user_id: (await supabase.auth.getUser()).data.user?.id || null,
+      user_id: user?.id || null,
       event_type: "sub_project_deleted",
       description: `Sub-project removed`,
       metadata: { sub_project_id: subProjectId },
@@ -1154,7 +1191,7 @@ const createLog = async (log: Partial<LogEntry>): Promise<LogEntry> => {
         partial_reason: log.partialReason || null,
         unavailable_reason: log.unavailableReason || null,
         submitted_at: new Date().toISOString(),
-        submitted_by: log.submittedBy || "",
+        submitted_by: log.submittedBy || null,
       })
       .select()
       .single();
@@ -1165,7 +1202,7 @@ const createLog = async (log: Partial<LogEntry>): Promise<LogEntry> => {
     cache.invalidate("logs");
 
     await recordTimelineEvent({
-      project_id: log.projectId || "",
+      project_id: log.projectId || null,
       user_id: log.submittedById || null,
       event_type: "task_log_created",
       description: `Task log submitted by ${log.submittedBy || "user"}`,
@@ -1190,9 +1227,6 @@ const createLog = async (log: Partial<LogEntry>): Promise<LogEntry> => {
     }
 
     if (log.projectId) {
-      // ⚠️ Fixed: referenced module-scoped function instead of dataService.updateProjectTotals
-      // ⚠️ FIX: Do not use `dataService.updateProjectTotals`.
-      // Call the module-scoped function directly: `updateProjectTotals`
       await updateProjectTotals(log.projectId);
       cache.invalidate("projects");
       cache.invalidate(`project_${log.projectId}`);

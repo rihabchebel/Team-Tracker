@@ -61,13 +61,15 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard' as PageType, label: 'Admin Dashboard', icon: LayoutDashboard },
     { id: 'users' as PageType, label: 'Manage Users', icon: Users },
     { id: 'settings' as PageType, label: 'Project Settings', icon: Settings },
+    { id: 'tasks' as PageType, label: 'LoggedTasks', icon: ListTodo },
   ];
 
   const supervisorLinks = [
     { id: 'dashboard' as PageType, label: 'Supervisor Dashboard', icon: LayoutDashboard },
-    { id: 'timeline' as PageType, label: 'Project Timeline', icon: Calendar },
+    { id: 'timeline' as PageType, label: 'Project Management', icon: Calendar },
     { id: 'settings' as PageType, label: 'Project Settings', icon: Settings },
     { id: 'users' as PageType, label: 'Manage Users', icon: Users },
+    { id: 'tasks' as PageType, label: 'Logged Tasks', icon: ListTodo },
   ];
 
   const developerLinks = [
