@@ -1,19 +1,11 @@
-<<<<<<< HEAD
-﻿{
-=======
 {
->>>>>>> modalFix/fix/modal-not-opening
   "compilerOptions": {
     "composite": true,
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
-<<<<<<< HEAD
-    "allowSyntheticDefaultImports": true
-=======
     "allowSyntheticDefaultImports": true,
     "strict": true
->>>>>>> modalFix/fix/modal-not-opening
   },
   "include": ["vite.config.ts"]
 }
