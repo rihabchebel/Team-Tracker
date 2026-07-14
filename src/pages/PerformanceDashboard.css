@@ -1,4 +1,4 @@
-/* components/PerformanceDashboard.css - Complete Dark Mode & Responsive */
+/* components/PerformanceDashboard.css - Fixed Form Height & Save Button Position */
 
 .performance-dashboard {
   animation: fadeIn 0.3s ease;
@@ -70,7 +70,7 @@
 }
 
 /* ============================================
-   DASHBOARD CONTENT
+   DASHBOARD CONTENT - FIXED HEIGHT
    ============================================ */
 .dashboard-content {
   background: white;
@@ -78,20 +78,25 @@
   padding: 24px 32px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 200px);
+  overflow: hidden;
 }
 
 .dashboard-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid #eef0f5;
   transition: border-color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .dashboard-header h3 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #1a1a2e;
   margin: 0;
@@ -100,22 +105,22 @@
 
 .dashboard-tabs {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tab-btn {
-  padding: 8px 20px;
+  padding: 6px 16px;
   border: 1px solid #e0e0ea;
   border-radius: 6px;
   background: transparent;
   color: #8888aa;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   transition: all 0.2s;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tab-btn:hover {
@@ -130,30 +135,31 @@
 }
 
 /* ============================================
-   TIMELINE FILTERS
+   TIMELINE FILTERS - COMPACT
    ============================================ */
 .timeline-filters {
   display: flex;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 16px 20px;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
   background: #f8f9fc;
-  border-radius: 8px;
+  border-radius: 6px;
   flex-wrap: wrap;
   align-items: flex-end;
   transition: background-color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .filter-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   flex: 1;
-  min-width: 150px;
+  min-width: 120px;
 }
 
 .filter-group label {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
   color: #8888aa;
   text-transform: uppercase;
@@ -162,11 +168,11 @@
 }
 
 .filter-select {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid #d0d3e0;
-  border-radius: 6px;
+  border-radius: 4px;
   background: white;
-  font-size: 14px;
+  font-size: 13px;
   color: #1a1a2e;
   cursor: pointer;
   transition: all 0.3s;
@@ -189,25 +195,25 @@
   align-items: center;
   background: white;
   border: 1px solid #d0d3e0;
-  border-radius: 6px;
-  padding: 0 12px;
+  border-radius: 4px;
+  padding: 0 10px;
   width: 100%;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .search-box .search-icon {
   color: #8888aa;
-  margin-right: 8px;
+  margin-right: 6px;
   transition: color 0.3s ease;
 }
 
 .search-box input {
   border: none;
   background: transparent;
-  padding: 8px 0;
+  padding: 6px 0;
   outline: none;
   width: 100%;
-  font-size: 14px;
+  font-size: 13px;
   color: #1a1a2e;
   transition: color 0.3s ease;
 }
@@ -218,10 +224,13 @@
 }
 
 /* ============================================
-   ROSTER TABLE
+   ROSTER TABLE - SCROLLABLE
    ============================================ */
 .roster-section {
   overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .roster-table {
@@ -235,21 +244,25 @@
 }
 
 .roster-table th {
-  padding: 12px 16px;
+  padding: 8px 12px;
   text-align: left;
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #8888aa;
   font-weight: 600;
   transition: color 0.3s ease;
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
 }
 
 .roster-table td {
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid #f0f1f5;
   color: #1a1a2e;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.3s ease, border-color 0.3s ease;
 }
 
@@ -276,13 +289,13 @@
 .member-cell {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   font-weight: 500;
 }
 
 .member-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4f72e8, #6c5ce7);
   color: white;
@@ -290,19 +303,19 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 11px;
   flex-shrink: 0;
   transition: background 0.3s ease;
 }
 
 /* ============================================
-   ROLE BADGES
+   ROLE BADGES - COMPACT
    ============================================ */
 .role-badge {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 500;
   text-transform: capitalize;
   transition: all 0.3s ease;
@@ -381,9 +394,9 @@
 /* Status badges */
 .status-badge {
   display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 500;
   transition: all 0.3s ease;
 }
@@ -404,27 +417,28 @@
 }
 
 /* ============================================
-   BUDGET SECTION
+   BUDGET SECTION - COMPACT
    ============================================ */
 .budget-section {
   background: #f8f9fc;
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
   transition: background-color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .budget-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .budget-label {
   font-weight: 500;
   color: #1a1a2e;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.3s ease;
 }
 
@@ -432,7 +446,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .hours-spent {
@@ -452,15 +466,15 @@
 
 .budget-percentage {
   color: #8888aa;
-  font-size: 12px;
+  font-size: 11px;
   margin-left: 4px;
   transition: color 0.3s ease;
 }
 
 .budget-bar {
-  height: 6px;
+  height: 4px;
   background: #e8e8f0;
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
   transition: background-color 0.3s ease;
 }
@@ -468,33 +482,42 @@
 .budget-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, #4f72e8, #6c5ce7);
-  border-radius: 3px;
+  border-radius: 2px;
   transition: width 0.6s ease;
 }
 
 /* ============================================
-   HEATMAP
+   HEATMAP - COMPACT
    ============================================ */
+.heatmap-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .heatmap-section h4 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #1a1a2e;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   transition: color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .heatmap-header-wrapper {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .heatmap-header-wrapper h4 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #1a1a2e;
   transition: color 0.3s ease;
@@ -503,11 +526,11 @@
 .heatmap-join-info {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: 4px;
+  padding: 2px 10px;
   background: #f0f2f5;
-  border-radius: 16px;
-  font-size: 12px;
+  border-radius: 12px;
+  font-size: 11px;
   color: #555577;
   transition: all 0.3s ease;
 }
@@ -515,35 +538,39 @@
 .heatmap-join-info svg {
   color: #8888aa;
   transition: color 0.3s ease;
+  width: 12px;
+  height: 12px;
 }
 
 .heatmap-container {
   background: #f8f9fc;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 6px;
+  padding: 12px;
   overflow-x: auto;
   transition: background-color 0.3s ease;
+  flex: 1;
+  min-height: 0;
 }
 
-/* Date header row */
+/* Date header row - COMPACT */
 .heatmap-dates-header {
   display: flex;
   align-items: stretch;
-  padding: 4px 0 8px 0;
+  padding: 2px 0 4px 0;
   border-bottom: 1px solid #eef0f5;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   gap: 2px;
   min-width: fit-content;
   transition: border-color 0.3s ease;
 }
 
 .heatmap-member-label {
-  width: 120px;
+  width: 100px;
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #8888aa;
-  padding-left: 8px;
+  padding-left: 6px;
   display: flex;
   align-items: center;
   transition: color 0.3s ease;
@@ -556,16 +583,16 @@
   align-items: center;
   justify-content: center;
   gap: 1px;
-  min-width: 20px;
-  padding: 4px 2px;
-  border-radius: 3px;
+  min-width: 16px;
+  padding: 2px 1px;
+  border-radius: 2px;
   text-align: center;
   transition: all 0.2s;
 }
 
 .heatmap-date-header.today {
   background: rgba(79, 114, 232, 0.1);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .heatmap-date-header.weekend {
@@ -573,46 +600,44 @@
 }
 
 .heatmap-day-number {
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
   color: #1a1a2e;
-  line-height: 1.2;
+  line-height: 1.1;
   transition: color 0.3s ease;
 }
 
 .heatmap-month {
-  font-size: 7px;
+  font-size: 6px;
   font-weight: 600;
   color: #8888aa;
   text-transform: uppercase;
-  line-height: 1.1;
+  line-height: 1;
   letter-spacing: 0.3px;
-  transition: color 0.3s ease;
 }
 
 .heatmap-day-name {
-  font-size: 7px;
+  font-size: 6px;
   font-weight: 400;
   color: #b0b0c0;
   text-transform: uppercase;
-  line-height: 1.1;
-  transition: color 0.3s ease;
+  line-height: 1;
 }
 
-/* Heatmap members */
+/* Heatmap members - COMPACT */
 .heatmap-members {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .heatmap-member {
   display: flex;
   align-items: center;
-  padding: 4px 0;
-  gap: 8px;
+  padding: 2px 0;
+  gap: 6px;
   border-bottom: 1px solid #f5f6fa;
-  min-height: 40px;
+  min-height: 30px;
   transition: border-color 0.3s ease;
 }
 
@@ -621,27 +646,27 @@
 }
 
 .heatmap-member .member-name {
-  width: 120px;
+  width: 100px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
+  gap: 1px;
+  font-size: 11px;
   font-weight: 500;
   color: #1a1a2e;
-  padding-left: 8px;
+  padding-left: 6px;
   transition: color 0.3s ease;
 }
 
 .member-name-text {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .member-status-left {
-  font-size: 11px;
+  font-size: 10px;
   color: #e17055;
   font-weight: 400;
   transition: color 0.3s ease;
@@ -649,9 +674,9 @@
 
 .member-role-badge {
   display: inline-block;
-  padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 8px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -663,17 +688,17 @@
   color: #4f72e8;
 }
 
-/* Join date badge */
+/* Join date badge - COMPACT */
 .member-join-badge {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 9px;
+  gap: 2px;
+  font-size: 8px;
   color: #555577;
   background: #f0f2f5;
-  padding: 1px 8px;
-  border-radius: 10px;
-  margin-top: 2px;
+  padding: 0 6px;
+  border-radius: 8px;
+  margin-top: 1px;
   width: fit-content;
   transition: all 0.3s ease;
 }
@@ -681,9 +706,11 @@
 .member-join-badge svg {
   color: #8888aa;
   transition: color 0.3s ease;
+  width: 8px;
+  height: 8px;
 }
 
-/* Heatmap row */
+/* Heatmap row - COMPACT */
 .heatmap-row {
   display: flex;
   gap: 2px;
@@ -694,9 +721,9 @@
 .heatmap-cell {
   flex: 1;
   aspect-ratio: 1;
-  min-width: 18px;
-  min-height: 18px;
-  border-radius: 3px;
+  min-width: 14px;
+  min-height: 14px;
+  border-radius: 2px;
   transition: all 0.2s;
   position: relative;
   display: flex;
@@ -705,8 +732,8 @@
 }
 
 .heatmap-cell:not(.before-start):hover {
-  transform: scale(1.15);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(1.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
   z-index: 2;
 }
 
@@ -741,26 +768,27 @@
 }
 
 .heatmap-before-start-indicator {
-  font-size: 8px;
+  font-size: 6px;
   color: #b0b0c0;
   font-weight: 300;
   transition: color 0.3s ease;
 }
 
-/* Heatmap legend */
+/* Heatmap legend - COMPACT */
 .heatmap-legend {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 12px;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid #eef0f5;
   flex-wrap: wrap;
   transition: border-color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .legend-label {
-  font-size: 13px;
+  font-size: 11px;
   color: #8888aa;
   font-weight: 500;
   transition: color 0.3s ease;
@@ -769,8 +797,8 @@
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 3px;
+  font-size: 10px;
   color: #555577;
   transition: color 0.3s ease;
 }
@@ -798,9 +826,9 @@
 
 .legend-color-dot {
   display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
 }
 
 .legend-color-dot.full {
@@ -826,45 +854,55 @@
 }
 
 /* ============================================
-   ANALYTICS / STATS
+   ANALYTICS / STATS - COMPACT
    ============================================ */
+.analytics-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .analytics-section h4 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #1a1a2e;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   transition: color 0.3s ease;
+  flex-shrink: 0;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
 }
 
 .stat-card {
   background: #f8f9fc;
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 6px;
+  padding: 12px;
   border: 1px solid #eef0f5;
   transition: all 0.2s;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .stat-card-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .stat-avatar {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4f72e8, #6c5ce7);
   color: white;
@@ -872,7 +910,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 16px;
+  font-size: 13px;
   flex-shrink: 0;
   transition: background 0.3s ease;
 }
@@ -885,12 +923,12 @@
 .stat-name {
   font-weight: 600;
   color: #1a1a2e;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.3s ease;
 }
 
 .stat-role {
-  font-size: 12px;
+  font-size: 11px;
   color: #8888aa;
   transition: color 0.3s ease;
 }
@@ -898,7 +936,7 @@
 .stat-details {
   display: flex;
   justify-content: space-between;
-  padding-top: 12px;
+  padding-top: 8px;
   border-top: 1px solid #eef0f5;
   transition: border-color 0.3s ease;
 }
@@ -909,27 +947,27 @@
 }
 
 .stat-label {
-  font-size: 11px;
+  font-size: 10px;
   color: #8888aa;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   transition: color 0.3s ease;
 }
 
 .stat-value {
   font-weight: 600;
   color: #1a1a2e;
-  font-size: 14px;
-  margin-top: 2px;
+  font-size: 13px;
+  margin-top: 1px;
   transition: color 0.3s ease;
 }
 
 .stat-status {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-top: 1px;
 }
 
 .stat-status.status-active {
@@ -943,7 +981,7 @@
 }
 
 /* ============================================
-   HEATMAP DETAIL MODAL
+   HEATMAP DETAIL MODAL - FIXED
    ============================================ */
 .performance-dashboard .modal-overlay {
   position: fixed;
@@ -1001,7 +1039,7 @@
 
 /* Modal Header */
 .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-header {
-  padding: 24px 28px 16px 28px;
+  padding: 20px 24px 14px 24px;
   border-bottom: 1px solid #eef0f5;
   display: flex;
   justify-content: space-between;
@@ -1011,7 +1049,7 @@
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-header h3 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #1a1a2e;
   margin: 0;
@@ -1021,15 +1059,15 @@
 .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-header-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .role-badge-small {
   display: inline-block;
-  padding: 2px 12px;
-  border-radius: 12px;
-  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -1043,7 +1081,7 @@
 .performance-dashboard .modal-overlay .heatmap-detail-modal .close-btn {
   background: none;
   border: none;
-  font-size: 28px;
+  font-size: 24px;
   color: #8888aa;
   cursor: pointer;
   transition: all 0.2s;
@@ -1058,14 +1096,14 @@
 
 /* Modal Body */
 .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-body {
-  padding: 24px 28px;
+  padding: 20px 24px;
   overflow-y: auto;
   flex: 1;
   min-height: 0;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .detail-item {
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .detail-item:last-child {
@@ -1073,7 +1111,7 @@
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .detail-date .detail-value {
-  font-size: 14px;
+  font-size: 13px;
   color: #8888aa;
   font-weight: 400;
   transition: color 0.3s ease;
@@ -1082,11 +1120,11 @@
 .performance-dashboard .modal-overlay .heatmap-detail-modal .detail-hours {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .hours-value-large {
-  font-size: 40px;
+  font-size: 32px;
   font-weight: 700;
   color: #1a1a2e;
   line-height: 1;
@@ -1094,7 +1132,7 @@
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .detail-hours .detail-label {
-  font-size: 14px;
+  font-size: 13px;
   color: #8888aa;
   font-weight: 400;
   text-transform: none;
@@ -1104,12 +1142,12 @@
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .detail-label {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #8888aa;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   transition: color 0.3s ease;
 }
 
@@ -1117,23 +1155,23 @@
 .performance-dashboard .modal-overlay .heatmap-detail-modal .task-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .task-tag {
   display: inline-block;
-  padding: 4px 14px;
+  padding: 3px 10px;
   background: #f0f1f5;
   color: #1a1a2e;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   transition: all 0.3s ease;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .no-tasks {
   color: #8888aa;
-  font-size: 14px;
+  font-size: 13px;
   font-style: italic;
   transition: color 0.3s ease;
 }
@@ -1141,9 +1179,9 @@
 /* Status Badge in Modal */
 .performance-dashboard .modal-overlay .heatmap-detail-modal .status-badge-small {
   display: inline-block;
-  padding: 4px 16px;
-  border-radius: 16px;
-  font-size: 13px;
+  padding: 3px 12px;
+  border-radius: 12px;
+  font-size: 12px;
   font-weight: 500;
   text-transform: capitalize;
   transition: all 0.3s ease;
@@ -1173,50 +1211,50 @@
 .performance-dashboard .modal-overlay .heatmap-detail-modal .notes-text {
   display: block;
   width: 100%;
-  margin: 0 0 8px 0;
-  padding: 12px 16px;
+  margin: 0 0 6px 0;
+  padding: 10px 14px;
   background: #f8f9fc;
-  border-radius: 8px;
+  border-radius: 6px;
   color: #1a1a2e;
-  font-size: 14px;
-  line-height: 1.6;
-  min-height: 44px;
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 36px;
   transition: all 0.3s ease;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .added-note-text {
-  margin: 0 0 8px 0;
-  padding: 10px 14px;
+  margin: 0 0 6px 0;
+  padding: 8px 12px;
   background: #e8edff;
   border-left: 3px solid #4f72e8;
-  border-radius: 4px 8px 8px 4px;
+  border-radius: 3px 6px 6px 3px;
   color: #1a1a2e;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.5;
   transition: all 0.3s ease;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .added-note-text::before {
   content: '📝 ';
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .notes-input-container {
-  margin-top: 12px;
+  margin-top: 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .notes-input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid #d0d3e0;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 13px;
   font-family: inherit;
   resize: vertical;
-  min-height: 70px;
+  min-height: 60px;
   transition: all 0.3s ease;
   background: white;
   color: #1a1a2e;
@@ -1234,17 +1272,17 @@
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .add-note-btn {
-  padding: 10px 20px;
+  padding: 8px 16px;
   background: #4f72e8;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
   align-self: flex-end;
-  min-width: 120px;
+  min-width: 100px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .add-note-btn:hover:not(:disabled) {
@@ -1258,25 +1296,30 @@
   cursor: not-allowed;
 }
 
-/* Modal Footer */
+/* Modal Footer - FIXED at bottom */
 .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-footer {
-  padding: 16px 28px 24px 28px;
+  padding: 14px 24px 20px 24px;
   border-top: 1px solid #eef0f5;
   flex-shrink: 0;
+  margin-top: auto;
   transition: border-color 0.3s ease;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .mark-read-btn {
-  padding: 10px 28px;
+  padding: 8px 24px;
   background: #4f72e8;
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: 6px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
-  width: 100%;
+  min-width: 100px;
 }
 
 .performance-dashboard .modal-overlay .heatmap-detail-modal .mark-read-btn:hover {
@@ -1327,7 +1370,7 @@
 }
 
 .modal-centered .modal-header {
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid #eef0f5;
   display: flex;
   justify-content: space-between;
@@ -1336,7 +1379,7 @@
 }
 
 .modal-centered .modal-header h3 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
   color: #1a1a2e;
   margin: 0;
@@ -1346,7 +1389,7 @@
 .modal-centered .close-btn {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: 22px;
   color: #8888aa;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1359,11 +1402,11 @@
 }
 
 .modal-centered .modal-body {
-  padding: 24px;
+  padding: 20px;
 }
 
 .modal-centered .form-group {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .modal-centered .form-group:last-child {
@@ -1372,10 +1415,10 @@
 
 .modal-centered .form-group label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-weight: 500;
   color: #1a1a2e;
-  font-size: 14px;
+  font-size: 13px;
   transition: color 0.3s ease;
 }
 
@@ -1387,10 +1430,10 @@
 .modal-centered .form-group input,
 .modal-centered .form-group select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #d0d3e0;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.3s ease;
   background: white;
   color: #1a1a2e;
@@ -1410,23 +1453,23 @@
 }
 
 .modal-centered .modal-footer {
-  padding: 16px 24px;
+  padding: 12px 20px;
   border-top: 1px solid #eef0f5;
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   transition: border-color 0.3s ease;
 }
 
 .modal-centered .cancel-btn {
-  padding: 10px 20px;
+  padding: 8px 16px;
   background: #f5f6fa;
   border: 1px solid #d0d3e0;
   border-radius: 6px;
   color: #1a1a2e;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -1435,12 +1478,12 @@
 }
 
 .modal-centered .create-btn {
-  padding: 10px 24px;
+  padding: 8px 20px;
   background: linear-gradient(135deg, #4f72e8, #6c5ce7);
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s;
@@ -1458,10 +1501,9 @@
 }
 
 /* ============================================
-   DARK MODE
+   DARK MODE - COMPLETE FIX
    ============================================ */
 @media (prefers-color-scheme: dark) {
-  /* Page Header */
   .page-header {
     background: #1a1a2e;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -1475,7 +1517,6 @@
     color: #8888aa;
   }
 
-  /* Dashboard Content */
   .dashboard-content {
     background: #1a1a2e;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -1489,7 +1530,6 @@
     color: #e8e8f0;
   }
 
-  /* Tabs */
   .tab-btn {
     color: #8888aa;
     border-color: #3a3a4e;
@@ -1506,7 +1546,6 @@
     border-color: #4f72e8;
   }
 
-  /* Filters */
   .timeline-filters {
     background: #2a2a3e;
   }
@@ -1516,14 +1555,19 @@
   }
 
   .filter-select {
-    background: #1a1a2e;
-    color: #e8e8f0;
-    border-color: #3a3a4e;
+    background: #1a1a2e !important;
+    color: #e8e8f0 !important;
+    border-color: #3a3a4e !important;
+  }
+
+  .filter-select:focus {
+    border-color: #4f72e8 !important;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.15) !important;
   }
 
   .filter-select option {
-    background: #1a1a2e;
-    color: #e8e8f0;
+    background: #1a1a2e !important;
+    color: #e8e8f0 !important;
   }
 
   .search-box {
@@ -1543,7 +1587,6 @@
     color: #666688;
   }
 
-  /* Roster Table */
   .roster-table thead {
     border-bottom-color: rgba(255, 255, 255, 0.06);
   }
@@ -1644,7 +1687,6 @@
     color: #fdcb6e;
   }
 
-  /* Budget Section */
   .budget-section {
     background: #2a2a3e;
   }
@@ -1665,7 +1707,6 @@
     background: #3a3a4e;
   }
 
-  /* Heatmap */
   .heatmap-section h4 {
     color: #e8e8f0;
   }
@@ -1783,7 +1824,6 @@
     color: #555577;
   }
 
-  /* Stats Cards */
   .stat-card {
     background: #2a2a3e;
     border-color: rgba(255, 255, 255, 0.06);
@@ -1852,6 +1892,14 @@
     border-top-color: rgba(255, 255, 255, 0.06);
   }
 
+  .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-footer .mark-read-btn {
+    background: #4f72e8;
+  }
+
+  .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-footer .mark-read-btn:hover {
+    background: #3a5cd8;
+  }
+
   .performance-dashboard .modal-overlay .heatmap-detail-modal .detail-date .detail-value {
     color: #8888aa;
   }
@@ -1889,13 +1937,13 @@
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .notes-input {
-    background: #1a1a2e;
-    color: #e8e8f0;
-    border-color: #3a3a4e;
+    background: #1a1a2e !important;
+    color: #e8e8f0 !important;
+    border-color: #3a3a4e !important;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .notes-input::placeholder {
-    color: #666688;
+    color: #666688 !important;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .status-badge-small.full {
@@ -1918,7 +1966,6 @@
     color: #8888aa;
   }
 
-  /* Add Member Modal - Dark */
   .modal-centered {
     background: #1a1a2e;
   }
@@ -1945,19 +1992,19 @@
 
   .modal-centered .form-group input,
   .modal-centered .form-group select {
-    background: #1a1a2e;
-    color: #e8e8f0;
-    border-color: #3a3a4e;
+    background: #1a1a2e !important;
+    color: #e8e8f0 !important;
+    border-color: #3a3a4e !important;
   }
 
   .modal-centered .form-group input::placeholder {
-    color: #666688;
+    color: #666688 !important;
   }
 
   .modal-centered .form-group input:focus,
   .modal-centered .form-group select:focus {
-    border-color: #4f72e8;
-    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.2);
+    border-color: #4f72e8 !important;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.2) !important;
   }
 
   .modal-centered .modal-footer {
@@ -1974,7 +2021,6 @@
     background: #3a3a4e;
   }
 
-  /* Add Member Button */
   .add-member-btn:hover {
     background: #3a5cd8;
     box-shadow: 0 4px 12px rgba(79, 114, 232, 0.4);
@@ -1982,59 +2028,67 @@
 }
 
 /* ============================================
-   RESPONSIVE - Tablet
+   RESPONSIVE
    ============================================ */
+
+/* Tablet */
 @media (max-width: 1024px) {
+  .dashboard-content {
+    max-height: calc(100vh - 160px);
+    padding: 16px 20px;
+  }
+
   .heatmap-member-label,
   .heatmap-member .member-name {
-    width: 100px;
+    width: 80px;
   }
 
   .heatmap-cell {
-    min-width: 16px;
-    min-height: 16px;
+    min-width: 12px;
+    min-height: 12px;
   }
 
   .heatmap-day-number {
-    font-size: 10px;
+    font-size: 8px;
   }
 
   .heatmap-month {
-    font-size: 6px;
+    font-size: 5px;
   }
 
   .heatmap-day-name {
-    font-size: 6px;
+    font-size: 5px;
   }
 
   .heatmap-date-header {
-    min-width: 16px;
-    padding: 3px 2px;
+    min-width: 12px;
+    padding: 2px 1px;
   }
 }
 
-/* ============================================
-   RESPONSIVE - Mobile
-   ============================================ */
+/* Mobile */
 @media (max-width: 768px) {
   .page-header {
-    padding: 16px 20px;
+    padding: 12px 16px;
   }
 
   .page-header-content {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 8px;
   }
 
   .dashboard-content {
-    padding: 16px 20px;
+    max-height: calc(100vh - 120px);
+    padding: 12px 16px;
   }
 
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
   }
 
   .dashboard-tabs {
@@ -2044,12 +2098,15 @@
   .tab-btn {
     flex: 1;
     text-align: center;
-    font-size: 13px;
-    padding: 6px 12px;
+    font-size: 11px;
+    padding: 4px 8px;
   }
 
   .timeline-filters {
     flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
   }
 
   .filter-group {
@@ -2062,70 +2119,71 @@
   }
 
   .heatmap-container {
-    padding: 12px;
+    padding: 8px;
   }
 
   .heatmap-member {
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    min-height: 24px;
   }
 
   .heatmap-member .member-name {
-    width: 80px;
-    font-size: 11px;
+    width: 60px;
+    font-size: 10px;
     padding-left: 4px;
   }
 
   .heatmap-cell {
-    min-width: 12px;
-    min-height: 12px;
+    min-width: 10px;
+    min-height: 10px;
     border-radius: 2px;
   }
 
   .heatmap-dates-header {
-    padding: 2px 0 4px 0;
+    padding: 2px 0 3px 0;
     gap: 1px;
   }
 
   .heatmap-date-header {
-    min-width: 12px;
-    padding: 2px 1px;
+    min-width: 10px;
+    padding: 1px 0;
   }
 
   .heatmap-day-number {
-    font-size: 8px;
+    font-size: 7px;
   }
 
   .heatmap-month {
-    font-size: 5px;
+    font-size: 4px;
   }
 
   .heatmap-day-name {
-    font-size: 5px;
+    font-size: 4px;
   }
 
   .heatmap-legend {
-    gap: 10px;
-    font-size: 10px;
+    gap: 6px;
+    font-size: 9px;
   }
 
   .legend-item {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .member-join-badge {
-    font-size: 8px;
-    padding: 1px 6px;
+    font-size: 7px;
+    padding: 0 4px;
   }
 
   .member-join-badge svg {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   .heatmap-before-start-indicator {
-    font-size: 6px;
+    font-size: 5px;
   }
 
   .stats-grid {
@@ -2135,16 +2193,20 @@
   .budget-info {
     flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
+    gap: 2px;
   }
 
   .roster-table {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .roster-table th,
   .roster-table td {
-    padding: 8px 10px;
+    padding: 4px 8px;
+  }
+
+  .roster-table th {
+    font-size: 10px;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal {
@@ -2154,15 +2216,15 @@
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-header {
-    padding: 20px 20px 14px 20px;
+    padding: 16px 16px 10px 16px;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-body {
-    padding: 20px 20px;
+    padding: 16px 16px;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-footer {
-    padding: 14px 20px 20px 20px;
+    padding: 10px 16px 16px 16px;
   }
 
   .modal-centered {
@@ -2171,19 +2233,19 @@
   }
 
   .modal-centered .modal-header {
-    padding: 16px 20px;
+    padding: 12px 16px;
   }
 
   .modal-centered .modal-header h3 {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .modal-centered .modal-body {
-    padding: 16px 20px;
+    padding: 12px 16px;
   }
 
   .modal-centered .modal-footer {
-    padding: 12px 20px;
+    padding: 10px 16px;
     flex-direction: column;
   }
 
@@ -2195,29 +2257,28 @@
   }
 }
 
-/* ============================================
-   RESPONSIVE - Small Phone
-   ============================================ */
+/* Small Phone */
 @media (max-width: 480px) {
   .page-header {
-    padding: 12px 16px;
+    padding: 10px 12px;
   }
 
   .page-header h2 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .dashboard-content {
-    padding: 12px 16px;
+    max-height: calc(100vh - 100px);
+    padding: 10px 12px;
   }
 
   .heatmap-container {
-    padding: 8px;
+    padding: 6px;
   }
 
   .heatmap-member .member-name {
-    width: 60px;
-    font-size: 10px;
+    width: 50px;
+    font-size: 9px;
   }
 
   .heatmap-cell {
@@ -2227,7 +2288,7 @@
   }
 
   .heatmap-dates-header {
-    padding: 1px 0 3px 0;
+    padding: 1px 0 2px 0;
     gap: 1px;
   }
 
@@ -2245,11 +2306,11 @@
   }
 
   .heatmap-day-name {
-    font-size: 5px;
+    font-size: 4px;
   }
 
   .heatmap-legend {
-    gap: 6px;
+    gap: 4px;
   }
 
   .legend-item {
@@ -2258,87 +2319,100 @@
   }
 
   .heatmap-header-wrapper h4 {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .heatmap-join-info {
-    font-size: 10px;
-    padding: 2px 8px;
+    font-size: 9px;
+    padding: 2px 6px;
   }
 
   .heatmap-join-info svg {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
   }
 
   .member-join-badge {
-    font-size: 7px;
-    padding: 0 4px;
+    font-size: 6px;
+    padding: 0 3px;
   }
 
   .member-join-badge svg {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
   }
 
   .heatmap-before-start-indicator {
-    font-size: 5px;
+    font-size: 4px;
   }
 
   .heatmap-member .member-name {
-    width: 55px;
-    font-size: 9px;
+    width: 45px;
+    font-size: 8px;
   }
 
   .member-name-text {
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px;
+    gap: 1px;
   }
 
   .roster-table {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .roster-table th,
   .roster-table td {
-    padding: 6px 8px;
+    padding: 3px 6px;
   }
 
   .member-avatar {
-    width: 28px;
-    height: 28px;
-    font-size: 11px;
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
   }
 
   .hours-value-large {
-    font-size: 32px;
+    font-size: 28px;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-header h3 {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-body {
-    padding: 16px 16px;
+    padding: 12px 12px;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-header {
-    padding: 16px 16px 12px 16px;
+    padding: 12px 12px 8px 12px;
   }
 
   .performance-dashboard .modal-overlay .heatmap-detail-modal .modal-footer {
-    padding: 12px 16px 16px 16px;
+    padding: 8px 12px 12px 12px;
+  }
+
+  .role-badge {
+    font-size: 10px;
+    padding: 1px 8px;
+  }
+
+  .status-badge {
+    font-size: 10px;
+    padding: 1px 8px;
   }
 }
 
-/* ============================================
-   RESPONSIVE - Very Small Phone
-   ============================================ */
+/* Very Small Phone */
 @media (max-width: 360px) {
+  .dashboard-content {
+    max-height: calc(100vh - 80px);
+    padding: 8px 10px;
+  }
+
   .heatmap-member .member-name {
-    width: 45px;
-    font-size: 8px;
+    width: 35px;
+    font-size: 7px;
   }
 
   .heatmap-cell {
@@ -2359,7 +2433,7 @@
   }
 
   .heatmap-legend {
-    gap: 4px;
+    gap: 3px;
   }
 
   .legend-item {
@@ -2367,8 +2441,8 @@
   }
 
   .heatmap-member .member-name {
-    width: 40px;
-    font-size: 8px;
+    width: 35px;
+    font-size: 7px;
     padding-left: 2px;
   }
 
@@ -2381,26 +2455,29 @@
   }
 }
 
-/* ============================================
-   RESPONSIVE - Landscape
-   ============================================ */
+/* Landscape */
 @media (max-height: 600px) and (orientation: landscape) {
+  .dashboard-content {
+    max-height: calc(100vh - 100px);
+  }
+
   .heatmap-cell {
-    min-width: 14px;
-    min-height: 14px;
+    min-width: 10px;
+    min-height: 10px;
   }
 
   .heatmap-member {
-    padding: 2px 0;
-    min-height: 30px;
+    padding: 1px 0;
+    min-height: 20px;
   }
 
   .heatmap-member .member-name {
-    width: 100px;
+    width: 80px;
+    font-size: 10px;
   }
 
   .heatmap-dates-header {
-    padding: 1px 0 3px 0;
+    padding: 1px 0 2px 0;
   }
 
   .heatmap-date-header {
@@ -2408,14 +2485,14 @@
   }
 
   .heatmap-day-number {
-    font-size: 8px;
+    font-size: 7px;
   }
 
   .heatmap-month {
-    font-size: 5px;
+    font-size: 4px;
   }
 
   .heatmap-day-name {
-    font-size: 5px;
+    font-size: 4px;
   }
 }

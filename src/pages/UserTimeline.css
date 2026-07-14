@@ -1,4 +1,5 @@
-/* components/UserTimeline.css */
+/* components/UserTimeline.css - Complete Dark Mode Support */
+
 .user-timeline {
   animation: fadeIn 0.3s ease;
 }
@@ -8,12 +9,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ============================================
+   PAGE HEADER
+   ============================================ */
 .page-header {
   background: white;
   padding: 24px 32px;
   border-radius: 8px;
   margin-bottom: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .page-header-content {
@@ -27,18 +32,24 @@
   font-weight: 700;
   color: #1a1a2e;
   margin: 0 0 4px 0;
+  transition: color 0.3s ease;
 }
 
 .project-description {
   color: #8888aa;
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
+/* ============================================
+   TIMELINE CONTENT
+   ============================================ */
 .timeline-content {
   background: white;
   border-radius: 8px;
   padding: 24px 32px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .timeline-header {
@@ -50,15 +61,19 @@
   font-weight: 600;
   color: #1a1a2e;
   margin: 0 0 8px 0;
+  transition: color 0.3s ease;
 }
 
 .timeline-subtitle {
   color: #8888aa;
   font-size: 14px;
   margin: 0;
+  transition: color 0.3s ease;
 }
 
-/* Filters */
+/* ============================================
+   FILTERS
+   ============================================ */
 .timeline-filters {
   display: flex;
   gap: 16px;
@@ -67,6 +82,7 @@
   background: #f8f9fc;
   border-radius: 8px;
   flex-wrap: wrap;
+  transition: background-color 0.3s ease;
 }
 
 .filter-group {
@@ -83,6 +99,7 @@
   color: #8888aa;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  transition: color 0.3s ease;
 }
 
 .filter-select {
@@ -94,6 +111,7 @@
   color: #1a1a2e;
   cursor: pointer;
   transition: all 0.3s;
+  width: 100%;
 }
 
 .filter-select:focus {
@@ -102,7 +120,14 @@
   box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
 }
 
-/* Timeline */
+.filter-select option {
+  background: white;
+  color: #1a1a2e;
+}
+
+/* ============================================
+   TIMELINE
+   ============================================ */
 .timeline-container {
   position: relative;
   padding-left: 20px;
@@ -122,6 +147,7 @@
   color: #1a1a2e;
   display: inline-block;
   padding: 0 12px 0 0;
+  transition: color 0.3s ease;
 }
 
 .timeline-events {
@@ -150,6 +176,27 @@
   box-shadow: 0 0 0 2px #e0e0ea;
   flex-shrink: 0;
   z-index: 1;
+  transition: all 0.3s ease;
+}
+
+.event-dot.full {
+  background: #4f72e8;
+  box-shadow: 0 0 0 2px #4f72e8;
+}
+
+.event-dot.partial {
+  background: #fdcb6e;
+  box-shadow: 0 0 0 2px #fdcb6e;
+}
+
+.event-dot.unavailable {
+  background: #e17055;
+  box-shadow: 0 0 0 2px #e17055;
+}
+
+.event-dot.no-log {
+  background: #d0d3e0;
+  box-shadow: 0 0 0 2px #d0d3e0;
 }
 
 .event-connector {
@@ -157,6 +204,7 @@
   flex: 1;
   background: #e0e0ea;
   margin: 4px 0;
+  transition: background-color 0.3s ease;
 }
 
 .event-card {
@@ -184,11 +232,13 @@
   font-weight: 600;
   color: #1a1a2e;
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
 .event-date {
   font-size: 12px;
   color: #8888aa;
+  transition: color 0.3s ease;
 }
 
 .event-body {
@@ -214,6 +264,7 @@
   font-size: 14px;
   color: #1a1a2e;
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 
 .event-project {
@@ -222,11 +273,13 @@
   background: rgba(79, 114, 232, 0.1);
   padding: 2px 10px;
   border-radius: 12px;
+  transition: all 0.3s ease;
 }
 
 .event-subproject {
   font-size: 12px;
   color: #8888aa;
+  transition: color 0.3s ease;
 }
 
 .event-hours {
@@ -237,20 +290,27 @@
   padding: 2px 10px;
   border-radius: 12px;
   border: 1px solid #e0e0ea;
+  transition: all 0.3s ease;
 }
 
-/* No events */
+/* ============================================
+   NO EVENTS
+   ============================================ */
 .no-events {
   text-align: center;
   padding: 40px 0;
   color: #8888aa;
+  transition: color 0.3s ease;
 }
 
-/* Project Users Sidebar */
+/* ============================================
+   PROJECT USERS SIDEBAR
+   ============================================ */
 .project-users-sidebar {
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid #eef0f5;
+  transition: border-color 0.3s ease;
 }
 
 .project-users-sidebar h4 {
@@ -258,6 +318,7 @@
   font-weight: 600;
   color: #1a1a2e;
   margin: 0 0 12px 0;
+  transition: color 0.3s ease;
 }
 
 .project-users-sidebar ul {
@@ -276,9 +337,167 @@
   font-size: 14px;
   color: #1a1a2e;
   border: 1px solid #eef0f5;
+  transition: all 0.3s ease;
 }
 
-/* Responsive */
+.project-users-sidebar ul li:hover {
+  background: #f0f1f5;
+  transform: translateY(-1px);
+}
+
+/* ============================================
+   DARK MODE
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  /* Page Header */
+  .page-header {
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .page-header h2 {
+    color: #e8e8f0;
+  }
+
+  .project-description {
+    color: #8888aa;
+  }
+
+  /* Timeline Content */
+  .timeline-content {
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .timeline-header h3 {
+    color: #e8e8f0;
+  }
+
+  .timeline-subtitle {
+    color: #8888aa;
+  }
+
+  /* Filters */
+  .timeline-filters {
+    background: #2a2a3e;
+  }
+
+  .filter-group label {
+    color: #8888aa;
+  }
+
+  .filter-select {
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .filter-select:focus {
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.15);
+  }
+
+  .filter-select option {
+    background: #1a1a2e;
+    color: #e8e8f0;
+  }
+
+  /* Timeline */
+  .month-label {
+    color: #e8e8f0;
+  }
+
+  .event-dot {
+    border-color: #1a1a2e;
+  }
+
+  .event-dot.full {
+    background: #4f72e8;
+    box-shadow: 0 0 0 2px #4f72e8;
+  }
+
+  .event-dot.partial {
+    background: #fdcb6e;
+    box-shadow: 0 0 0 2px #fdcb6e;
+  }
+
+  .event-dot.unavailable {
+    background: #e17055;
+    box-shadow: 0 0 0 2px #e17055;
+  }
+
+  .event-dot.no-log {
+    background: #3a3a4e;
+    box-shadow: 0 0 0 2px #3a3a4e;
+  }
+
+  .event-connector {
+    background: #3a3a4e;
+  }
+
+  .event-card {
+    background: #2a2a3e;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .event-card:hover {
+    background: #3a3a4e;
+  }
+
+  .event-user {
+    color: #e8e8f0;
+  }
+
+  .event-date {
+    color: #8888aa;
+  }
+
+  .event-description {
+    color: #e8e8f0;
+  }
+
+  .event-project {
+    color: #6c8ce8;
+    background: rgba(79, 114, 232, 0.2);
+  }
+
+  .event-subproject {
+    color: #8888aa;
+  }
+
+  .event-hours {
+    color: #e8e8f0;
+    background: #1a1a2e;
+    border-color: #3a3a4e;
+  }
+
+  .no-events {
+    color: #8888aa;
+  }
+
+  /* Project Users Sidebar */
+  .project-users-sidebar {
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .project-users-sidebar h4 {
+    color: #e8e8f0;
+  }
+
+  .project-users-sidebar ul li {
+    background: #2a2a3e;
+    color: #e8e8f0;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .project-users-sidebar ul li:hover {
+    background: #3a3a4e;
+  }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 768px) {
   .page-header {
     padding: 16px 20px;
@@ -319,6 +538,19 @@
     align-items: flex-start;
     gap: 4px;
   }
+
+  .timeline-container {
+    padding-left: 12px;
+  }
+
+  .event-line {
+    width: 16px;
+  }
+
+  .event-dot {
+    width: 10px;
+    height: 10px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -339,8 +571,8 @@
   }
   
   .event-dot {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   
   .event-card {
@@ -353,5 +585,145 @@
   
   .event-hours {
     font-size: 12px;
+    padding: 1px 8px;
+  }
+
+  .event-project {
+    font-size: 11px;
+    padding: 1px 8px;
+  }
+
+  .event-subproject {
+    font-size: 11px;
+  }
+
+  .event-icon {
+    font-size: 16px;
+  }
+
+  .project-users-sidebar ul li {
+    font-size: 12px;
+    padding: 3px 12px;
+  }
+
+  .timeline-container {
+    padding-left: 8px;
+  }
+
+  .event-line {
+    width: 12px;
+  }
+}
+
+@media (max-width: 360px) {
+  .timeline-event {
+    gap: 6px;
+  }
+
+  .event-card {
+    padding: 6px 8px;
+  }
+
+  .event-description {
+    font-size: 12px;
+  }
+
+  .event-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .event-line {
+    width: 10px;
+  }
+
+  .event-details {
+    gap: 4px;
+  }
+
+  .event-hours {
+    font-size: 11px;
+    padding: 1px 6px;
+  }
+}
+
+/* Landscape orientation */
+@media (max-height: 600px) and (orientation: landscape) {
+  .timeline-event {
+    margin-bottom: 10px;
+  }
+
+  .event-card {
+    padding: 8px 12px;
+  }
+
+  .event-body {
+    flex-wrap: nowrap;
+  }
+
+  .event-details {
+    flex-wrap: nowrap;
+  }
+
+  .timeline-container {
+    padding-left: 12px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .page-header {
+    background: white !important;
+    box-shadow: none;
+    border: 1px solid #e0e0e0;
+  }
+
+  .page-header h2 {
+    color: #1a1a2e !important;
+  }
+
+  .timeline-content {
+    background: white !important;
+    box-shadow: none;
+  }
+
+  .timeline-filters {
+    background: #f8f9fc !important;
+  }
+
+  .filter-select {
+    background: white !important;
+    color: #1a1a2e !important;
+    border-color: #d0d3e0 !important;
+  }
+
+  .event-card {
+    background: #f8f9fc !important;
+    border-color: #eef0f5 !important;
+  }
+
+  .event-card:hover {
+    transform: none !important;
+  }
+
+  .event-dot {
+    border-color: white !important;
+  }
+
+  .event-hours {
+    background: white !important;
+    color: #1a1a2e !important;
+    border-color: #e0e0ea !important;
+  }
+
+  .event-project {
+    background: rgba(79, 114, 232, 0.1) !important;
+    color: #4f72e8 !important;
+  }
+
+  .project-users-sidebar ul li {
+    background: #f8f9fc !important;
+    color: #1a1a2e !important;
+    border-color: #eef0f5 !important;
   }
 }
