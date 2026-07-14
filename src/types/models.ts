@@ -66,6 +66,7 @@ export interface Task {
 }
 
 export interface LogEntry {
+  projectName: string;
   id: string;
   project: string;
   projectId?: string;

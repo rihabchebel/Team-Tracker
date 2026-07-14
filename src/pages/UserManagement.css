@@ -1,4 +1,4 @@
-/* components/UserManagement.css */
+/* components/UserManagement.css - Complete Dark Mode Support */
 
 .user-management {
   animation: fadeIn 0.3s ease;
@@ -18,6 +18,7 @@
   border-radius: 8px;
   margin-bottom: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .page-header-content {
@@ -31,11 +32,13 @@
   font-weight: 700;
   color: #1a1a2e;
   margin: 0 0 4px 0;
+  transition: color 0.3s ease;
 }
 
 .project-description {
   color: #8888aa;
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
 .create-user-btn {
@@ -67,6 +70,7 @@
   border-radius: 8px;
   padding: 24px 32px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .user-management-header {
@@ -76,6 +80,7 @@
   margin-bottom: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid #eef0f5;
+  transition: border-color 0.3s ease;
 }
 
 .user-management-header h3 {
@@ -83,6 +88,7 @@
   font-weight: 600;
   color: #1a1a2e;
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .search-container {
@@ -111,6 +117,7 @@
 
 .search-input::placeholder {
   color: #b0b0c0;
+  transition: color 0.3s ease;
 }
 
 /* ============================================
@@ -127,6 +134,7 @@
 
 .user-table thead {
   border-bottom: 2px solid #eef0f5;
+  transition: border-color 0.3s ease;
 }
 
 .user-table th {
@@ -137,6 +145,7 @@
   letter-spacing: 0.5px;
   color: #8888aa;
   font-weight: 600;
+  transition: color 0.3s ease;
 }
 
 .user-table td {
@@ -144,10 +153,12 @@
   border-bottom: 1px solid #f0f1f5;
   color: #1a1a2e;
   font-size: 14px;
+  transition: color 0.3s ease, border-color 0.3s ease;
 }
 
 .user-table tbody tr:hover {
   background: #f8f9fc;
+  transition: background-color 0.2s ease;
 }
 
 .user-name-cell {
@@ -169,10 +180,11 @@
   font-weight: 600;
   font-size: 13px;
   flex-shrink: 0;
+  transition: background 0.3s ease;
 }
 
 /* ============================================
-   ROLE BADGES - MATCHING YOUR IMAGE
+   ROLE BADGES
    ============================================ */
 .role-badge {
   display: inline-block;
@@ -181,27 +193,34 @@
   font-size: 12px;
   font-weight: 500;
   text-transform: capitalize;
+  transition: all 0.3s ease;
 }
 
-/* Supervisor - Purple like in your image */
 .role-supervisor {
   background: #e8e0f0;
   color: #6c3b8c;
 }
 
-/* Developer - Teal/Green like in your image */
 .role-developer {
   background: #e0f0ec;
   color: #1a7a6a;
 }
-/* UserManagement.css - Add status badge styles */
 
+.role-admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* ============================================
+   STATUS BADGES
+   ============================================ */
 .status-badge {
   display: inline-block;
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .status-active {
@@ -218,6 +237,93 @@
   background: #f8d7da;
   color: #721c24;
 }
+
+/* ============================================
+   MULTIPLE ROLES GREEN INDICATOR
+   ============================================ */
+.multiple-roles-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 2px 8px;
+  background: #dcfce7;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #166534;
+  transition: all 0.3s ease;
+}
+
+.green-dot {
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+}
+
+.roles-text {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================
+   GLOBAL ROLES DISPLAY
+   ============================================ */
+.global-roles {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.global-roles-label {
+  font-size: 10px;
+  color: #8888aa;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.role-badge-small {
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: capitalize;
+  transition: all 0.3s ease;
+}
+
+.role-badge-small.role-supervisor {
+  background: #e8e0f0;
+  color: #6c3b8c;
+}
+
+.role-badge-small.role-developer {
+  background: #e0f0ec;
+  color: #1a7a6a;
+}
+
+.role-badge-small.role-admin {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 /* ============================================
    NO ACCESS
    ============================================ */
@@ -230,6 +336,7 @@
 .no-access-text {
   color: #c0bccf;
   font-size: 13px;
+  transition: color 0.3s ease;
 }
 
 .add-inline {
@@ -247,12 +354,18 @@
   background: white;
   font-size: 13px;
   color: #1a1a2e;
+  transition: all 0.3s ease;
 }
 
 .add-inline select:focus {
   outline: none;
   border-color: #4f72e8;
   box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+.add-inline select option {
+  background: white;
+  color: #1a1a2e;
 }
 
 /* ============================================
@@ -376,6 +489,7 @@
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: slideUp 0.3s ease;
+  transition: background-color 0.3s ease;
 }
 
 @keyframes slideUp {
@@ -389,6 +503,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: border-color 0.3s ease;
 }
 
 .modal-header h3 {
@@ -396,6 +511,7 @@
   font-weight: 600;
   color: #1a1a2e;
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .modal-header .close-btn {
@@ -432,6 +548,7 @@
   font-weight: 500;
   color: #1a1a2e;
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
 .modal-body .form-group .required {
@@ -440,7 +557,8 @@
 }
 
 .modal-body .form-group input,
-.modal-body .form-group select {
+.modal-body .form-group select,
+.modal-body .form-group textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d0d3e0;
@@ -453,14 +571,17 @@
 }
 
 .modal-body .form-group input:focus,
-.modal-body .form-group select:focus {
+.modal-body .form-group select:focus,
+.modal-body .form-group textarea:focus {
   outline: none;
   border-color: #4f72e8;
   box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
 }
 
-.modal-body .form-group input::placeholder {
+.modal-body .form-group input::placeholder,
+.modal-body .form-group textarea::placeholder {
   color: #b0b0c0;
+  transition: color 0.3s ease;
 }
 
 .modal-body .form-group select {
@@ -472,12 +593,24 @@
   cursor: pointer;
 }
 
+.modal-body .form-group select option {
+  background: white;
+  color: #1a1a2e;
+}
+
+.modal-body .form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
 .modal-footer {
   padding: 16px 24px;
   border-top: 1px solid #eef0f5;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  transition: border-color 0.3s ease;
+  background: transparent;
 }
 
 .modal-footer .cancel-btn {
@@ -569,29 +702,343 @@
 }
 
 /* ============================================
-   STATUS BADGES
+   DARK MODE - COMPLETE
    ============================================ */
-.status-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
+@media (prefers-color-scheme: dark) {
+  /* Page Header */
+  .page-header {
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
 
-.status-active {
-  background: #d4edda;
-  color: #155724;
-}
+  .page-header h2 {
+    color: #e8e8f0;
+  }
 
-.status-inactive {
-  background: #f8d7da;
-  color: #721c24;
-}
+  .project-description {
+    color: #8888aa;
+  }
 
-.status-on-leave {
-  background: #fff3cd;
-  color: #856404;
+  /* Content Area */
+  .content-area {
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .user-management-header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .user-management-header h3 {
+    color: #e8e8f0;
+  }
+
+  /* Search */
+  .search-input {
+    background: #2a2a3e;
+    border-color: #3a3a4e;
+    color: #e8e8f0;
+  }
+
+  .search-input:focus {
+    background: #1a1a2e;
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.15);
+  }
+
+  .search-input::placeholder {
+    color: #666688;
+  }
+
+  /* Table */
+  .user-table thead {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .user-table th {
+    color: #8888aa;
+  }
+
+  .user-table td {
+    color: #e8e8f0;
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+  }
+
+  .user-table tbody tr:hover {
+    background: #2a2a3e;
+  }
+
+  .user-avatar {
+    background: #3a5cd8;
+  }
+
+  /* Role Badges - Dark */
+  .role-supervisor {
+    background: #2a1a3e;
+    color: #b08cd8;
+  }
+
+  .role-developer {
+    background: #1a3a3e;
+    color: #5cb8a8;
+  }
+
+  .role-admin {
+    background: #3a2a1e;
+    color: #d4a84e;
+  }
+
+  .role-badge-small.role-supervisor {
+    background: #2a1a3e;
+    color: #b08cd8;
+  }
+
+  .role-badge-small.role-developer {
+    background: #1a3a3e;
+    color: #5cb8a8;
+  }
+
+  .role-badge-small.role-admin {
+    background: #3a2a1e;
+    color: #d4a84e;
+  }
+
+  /* Status Badges - Dark */
+  .status-active {
+    background: #1a3a2e;
+    color: #00b894;
+  }
+
+  .status-on-leave {
+    background: #3a3a1e;
+    color: #fdcb6e;
+  }
+
+  .status-inactive {
+    background: #3a1a1e;
+    color: #e17055;
+  }
+
+  /* Multiple Roles */
+  .multiple-roles-indicator {
+    background: #1a3a2e;
+    color: #5cb8a8;
+  }
+
+  .green-dot {
+    background: #22c55e;
+  }
+
+  .global-roles-label {
+    color: #8888aa;
+  }
+
+  /* No Access */
+  .no-access-text {
+    color: #8888aa;
+  }
+
+  /* Inline Add - FIXED */
+  .add-inline select {
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .add-inline select:focus {
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.2);
+  }
+
+  .add-inline select option {
+    background: #1a1a2e !important;
+    color: #e8e8f0 !important;
+  }
+
+  /* Buttons */
+  .cancel-add {
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .cancel-add:hover {
+    background: #2a2a3e;
+  }
+
+  .confirm-add {
+    background: #4f72e8;
+  }
+
+  .confirm-add:hover {
+    background: #3a5cd8;
+  }
+
+  .add-icon-btn {
+    background: #4f72e8;
+  }
+
+  .add-icon-btn:hover {
+    background: #3a5cd8;
+  }
+
+  /* Action Buttons */
+  .action-link {
+    color: #8888aa;
+  }
+
+  .action-link:hover {
+    background: #2a2a3e;
+  }
+
+  .action-link.edit-btn:hover {
+    color: #6c8ce8;
+    background: #1a2a4e;
+  }
+
+  .action-link.delete-btn:hover {
+    color: #e17055;
+    background: #3a1a1e;
+  }
+
+  /* Create User Button */
+  .create-user-btn {
+    background: #4f72e8;
+  }
+
+  .create-user-btn:hover {
+    background: #3a5cd8;
+  }
+
+  /* ============================================
+     MODALS - COMPLETE DARK THEME - FIXED
+     ============================================ */
+  .modal {
+    background: #1a1a2e;
+  }
+
+  .modal-header {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .modal-header h3 {
+    color: #e8e8f0;
+  }
+
+  .modal-header .close-btn {
+    color: #8888aa;
+  }
+
+  .modal-header .close-btn:hover {
+    color: #e8e8f0;
+  }
+
+  .modal-body {
+    background: #1a1a2e;
+  }
+
+  .modal-body .form-group label {
+    color: #e8e8f0;
+  }
+
+  .modal-body .form-group .required {
+    color: #e17055;
+  }
+
+  /* ALL FORM ELEMENTS - FIXED */
+  .modal-body .form-group input,
+  .modal-body .form-group select,
+  .modal-body .form-group textarea {
+    background: #1a1a2e !important;
+    color: #e8e8f0 !important;
+    border-color: #3a3a4e !important;
+  }
+
+  .modal-body .form-group input:focus,
+  .modal-body .form-group select:focus,
+  .modal-body .form-group textarea:focus {
+    border-color: #4f72e8 !important;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.2) !important;
+  }
+
+  .modal-body .form-group input::placeholder,
+  .modal-body .form-group textarea::placeholder {
+    color: #666688 !important;
+  }
+
+  /* SELECT DROPDOWN - FIXED */
+  .modal-body .form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666688' d='M6 8L1 3h10z'/%3E%3C/svg%3E") !important;
+    background-color: #1a1a2e !important;
+  }
+
+  .modal-body .form-group select option {
+    background: #1a1a2e !important;
+    color: #e8e8f0 !important;
+    padding: 8px !important;
+  }
+
+  .modal-body .form-group select option:hover,
+  .modal-body .form-group select option:focus,
+  .modal-body .form-group select option:active,
+  .modal-body .form-group select option:checked {
+    background: #2a2a3e !important;
+    color: #e8e8f0 !important;
+  }
+
+  /* MODAL FOOTER - FIXED */
+  .modal-footer {
+    border-top-color: rgba(255, 255, 255, 0.06);
+    background: #1a1a2e;
+  }
+
+  .modal-footer .cancel-btn {
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+    background: transparent;
+  }
+
+  .modal-footer .cancel-btn:hover {
+    background: #2a2a3e;
+    border-color: #4a4a5e;
+  }
+
+  .modal-footer .create-btn {
+    background: #4f72e8;
+  }
+
+  .modal-footer .create-btn:hover:not(:disabled) {
+    background: #3a5cd8;
+  }
+
+  .modal-footer .save-btn {
+    background: #00b894;
+  }
+
+  .modal-footer .save-btn:hover:not(:disabled) {
+    background: #00a884;
+  }
+
+  /* Delete Modal - Dark */
+  .delete-modal .delete-btn-modal {
+    background: #dc3545;
+  }
+
+  .delete-modal .delete-btn-modal:hover {
+    background: #c82333;
+  }
+
+  /* Scrollbar - Dark Modal */
+  .modal::-webkit-scrollbar-track {
+    background: #2a2a3e;
+  }
+
+  .modal::-webkit-scrollbar-thumb {
+    background: #4a4a5e;
+  }
+
+  .modal::-webkit-scrollbar-thumb:hover {
+    background: #5a5a6e;
+  }
 }
 
 /* ============================================
@@ -758,116 +1205,8 @@
 .modal {
   transition: all 0.3s ease;
 }
-/* Add these styles to your existing UserManagement.css */
 
-/* ============================================
-   MULTIPLE ROLES GREEN INDICATOR
-   ============================================ */
-.multiple-roles-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 2px;
-  padding: 2px 8px;
-  background: #dcfce7;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-  color: #166534;
-}
-
-.green-dot {
-  width: 6px;
-  height: 6px;
-  background: #22c55e;
-  border-radius: 50%;
-  display: inline-block;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(0.8);
-  }
-}
-
-.roles-text {
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-/* ============================================
-   GLOBAL ROLES DISPLAY
-   ============================================ */
-.global-roles {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-top: 2px;
-}
-
-.global-roles-label {
-  font-size: 10px;
-  color: #8888aa;
-  font-weight: 500;
-}
-
-.role-badge-small {
-  padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-/* ============================================
-   ROLE BADGE COLORS - ENHANCED
-   ============================================ */
-.role-admin {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.role-supervisor {
-  background: #e8e0f0;
-  color: #6c3b8c;
-}
-
-.role-developer {
-  background: #e0f0ec;
-  color: #1a7a6a;
-}
-
-/* ============================================
-   ROLES CONTAINER
-   ============================================ */
-.roles-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-/* ============================================
-   ROLE BADGE WITH PROJECT
-   ============================================ */
-.role-badge {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-/* Hover effects */
+/* Role badge hover effects */
 .role-badge:hover,
 .role-badge-small:hover {
   opacity: 0.85;

@@ -1,4 +1,5 @@
-// pages/AllTasks.tsx
+// pages/AllTasks.tsx - Fixed version with proper project display
+
 import React, { useState, useEffect } from 'react';
 import './AllTasks.css';
 import { ViewMode, Project, User, LogEntry } from '../types/models';
@@ -14,7 +15,8 @@ interface AllTasksProps {
 
 const AllTasks: React.FC<AllTasksProps> = ({ 
   project, 
-  taskLogs = [] 
+  taskLogs = [],
+  projectsData = []
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
@@ -32,13 +34,27 @@ const AllTasks: React.FC<AllTasksProps> = ({
     return ['All Users', ...Array.from(userSet)];
   };
 
-  // Get unique projects from actual data
+  // Get unique projects from actual data - check multiple possible fields
   const getUniqueProjects = () => {
     const projectSet = new Set<string>();
     taskLogs.forEach(log => {
-      if (log.project) projectSet.add(log.project);
+      // Try multiple possible project fields
+      const projectName = log.project || log.projectName || log.projectId || log.projectId;
+      if (projectName) {
+        projectSet.add(projectName);
+      }
     });
     return ['All Projects', ...Array.from(projectSet)];
+  };
+
+  // Get project name from log - helper function
+  const getProjectName = (log: LogEntry): string => {
+    // Try multiple possible project fields
+    return log.project || 
+           log.projectName || 
+           log.projectId || 
+           log.projectId || 
+           'No Project';
   };
 
   // Update filtered logs when filters change
@@ -46,7 +62,10 @@ const AllTasks: React.FC<AllTasksProps> = ({
     let filtered = taskLogs;
 
     if (selectedProject && selectedProject !== 'All Projects') {
-      filtered = filtered.filter(log => log.project === selectedProject);
+      filtered = filtered.filter(log => {
+        const projectName = getProjectName(log);
+        return projectName === selectedProject;
+      });
     }
 
     if (selectedUser && selectedUser !== 'All Users') {
@@ -57,7 +76,7 @@ const AllTasks: React.FC<AllTasksProps> = ({
       const term = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(log => 
         log.tasks?.some(task => task.description?.toLowerCase().includes(term)) ||
-        log.project?.toLowerCase().includes(term) ||
+        getProjectName(log).toLowerCase().includes(term) ||
         log.submittedBy?.toLowerCase().includes(term)
       );
     }
@@ -174,61 +193,77 @@ const AllTasks: React.FC<AllTasksProps> = ({
               <p>No tasks logged yet. Tasks will appear here once developers submit their logs.</p>
             </div>
           ) : (
-            filteredLogs.map((log) => (
-              <div key={log.id} className="log-entry">
-                <div className="log-header">
-                  <div className="log-user-info">
-                    <div className="log-user-avatar">
-                      {log.submittedBy?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                    <div className="log-user-details">
-                      <span className="log-user-name">{log.submittedBy || 'Unknown'}</span>
-                      <span className="log-project-name">{log.project || 'No Project'}</span>
-                    </div>
-                  </div>
-                  <div className="log-meta">
-                    <span className={`log-status ${getStatusBadgeClass(log.status)}`}>
-                      {getStatusLabel(log.status)}
-                    </span>
-                    <span className="log-hours">{log.hoursWorked || 0}h</span>
-                    <span className="log-date">{formatDate(log.date)}</span>
-                  </div>
-                </div>
-
-                <div className="log-body">
-                  {log.tasks && log.tasks.length > 0 ? (
-                    <div className="log-tasks">
-                      {log.tasks.map((task) => (
-                        <span key={task.id} className="log-task-tag">
-                          {task.description}
+            filteredLogs.map((log) => {
+              const projectName = getProjectName(log);
+              // Try to find project details from projectsData
+              const projectDetails = projectsData.find(p => 
+                p.name === projectName || 
+                p.id === projectName
+              );
+              
+              return (
+                <div key={log.id} className="log-entry">
+                  <div className="log-header">
+                    <div className="log-user-info">
+                      <div className="log-user-avatar">
+                        {log.submittedBy?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div className="log-user-details">
+                        <span className="log-user-name">{log.submittedBy || 'Unknown'}</span>
+                        <span className="log-project-name">
+                          {projectDetails?.name || projectName || 'No Project'}
+                          {projectDetails && (
+                            <span className="project-badge">
+                              {projectDetails.totalHours ? `${projectDetails.totalHours}h` : ''}
+                            </span>
+                          )}
                         </span>
-                      ))}
+                      </div>
                     </div>
-                  ) : (
-                    <span className="no-tasks-text">No tasks completed</span>
-                  )}
-                  
-                  {log.partialReason && (
-                    <div className="log-reason">
-                      <span className="reason-label">Partial Reason:</span>
-                      <span className="reason-text">{log.partialReason}</span>
+                    <div className="log-meta">
+                      <span className={`log-status ${getStatusBadgeClass(log.status)}`}>
+                        {getStatusLabel(log.status)}
+                      </span>
+                      <span className="log-hours">{log.hoursWorked || 0}h</span>
+                      <span className="log-date">{formatDate(log.date)}</span>
                     </div>
-                  )}
-                  {log.unavailableReason && (
-                    <div className="log-reason">
-                      <span className="reason-label">Unavailable Reason:</span>
-                      <span className="reason-text">{log.unavailableReason}</span>
-                    </div>
-                  )}
-                </div>
+                  </div>
 
-                <div className="log-footer">
-                  <span className="log-submitted">
-                    Submitted {log.submittedAt ? formatTime(log.submittedAt) : 'Unknown'}
-                  </span>
+                  <div className="log-body">
+                    {log.tasks && log.tasks.length > 0 ? (
+                      <div className="log-tasks">
+                        {log.tasks.map((task) => (
+                          <span key={task.id} className="log-task-tag">
+                            {task.description}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="no-tasks-text">Add tasks</span>
+                    )}
+                    
+                    {log.partialReason && (
+                      <div className="log-reason">
+                        <span className="reason-label">Partial Reason:</span>
+                        <span className="reason-text">{log.partialReason}</span>
+                      </div>
+                    )}
+                    {log.unavailableReason && (
+                      <div className="log-reason">
+                        <span className="reason-label">Unavailable Reason:</span>
+                        <span className="reason-text">{log.unavailableReason}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="log-footer">
+                    <span className="log-submitted">
+                      Submitted {log.submittedAt ? formatTime(log.submittedAt) : 'Unknown'}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

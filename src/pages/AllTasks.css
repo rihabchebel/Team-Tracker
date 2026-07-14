@@ -1,4 +1,5 @@
-/* components/AllTasks.css */
+/* components/AllTasks.css - Updated with project badge support */
+
 .all-tasks {
   animation: fadeIn 0.3s ease;
 }
@@ -14,12 +15,16 @@
   }
 }
 
+/* ============================================
+   PAGE HEADER
+   ============================================ */
 .page-header {
   background: white;
   padding: 24px 32px;
   border-radius: 8px;
   margin-bottom: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .page-header-content {
@@ -33,21 +38,29 @@
   font-weight: 700;
   color: #1a1a2e;
   margin: 0 0 4px 0;
+  transition: color 0.3s ease;
 }
 
 .project-description {
   color: #8888aa;
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
+/* ============================================
+   CONTENT
+   ============================================ */
 .all-tasks-content {
   background: white;
   border-radius: 8px;
   padding: 24px 32px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Stats Cards */
+/* ============================================
+   STATS CARDS
+   ============================================ */
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -58,31 +71,45 @@
 .stat-card {
   background: #f8f9fc;
   border-radius: 8px;
-  padding: 16px 20px;
+  padding: 20px;
   text-align: center;
   border: 1px solid #eef0f5;
+  transition: all 0.2s;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .stat-number {
   font-size: 28px;
   font-weight: 700;
-  color: #4f72e8;
+  color: #1a1a2e;
+  margin-bottom: 4px;
+  transition: color 0.3s ease;
 }
 
 .stat-label {
-  font-size: 13px;
+  font-size: 14px;
   color: #8888aa;
-  margin-top: 4px;
+  font-weight: 500;
+  transition: color 0.3s ease;
 }
 
-/* Filters */
+/* ============================================
+   FILTERS
+   ============================================ */
 .filters-section {
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #eef0f5;
+  padding: 16px 20px;
+  background: #f8f9fc;
+  border-radius: 8px;
   flex-wrap: wrap;
+  align-items: flex-end;
+  transition: background-color 0.3s ease;
 }
 
 .filter-group {
@@ -95,34 +122,55 @@
 
 .filter-group label {
   font-size: 12px;
+  font-weight: 600;
+  color: #8888aa;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #8888aa;
-  font-weight: 600;
+  transition: color 0.3s ease;
 }
 
-.filter-select,
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  color: #1a1a2e;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
 .search-input {
   padding: 8px 12px;
   border: 1px solid #d0d3e0;
   border-radius: 6px;
   font-size: 14px;
+  color: #1a1a2e;
+  transition: all 0.3s;
+  width: 100%;
   background: white;
-  transition: border-color 0.3s;
 }
 
-.filter-select:focus,
 .search-input:focus {
   outline: none;
   border-color: #4f72e8;
   box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
 }
 
-.search-group {
-  flex: 2;
+.search-input::placeholder {
+  color: #b0b0c0;
 }
 
-/* Log Entries */
+/* ============================================
+   LOG ENTRIES
+   ============================================ */
 .logs-container {
   display: flex;
   flex-direction: column;
@@ -132,7 +180,7 @@
 .log-entry {
   background: #f8f9fc;
   border-radius: 8px;
-  padding: 16px 20px;
+  padding: 20px;
   border: 1px solid #eef0f5;
   transition: all 0.2s;
 }
@@ -145,10 +193,8 @@
 .log-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .log-user-info {
@@ -158,8 +204,8 @@
 }
 
 .log-user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: linear-gradient(135deg, #4f72e8, #6c5ce7);
   color: white;
@@ -169,22 +215,39 @@
   font-weight: 600;
   font-size: 14px;
   flex-shrink: 0;
+  transition: background 0.3s ease;
 }
 
 .log-user-details {
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .log-user-name {
   font-weight: 600;
   color: #1a1a2e;
-  font-size: 14px;
+  font-size: 15px;
+  transition: color 0.3s ease;
 }
 
 .log-project-name {
-  font-size: 12px;
+  font-size: 13px;
   color: #8888aa;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.3s ease;
+}
+
+.project-badge {
+  display: inline-block;
+  padding: 1px 8px;
+  background: #e8edff;
+  color: #4f72e8;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .log-meta {
@@ -196,26 +259,25 @@
 
 .log-status {
   display: inline-block;
-  padding: 2px 12px;
+  padding: 4px 12px;
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
-  text-transform: capitalize;
 }
 
 .log-status.status-full {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: #d4edda;
+  color: #155724;
 }
 
 .log-status.status-partial {
-  background: #fff8e1;
-  color: #f57f17;
+  background: #fff3cd;
+  color: #856404;
 }
 
 .log-status.status-unavailable {
-  background: #fbe9e7;
-  color: #c62828;
+  background: #f8d7da;
+  color: #721c24;
 }
 
 .log-hours {
@@ -229,10 +291,14 @@
   color: #8888aa;
 }
 
+/* ============================================
+   LOG BODY
+   ============================================ */
 .log-body {
-  padding: 8px 0 12px 0;
-  border-top: 1px solid #eef0f5;
-  border-bottom: 1px solid #eef0f5;
+  margin-left: 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .log-tasks {
@@ -245,42 +311,50 @@
   display: inline-block;
   padding: 4px 14px;
   background: white;
-  color: #1a1a2e;
+  border: 1px solid #d0d3e0;
   border-radius: 4px;
   font-size: 13px;
-  font-weight: 500;
-  border: 1px solid #eef0f5;
+  color: #1a1a2e;
+  transition: all 0.2s;
+}
+
+.log-task-tag:hover {
+  background: #f0f1f5;
+  border-color: #b0b3c0;
 }
 
 .no-tasks-text {
-  color: #8888aa;
+  color: #b0b0c0;
   font-size: 14px;
   font-style: italic;
 }
 
 .log-reason {
-  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
   padding: 8px 12px;
   background: white;
   border-radius: 4px;
-  font-size: 13px;
-  border: 1px solid #eef0f5;
+  border-left: 3px solid #fdcb6e;
 }
 
 .reason-label {
   font-weight: 600;
   color: #8888aa;
-  margin-right: 6px;
 }
 
 .reason-text {
   color: #1a1a2e;
 }
 
+/* ============================================
+   LOG FOOTER
+   ============================================ */
 .log-footer {
-  padding-top: 8px;
-  display: flex;
-  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eef0f5;
 }
 
 .log-submitted {
@@ -288,7 +362,9 @@
   color: #b0b0c0;
 }
 
-/* Empty State */
+/* ============================================
+   EMPTY STATE
+   ============================================ */
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -297,10 +373,166 @@
 
 .empty-state p {
   font-size: 16px;
-  margin: 0;
+  max-width: 400px;
+  margin: 0 auto;
 }
 
-/* Responsive */
+/* ============================================
+   DARK MODE
+   ============================================ */
+@media (prefers-color-scheme: dark) {
+  .page-header {
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .page-header h2 {
+    color: #e8e8f0;
+  }
+
+  .project-description {
+    color: #8888aa;
+  }
+
+  .all-tasks-content {
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  .stat-card {
+    background: #2a2a3e;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .stat-number {
+    color: #4f72e8;
+  }
+
+  .stat-label {
+    color: #8888aa;
+  }
+
+  .filters-section {
+    background: #2a2a3e;
+  }
+
+  .filter-group label {
+    color: #8888aa;
+  }
+
+  .filter-select {
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .filter-select option {
+    background: #1a1a2e;
+    color: #e8e8f0;
+  }
+
+  .search-input {
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .search-input::placeholder {
+    color: #666688;
+  }
+
+  .log-entry {
+    background: #2a2a3e;
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .log-entry:hover {
+    border-color: #4a4a5e;
+  }
+
+  .log-user-avatar {
+    background: linear-gradient(135deg, #3a5cd8, #5a4ce7);
+  }
+
+  .log-user-name {
+    color: #e8e8f0;
+  }
+
+  .log-project-name {
+    color: #8888aa;
+  }
+
+  .project-badge {
+    background: #1a2a4e;
+    color: #6c8ce8;
+  }
+
+  .log-status.status-full {
+    background: #1a3a2e;
+    color: #00b894;
+  }
+
+  .log-status.status-partial {
+    background: #3a3a1e;
+    color: #fdcb6e;
+  }
+
+  .log-status.status-unavailable {
+    background: #3a1a1e;
+    color: #e17055;
+  }
+
+  .log-hours {
+    color: #6c8ce8;
+  }
+
+  .log-date {
+    color: #8888aa;
+  }
+
+  .log-task-tag {
+    background: #1a1a2e;
+    border-color: #3a3a4e;
+    color: #e8e8f0;
+  }
+
+  .log-task-tag:hover {
+    background: #2a2a3e;
+    border-color: #4a4a5e;
+  }
+
+  .no-tasks-text {
+    color: #666688;
+  }
+
+  .log-reason {
+    background: #1a1a2e;
+  }
+
+  .reason-label {
+    color: #8888aa;
+  }
+
+  .reason-text {
+    color: #e8e8f0;
+  }
+
+  .log-footer {
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .log-submitted {
+    color: #666688;
+  }
+
+  .empty-state {
+    color: #8888aa;
+  }
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 768px) {
   .page-header {
     padding: 16px 20px;
@@ -320,6 +552,10 @@
     grid-template-columns: 1fr 1fr;
   }
 
+  .stat-card:last-child {
+    grid-column: span 2;
+  }
+
   .filters-section {
     flex-direction: column;
   }
@@ -330,12 +566,19 @@
 
   .log-header {
     flex-direction: column;
-    align-items: flex-start;
+    gap: 8px;
   }
 
   .log-meta {
+    flex-wrap: wrap;
+  }
+
+  .log-body {
+    margin-left: 0;
+  }
+
+  .log-user-info {
     width: 100%;
-    justify-content: flex-start;
   }
 }
 
@@ -356,12 +599,47 @@
     grid-template-columns: 1fr;
   }
 
+  .stat-card:last-child {
+    grid-column: span 1;
+  }
+
   .stat-number {
     font-size: 24px;
   }
 
   .log-entry {
-    padding: 12px 16px;
+    padding: 16px;
   }
-  
+
+  .log-user-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .log-user-name {
+    font-size: 14px;
+  }
+
+  .log-meta {
+    gap: 8px;
+  }
+
+  .log-status {
+    font-size: 11px;
+    padding: 2px 10px;
+  }
+
+  .log-hours {
+    font-size: 13px;
+  }
+
+  .log-date {
+    font-size: 12px;
+  }
+
+  .log-task-tag {
+    font-size: 12px;
+    padding: 3px 10px;
+  }
 }

@@ -1,19 +1,21 @@
-/* components/DeveloperDashboard.css  */
+/* components/DeveloperDashboard.css - With Dark Mode Support */
 
 .developer-dashboard {
   padding: 24px;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease;
 }
 
-/* Header - Original colors preserved */
+/* Header */
 .page-header {
   background: white;
   padding: 24px 32px;
   border-radius: 8px;
   margin-bottom: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .page-header-content {
@@ -27,6 +29,7 @@
   font-weight: 700;
   color: #1a1a2e;
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .user-info {
@@ -38,11 +41,13 @@
 .user-name {
   font-weight: 500;
   color: #1a1a2e;
+  transition: color 0.3s ease;
 }
 
 .user-role {
   color: #8888aa;
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
 .dashboard-content {
@@ -53,6 +58,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .availability-section {
@@ -67,6 +73,7 @@
   color: #1a1a2e;
   margin: 0 0 24px 0;
   flex-shrink: 0;
+  transition: color 0.3s ease;
 }
 
 /* Form row with proper grid */
@@ -98,6 +105,7 @@
   margin-bottom: 8px;
   font-size: 14px;
   flex-shrink: 0;
+  transition: color 0.3s ease;
 }
 
 .required {
@@ -111,7 +119,9 @@
   border: 1px solid #d0d3e0;
   border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
+  background: white;
+  color: #1a1a2e;
 }
 
 .date-input:focus {
@@ -120,7 +130,7 @@
   box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
 }
 
-/* Status Buttons - Original colors preserved */
+/* Status Buttons */
 .status-buttons {
   display: flex;
   gap: 8px;
@@ -184,9 +194,11 @@
   border: 1px solid #d0d3e0;
   border-radius: 6px;
   font-size: 16px;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
   width: 100%;
   min-width: 80px;
+  background: white;
+  color: #1a1a2e;
 }
 
 .hours-input:focus {
@@ -243,13 +255,13 @@
   border: none;
 }
 
-/* Slider labels */
 .hours-slider-labels {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
   color: #8888aa;
   padding: 0 4px;
+  transition: color 0.3s ease;
 }
 
 /* Reason input */
@@ -260,8 +272,9 @@
   border-radius: 6px;
   font-size: 14px;
   font-family: inherit;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
   background: white;
+  color: #1a1a2e;
 }
 
 .reason-input:focus {
@@ -272,6 +285,7 @@
 
 .reason-input::placeholder {
   color: #b0b0c0;
+  transition: color 0.3s ease;
 }
 
 /* Tasks Section */
@@ -282,6 +296,7 @@
   border-top: 1px solid #eef0f5;
   display: flex;
   flex-direction: column;
+  transition: border-color 0.3s ease;
 }
 
 .tasks-section h4 {
@@ -290,6 +305,7 @@
   color: #1a1a2e;
   margin: 0 0 16px 0;
   flex-shrink: 0;
+  transition: color 0.3s ease;
 }
 
 .task-list {
@@ -308,6 +324,7 @@
   background: #f8f9fc;
   border-radius: 6px;
   border: 1px dashed #d0d3e0;
+  transition: all 0.3s ease;
 }
 
 .task-item {
@@ -317,7 +334,7 @@
   padding: 10px 12px;
   background: #f8f9fc;
   border-radius: 6px;
-  transition: background 0.3s;
+  transition: all 0.3s;
 }
 
 .task-item:hover {
@@ -328,6 +345,7 @@
   flex: 1;
   font-size: 14px;
   color: #1a1a2e;
+  transition: color 0.3s ease;
 }
 
 .delete-task-btn {
@@ -360,7 +378,9 @@
   border: 1px solid #d0d3e0;
   border-radius: 6px;
   font-size: 14px;
-  transition: border-color 0.3s;
+  transition: all 0.3s;
+  background: white;
+  color: #1a1a2e;
 }
 
 .task-input:focus {
@@ -390,7 +410,7 @@
   color: #4f72e8;
 }
 
-/* Save Log Button - Original gradient preserved */
+/* Save Log Button */
 .save-log-btn {
   width: 100%;
   padding: 14px;
@@ -416,79 +436,194 @@
   cursor: not-allowed;
 }
 
-/* Responsive */
-@media (max-width: 1024px) {
-  .form-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-}
-
-@media (max-width: 768px) {
+/* ============================================
+   DARK MODE
+   ============================================ */
+@media (prefers-color-scheme: dark) {
   .developer-dashboard {
-    padding: 16px;
+    background: #0f0f1a;
   }
 
   .page-header {
-    padding: 16px 20px;
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
-  .page-header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
+  .page-header h2 {
+    color: #e8e8f0;
+  }
+
+  .user-name {
+    color: #e8e8f0;
+  }
+
+  .user-role {
+    color: #8888aa;
   }
 
   .dashboard-content {
-    padding: 20px;
+    background: #1a1a2e;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .availability-section h3 {
+    color: #e8e8f0;
   }
 
-  .status-buttons {
-    flex-direction: row;
+  .form-group label {
+    color: #e8e8f0;
   }
 
-  .status-btn {
-    flex: 1;
-    text-align: center;
+  .date-input {
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
   }
 
-  .hours-input-container {
-    flex-direction: row;
+  .date-input:focus {
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.15);
   }
 
-  .add-task-row {
-    flex-direction: column;
-  }
-
-  .add-task-btn {
-    width: 100%;
-    justify-content: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .status-buttons {
-    flex-direction: column;
+  .date-input::placeholder {
+    color: #666688;
   }
 
   .status-btn {
-    width: 100%;
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .status-btn:hover {
+    border-color: #4f72e8;
+  }
+
+  .status-btn.active.full {
+    border-color: #00b894;
+    background: #1a3a2e;
+    color: #00b894;
+  }
+
+  .status-btn.active.partial {
+    border-color: #fdcb6e;
+    background: #3a3a1e;
+    color: #fdcb6e;
+  }
+
+  .status-btn.active.unavailable {
+    border-color: #e17055;
+    background: #3a1a1e;
+    color: #e17055;
   }
 
   .hours-input {
-    font-size: 14px;
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
   }
 
-  .hours-value {
-    font-size: 16px;
-    min-width: 40px;
+  .hours-input:focus {
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.15);
   }
-  /* ============================================
+
+  .hours-slider {
+    background: #3a3a4e;
+  }
+
+  .hours-slider::-webkit-slider-thumb {
+    background: #4f72e8;
+  }
+
+  .hours-slider::-moz-range-thumb {
+    background: #4f72e8;
+  }
+
+  .hours-slider-labels {
+    color: #8888aa;
+  }
+
+  .reason-input {
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .reason-input:focus {
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.15);
+  }
+
+  .reason-input::placeholder {
+    color: #666688;
+  }
+
+  .tasks-section {
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+
+  .tasks-section h4 {
+    color: #e8e8f0;
+  }
+
+  .empty-tasks-message {
+    color: #8888aa;
+    background: #2a2a3e;
+    border-color: #3a3a4e;
+  }
+
+  .task-item {
+    background: #2a2a3e;
+  }
+
+  .task-item:hover {
+    background: #3a3a4e;
+  }
+
+  .task-description {
+    color: #e8e8f0;
+  }
+
+  .delete-task-btn {
+    color: #8888aa;
+  }
+
+  .delete-task-btn:hover {
+    color: #e17055;
+  }
+
+  .task-input {
+    background: #1a1a2e;
+    color: #e8e8f0;
+    border-color: #3a3a4e;
+  }
+
+  .task-input:focus {
+    border-color: #4f72e8;
+    box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.15);
+  }
+
+  .add-task-btn {
+    color: #8888aa;
+    border-color: #3a3a4e;
+  }
+
+  .add-task-btn:hover {
+    border-color: #4f72e8;
+    color: #4f72e8;
+  }
+
+  .save-log-btn {
+    background: linear-gradient(135deg, #3a5cd8, #5a4ce7);
+  }
+
+  .save-log-btn:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(79, 114, 232, 0.4);
+  }
+}
+
+/* ============================================
    RESPONSIVE STYLES
    ============================================ */
 
@@ -815,12 +950,21 @@
 @media print {
   .developer-dashboard {
     padding: 0;
-    background: white;
+    background: white !important;
   }
 
   .page-header {
     box-shadow: none;
     border: 1px solid #e0e0e0;
+    background: white !important;
+  }
+
+  .page-header h2 {
+    color: #1a1a2e !important;
+  }
+
+  .dashboard-content {
+    background: white !important;
   }
 
   .save-log-btn {
@@ -836,5 +980,8 @@
     border-color: #4f72e8;
     background: #e8edfe;
   }
-}
+
+  .task-item {
+    background: #f8f9fc !important;
+  }
 }

@@ -1,4 +1,5 @@
-/* App.css */
+/* App.css - Full Dark Mode Support for All Containers */
+
 * {
   margin: 0;
   padding: 0;
@@ -9,6 +10,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   background: #f0f2f5;
   color: #1a1a2e;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-container {
@@ -17,6 +19,7 @@ body {
   display: flex;
   flex-direction: column;
   background: #f0f2f5;
+  transition: background-color 0.3s ease;
 }
 
 .main-layout {
@@ -31,20 +34,12 @@ body {
   padding: 24px 32px;
   background: #f0f2f5;
   overflow-y: auto;
+  transition: background-color 0.3s ease;
 }
 
-.lovable-credit {
-  text-align: center;
-  margin-top: 40px;
-  padding: 12px;
-  color: #8a8aa8;
-  font-size: 13px;
-  border-top: 1px solid #e8e8f0;
-  background: transparent;
-  border-radius: 0;
-}
-
-/* Scrollbar Styling */
+/* ============================================
+   SCROLLBAR STYLING
+   ============================================ */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -53,18 +48,21 @@ body {
 ::-webkit-scrollbar-track {
   background: #e8e8f0;
   border-radius: 4px;
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb {
   background: #c0c3d0;
   border-radius: 4px;
+  transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a0a3b0;
 }
+
 /* ============================================
-   RESPONSIVE STYLES - APP
+   RESPONSIVE STYLES
    ============================================ */
 
 /* Tablets and smaller laptops */
@@ -98,13 +96,6 @@ body {
     flex: 1;
   }
 
-  .lovable-credit {
-    margin-top: 30px;
-    padding: 10px;
-    font-size: 12px;
-  }
-
-  /* Scrollbar adjustments for mobile */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -127,14 +118,6 @@ body {
     padding: 12px 16px;
   }
 
-  .lovable-credit {
-    margin-top: 20px;
-    padding: 8px;
-    font-size: 11px;
-    border-top: 1px solid #e8e8f0;
-  }
-
-  /* Smaller scrollbar for mobile */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;
@@ -157,12 +140,6 @@ body {
     padding: 10px 12px;
   }
 
-  .lovable-credit {
-    margin-top: 16px;
-    padding: 6px;
-    font-size: 10px;
-  }
-
   ::-webkit-scrollbar {
     width: 3px;
     height: 3px;
@@ -179,24 +156,12 @@ body {
   .main-content {
     padding: 12px 20px;
   }
-
-  .lovable-credit {
-    margin-top: 16px;
-    padding: 6px;
-    font-size: 11px;
-  }
 }
 
 /* Large screens (desktops) */
 @media (min-width: 1400px) {
   .main-content {
     padding: 32px 48px;
-  }
-
-  .lovable-credit {
-    margin-top: 50px;
-    font-size: 14px;
-    padding: 16px;
   }
 
   .main-layout {
@@ -214,50 +179,190 @@ body {
   }
 }
 
-/* Dark mode support */
+/* ============================================
+   DARK MODE - FULL SUPPORT
+   ============================================ */
 @media (prefers-color-scheme: dark) {
+  /* Base */
   body {
-    background: #1a1a2e;
-    color: #e0e0e8;
+    background: #0f0f1a;
+    color: #e8e8f0;
   }
 
   .app-container {
-    background: #1a1a2e;
+    background: #0f0f1a;
   }
 
   .main-content {
+    background: #0f0f1a;
+  }
+
+  /* Scrollbar - Dark */
+  ::-webkit-scrollbar-track {
     background: #1a1a2e;
   }
 
-  .lovable-credit {
-    color: #666688;
-    border-top-color: rgba(255, 255, 255, 0.06);
-  }
-
-  ::-webkit-scrollbar-track {
-    background: #2a2a3e;
-  }
-
   ::-webkit-scrollbar-thumb {
-    background: #4a4a5e;
+    background: #3a3a5e;
+    border-radius: 4px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #5a5a6e;
+    background: #4a4a6e;
+  }
+
+  /* Selection */
+  ::selection {
+    background: #4f72e8;
+    color: #ffffff;
+  }
+
+  ::-moz-selection {
+    background: #4f72e8;
+    color: #ffffff;
+  }
+
+  /* Focus */
+  :focus-visible {
+    outline: 2px solid #6c8ce8;
+    outline-offset: 2px;
   }
 }
 
-/* Reduced motion preferences */
+/* ============================================
+   LIGHT MODE (System Preference)
+   ============================================ */
+@media (prefers-color-scheme: light) {
+  body {
+    background: #f0f2f5;
+    color: #1a1a2e;
+  }
+
+  .app-container {
+    background: #f0f2f5;
+  }
+
+  .main-content {
+    background: #f0f2f5;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #e8e8f0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #c0c3d0;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a0a3b0;
+  }
+
+  :focus-visible {
+    outline: 2px solid #4f72e8;
+  }
+
+  ::selection {
+    background: #4f72e8;
+    color: white;
+  }
+
+  ::-moz-selection {
+    background: #4f72e8;
+    color: white;
+  }
+}
+
+/* ============================================
+   MANUAL THEME TOGGLE SUPPORT
+   ============================================ */
+/* Dark theme class */
+.theme-dark body,
+body.dark-mode {
+  background: #0f0f1a;
+  color: #e8e8f0;
+}
+
+.theme-dark .app-container,
+body.dark-mode .app-container {
+  background: #0f0f1a;
+}
+
+.theme-dark .main-content,
+body.dark-mode .main-content {
+  background: #0f0f1a;
+}
+
+.theme-dark ::-webkit-scrollbar-track,
+body.dark-mode ::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+
+.theme-dark ::-webkit-scrollbar-thumb,
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: #3a3a5e;
+}
+
+.theme-dark ::-webkit-scrollbar-thumb:hover,
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: #4a4a6e;
+}
+
+/* Light theme class */
+.theme-light body,
+body.light-mode {
+  background: #f0f2f5;
+  color: #1a1a2e;
+}
+
+.theme-light .app-container,
+body.light-mode .app-container {
+  background: #f0f2f5;
+}
+
+.theme-light .main-content,
+body.light-mode .main-content {
+  background: #f0f2f5;
+}
+
+.theme-light ::-webkit-scrollbar-track,
+body.light-mode ::-webkit-scrollbar-track {
+  background: #e8e8f0;
+}
+
+.theme-light ::-webkit-scrollbar-thumb,
+body.light-mode ::-webkit-scrollbar-thumb {
+  background: #c0c3d0;
+}
+
+.theme-light ::-webkit-scrollbar-thumb:hover,
+body.light-mode ::-webkit-scrollbar-thumb:hover {
+  background: #a0a3b0;
+}
+
+/* ============================================
+   REDUCED MOTION PREFERENCES
+   ============================================ */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  body,
+  .app-container,
+  .main-content {
+    transition: none !important;
+  }
 }
 
-/* High contrast mode */
+/* ============================================
+   HIGH CONTRAST MODE
+   ============================================ */
 @media (prefers-contrast: high) {
   body {
     background: #ffffff;
@@ -272,11 +377,6 @@ body {
     background: #ffffff;
   }
 
-  .lovable-credit {
-    color: #000000;
-    border-top-color: #000000;
-  }
-
   ::-webkit-scrollbar-track {
     background: #e0e0e0;
   }
@@ -284,12 +384,33 @@ body {
   ::-webkit-scrollbar-thumb {
     background: #666666;
   }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #333333;
+  }
+
+  :focus-visible {
+    outline: 3px solid #000000;
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: #000000;
+    color: #ffffff;
+  }
+
+  ::-moz-selection {
+    background: #000000;
+    color: #ffffff;
+  }
 }
 
-/* Print styles */
+/* ============================================
+   PRINT STYLES
+   ============================================ */
 @media print {
   .app-container {
-    background: white;
+    background: white !important;
   }
 
   .main-layout {
@@ -299,35 +420,56 @@ body {
 
   .main-content {
     padding: 20px;
-    background: white;
+    background: white !important;
     overflow-y: visible;
   }
-
 
   ::-webkit-scrollbar {
     display: none;
   }
+
+  * {
+    background: transparent !important;
+    color: #000 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
 }
 
-/* Touch device optimizations */
+/* ============================================
+   TOUCH DEVICE OPTIMIZATIONS
+   ============================================ */
 @media (hover: none) and (pointer: coarse) {
   .main-content {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
   }
+
+  button,
+  a,
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
-/* Support for safe area insets (notched phones) */
+/* ============================================
+   SAFE AREA INSETS (Notched Phones)
+   ============================================ */
 @supports (padding: max(0px)) {
   .main-content {
     padding-left: max(24px, env(safe-area-inset-left));
     padding-right: max(24px, env(safe-area-inset-right));
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
   }
 
   @media (max-width: 768px) {
     .main-content {
       padding-left: max(16px, env(safe-area-inset-left));
       padding-right: max(16px, env(safe-area-inset-right));
+      padding-top: max(16px, env(safe-area-inset-top));
+      padding-bottom: max(16px, env(safe-area-inset-bottom));
     }
   }
 
@@ -335,24 +477,33 @@ body {
     .main-content {
       padding-left: max(12px, env(safe-area-inset-left));
       padding-right: max(12px, env(safe-area-inset-right));
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
     }
   }
 }
 
-/* Container query support (modern browsers) */
+/* ============================================
+   CONTAINER QUERY SUPPORT
+   ============================================ */
 @container (max-width: 600px) {
   .main-content {
     padding: 12px;
   }
 }
 
-/* Focus visible for accessibility */
+/* ============================================
+   FOCUS VISIBLE - Accessibility
+   ============================================ */
 :focus-visible {
   outline: 2px solid #4f72e8;
   outline-offset: 2px;
+  border-radius: 2px;
 }
 
-/* Selection color */
+/* ============================================
+   SELECTION COLOR
+   ============================================ */
 ::selection {
   background: #4f72e8;
   color: white;
@@ -361,4 +512,48 @@ body {
 ::-moz-selection {
   background: #4f72e8;
   color: white;
+}
+
+/* ============================================
+   FIREFOX SCROLLBAR SUPPORT
+   ============================================ */
+@-moz-document url-prefix() {
+  * {
+    scrollbar-width: thin;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    * {
+      scrollbar-color: #3a3a5e #1a1a2e;
+    }
+  }
+
+  @media (prefers-color-scheme: light) {
+    * {
+      scrollbar-color: #c0c3d0 #e8e8f0;
+    }
+  }
+
+  .theme-dark *,
+  body.dark-mode * {
+    scrollbar-color: #3a3a5e #1a1a2e;
+  }
+
+  .theme-light *,
+  body.light-mode * {
+    scrollbar-color: #c0c3d0 #e8e8f0;
+  }
+}
+
+/* ============================================
+   SMOOTH TRANSITIONS FOR THEME SWITCHING
+   ============================================ */
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  .app-container,
+  .main-content,
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-thumb {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
 }

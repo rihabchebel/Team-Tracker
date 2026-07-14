@@ -1,4 +1,4 @@
-// pages/PerformanceDashboard.tsx - Matches UserManagement styling
+// pages/PerformanceDashboard.tsx - Complete with Heatmap Start Date Support
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
@@ -12,6 +12,7 @@ import {
   UserPlus,
   Clock,
   Calendar,
+  User as UserIcon
 } from "lucide-react";
 import "./PerformanceDashboard.css";
 import {
@@ -22,7 +23,7 @@ import {
   UserActivity,
   ProjectTimelineEvent,
 } from "../types/models";
-import { formatDate, formatDateLong } from "../utils/dateUtils";
+import { formatDate, formatDateLong, formatShortDate } from "../utils/dateUtils";
 // ✅ Import role utilities
 import {
   getPrimaryRole,
@@ -190,34 +191,34 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return base + variation;
   };
   
-// Add this useEffect to check the user's actual roles
-useEffect(() => {
-  const checkUserRoles = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile, error } = await supabase
-          .from("user_profiles")
-          .select("roles")
-          .eq("id", user.id)
-          .single();
-          
-        if (!error && profile) {
-          const roles = profile.roles || [];
-          // Check if user has supervisor role
-          const hasSupervisor = roles.some((r: any) => 
-            r === 'supervisor' || r === 'Supervisor'
-          );
-          setUserHasSupervisorRole(hasSupervisor);
+  // Add this useEffect to check the user's actual roles
+  useEffect(() => {
+    const checkUserRoles = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile, error } = await supabase
+            .from("user_profiles")
+            .select("roles")
+            .eq("id", user.id)
+            .single();
+            
+          if (!error && profile) {
+            const roles = profile.roles || [];
+            // Check if user has supervisor role
+            const hasSupervisor = roles.some((r: any) => 
+              r === 'supervisor' || r === 'Supervisor'
+            );
+            setUserHasSupervisorRole(hasSupervisor);
+          }
         }
+      } catch (error) {
+        console.error("Error checking user roles:", error);
       }
-    } catch (error) {
-      console.error("Error checking user roles:", error);
-    }
-  };
-  
-  checkUserRoles();
-}, []);
+    };
+    
+    checkUserRoles();
+  }, []);
 
   // ✅ FIXED: Role priority function - handles JSONB arrays
   const rolePriority = (role: any): number => {
@@ -546,6 +547,7 @@ useEffect(() => {
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() - (29 - dayIndex));
 
+    // Use formatDateLong from date utils
     const formattedDate = formatDateLong(targetDate.toISOString());
 
     const detailData: HeatmapDetailData = {
@@ -1192,47 +1194,143 @@ useEffect(() => {
 
         {!isAll && activeTab === "heatmap" && (
           <div className="heatmap-section">
-            <h4>Availability Heatmap (Last 30 Working Days)</h4>
-            <div className="heatmap-placeholder">
+            <div className="heatmap-header-wrapper">
+              <h4>Availability Heatmap (Last 30 Days)</h4>
+              {teamMembers.some(m => m.joined) && (
+                <div className="heatmap-join-info">
+                  <UserIcon size={14} />
+                  <span>Join dates shown</span>
+                </div>
+              )}
+            </div>
+            
+            {/* Heatmap with date headers */}
+            <div className="heatmap-container">
+              {/* Date header row with day numbers and dates */}
+              <div className="heatmap-dates-header">
+                <div className="heatmap-member-label">Member</div>
+                {Array.from({ length: 30 }, (_, i) => {
+                  const date = new Date();
+                  date.setDate(date.getDate() - (29 - i));
+                  const dateStr = date.toISOString().split('T')[0];
+                  const dayNum = date.getDate();
+                  const isToday = new Date().toDateString() === date.toDateString();
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  
+                  return (
+                    <div 
+                      key={i} 
+                      className={`heatmap-date-header ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''}`}
+                      title={formatDateLong(dateStr)}
+                    >
+                      <span className="heatmap-day-number">{dayNum}</span>
+                      <span className="heatmap-day-name">
+                        {date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Member rows with heatmap cells */}
               <div className="heatmap-members">
-                {teamMembers.slice(0, 8).map((member) => (
-                  <div key={member.id} className="heatmap-member">
-                    <span className="member-name">
-                      <span className="member-name-text">
-                        {member.name}
-                        {member.status === "Left" && (
-                          <span className="member-status-left"> (left)</span>
+                {teamMembers.slice(0, 8).map((member) => {
+                  // Parse join date using date utilities
+                  let joinedDate: Date | null = null;
+                  if (member.joined) {
+                    try {
+                      // Check if it's in DD/MM/YYYY format
+                      if (member.joined.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                        const parts = member.joined.split('/');
+                        joinedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+                      } else {
+                        joinedDate = new Date(member.joined);
+                      }
+                      if (isNaN(joinedDate.getTime())) joinedDate = null;
+                    } catch {
+                      joinedDate = null;
+                    }
+                  }
+                  
+                  return (
+                    <div key={member.id} className="heatmap-member">
+                      <span className="member-name">
+                        <span className="member-name-text">
+                          {member.name}
+                          {member.status === "Left" && (
+                            <span className="member-status-left"> (left)</span>
+                          )}
+                        </span>
+                        {hasRole(member.role, "supervisor") && (
+                          <span className="member-role-badge supervisor-badge">
+                            Supervisor
+                          </span>
+                        )}
+                        {/* Show join date badge using formatShortDate */}
+                        {joinedDate && (
+                          <span className="member-join-badge" title={`Joined: ${formatDateLong(member.joined)}`}>
+                            <Calendar size={10} />
+                            <span>{formatShortDate(member.joined)}</span>
+                          </span>
                         )}
                       </span>
-                      {hasRole(member.role, "supervisor") && (
-                        <span className="member-role-badge supervisor-badge">
-                          Supervisor
-                        </span>
-                      )}
-                    </span>
-                    <div className="heatmap-row">
-                      {Array.from({ length: 30 }, (_, i) => {
-                        const status = getCellStatus(member, i);
-                        return (
-                          <div
-                            key={i}
-                            className={`heatmap-cell ${status}`}
-                            onClick={() => handleCellClick(member, i, status)}
-                            title={`${member.name} - ${status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}`}
-                            style={{ cursor: "pointer" }}
-                          />
-                        );
-                      })}
+                      
+                      <div className="heatmap-row">
+                        {Array.from({ length: 30 }, (_, i) => {
+                          const date = new Date();
+                          date.setDate(date.getDate() - (29 - i));
+                          
+                          // Check if date is before join date
+                          let isBeforeStart = false;
+                          if (joinedDate) {
+                            const compareDate = new Date(date);
+                            compareDate.setHours(0, 0, 0, 0);
+                            const join = new Date(joinedDate);
+                            join.setHours(0, 0, 0, 0);
+                            isBeforeStart = compareDate < join;
+                          }
+                          
+                          const status = isBeforeStart ? 'before-start' : getCellStatus(member, i);
+                          const hours = isBeforeStart ? 0 : getHoursForStatus(member, i);
+                          
+                          return (
+                            <div
+                              key={i}
+                              className={`heatmap-cell ${status}`}
+                              onClick={() => {
+                                if (!isBeforeStart) {
+                                  handleCellClick(member, i, status as any);
+                                }
+                              }}
+                              title={
+                                isBeforeStart 
+                                  ? `Before join date (${joinedDate ? formatDateLong(member.joined) : 'N/A'})` 
+                                  : `${member.name} - ${status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}${hours > 0 ? ` - ${hours}h` : ''}`
+                              }
+                              style={{ 
+                                cursor: isBeforeStart ? 'default' : 'pointer',
+                                opacity: isBeforeStart ? 0.3 : 1
+                              }}
+                            >
+                              {isBeforeStart && (
+                                <span className="heatmap-before-start-indicator">—</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+              
               <div className="heatmap-legend">
                 <span className="legend-label">Legend:</span>
-                <span className="legend-item full">Full</span>
-                <span className="legend-item partial">Partial</span>
-                <span className="legend-item unavailable">Unavailable</span>
-                <span className="legend-item no-log">No Log</span>
+                <span className="legend-item full">● Full</span>
+                <span className="legend-item partial">● Partial</span>
+                <span className="legend-item unavailable">● Unavailable</span>
+                <span className="legend-item no-log">○ No Log</span>
+                <span className="legend-item before-start">— Before Join</span>
               </div>
             </div>
           </div>
