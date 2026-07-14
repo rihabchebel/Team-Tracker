@@ -23,7 +23,6 @@ import {
   ProjectTimelineEvent,
 } from "../types/models";
 import { formatDate, formatDateLong } from "../utils/dateUtils";
-import { adminAuth } from "@/lib/supabase";
 // ✅ Import role utilities
 import {
   getPrimaryRole,
@@ -563,168 +562,209 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   // Add Member Handler
-  const handleAddMember = async () => {
-    if (!isAdmin) {
-      alert("You do not have permission to add members.");
+ const handleAddMember = async () => {
+  if (!isAdmin) {
+    alert("You do not have permission to add members.");
+    return;
+  }
+  if (!newMember.name.trim() || !newMember.email.trim()) {
+    alert("Please fill in all fields");
+    return;
+  }
+
+  setIsLoading(true);
+  try {
+    const currentProject = projectsData.find((p) => p.name === project);
+    if (!currentProject) {
+      alert("Project not found");
       return;
     }
-    if (!newMember.name.trim() || !newMember.email.trim()) {
-      alert("Please fill in all fields");
+
+    let userId: string;
+    let isNewUser = false;
+
+    // 1. CHECK IF USER EXISTS IN user_profiles
+    const { data: existingProfile, error: profileCheckError } = await supabase
+      .from("user_profiles")
+      .select("id, full_name, email, roles")
+      .eq("email", newMember.email)
+      .maybeSingle();
+
+    if (profileCheckError && profileCheckError.code !== "PGRST116") {
+      console.error("Error checking existing profile:", profileCheckError);
+      alert("Error checking user. Please try again.");
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const currentProject = projectsData.find((p) => p.name === project);
-      if (!currentProject) {
-        alert("Project not found");
-        return;
+    if (existingProfile) {
+      userId = existingProfile.id;
+      isNewUser = false;
+      console.log("✅ User already exists:", existingProfile);
+      
+      // ✅ For JSONB - get the roles array properly
+      let currentRoles: string[] = [];
+      
+      // Handle JSONB roles - could be array or object
+      if (existingProfile.roles) {
+        if (Array.isArray(existingProfile.roles)) {
+          currentRoles = existingProfile.roles;
+        } else if (typeof existingProfile.roles === 'string') {
+          try {
+            currentRoles = JSON.parse(existingProfile.roles);
+          } catch {
+            currentRoles = [];
+          }
+        } else if (typeof existingProfile.roles === 'object') {
+          currentRoles = Object.values(existingProfile.roles);
+        }
       }
-
-      let userId: string;
-      let isNewUser = false;
-
-      // 1. CHECK IF USER EXISTS IN user_profiles
-      const { data: existingProfile, error: profileCheckError } = await supabase
-        .from("user_profiles")
-        .select("id, full_name, email")
-        .eq("email", newMember.email)
-        .maybeSingle();
-
-      if (profileCheckError && profileCheckError.code !== "PGRST116") {
-        console.error("Error checking existing profile:", profileCheckError);
-        alert("Error checking user. Please try again.");
-        return;
+      
+      const roleToAdd = newMember.role.toLowerCase();
+      
+      // ✅ Update roles as JSONB array
+      if (!currentRoles.includes(roleToAdd)) {
+        const updatedRoles = [...currentRoles, roleToAdd];
+        
+        // ✅ Store as JSONB array
+        const { error: updateRolesError } = await supabase
+          .from("user_profiles")
+          .update({ 
+            roles: updatedRoles // Supabase will convert to JSONB
+          })
+          .eq("id", userId);
+          
+        if (updateRolesError) {
+          console.warn("Could not update roles:", updateRolesError);
+        } else {
+          console.log("✅ Roles updated:", updatedRoles);
+        }
       }
+    } else {
+      // 2. CREATE NEW USER
+      console.log("📝 Creating new user...");
+      const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
 
-      if (existingProfile) {
-        userId = existingProfile.id;
-        isNewUser = false;
-        console.log("✅ User already exists:", existingProfile);
-      } else {
-        // 2. CREATE USER USING ADMIN API
-        console.log("📝 Creating user via admin API...");
+      try {
+        // Create auth user
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: newMember.email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name: newMember.name,
+          },
+        });
 
-        // Generate a temporary password
-        const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
+        if (authError) throw authError;
+        
+        userId = authData.user.id;
+        isNewUser = true;
+        console.log("✅ Auth user created:", userId);
 
-        try {
-          // Create auth user
-          const { user } = await adminAuth.createUser(
-            newMember.email,
-            tempPassword,
-            {
-              name: newMember.name,
-              role: newMember.role.toLowerCase(),
-            },
-          );
+        // ✅ Create user profile with JSONB roles
+        const profileData = {
+          id: userId,
+          email: newMember.email,
+          full_name: newMember.name,
+          roles: [newMember.role.toLowerCase()] // ✅ JSONB array
+        };
+        
+        console.log("📤 Creating profile with roles:", profileData.roles);
 
-          userId = user.id;
-          isNewUser = true;
-          console.log("✅ Auth user created:", userId);
+        const { error: profileError } = await supabase
+          .from("user_profiles")
+          .insert(profileData);
 
-          // Create user profile
-          await adminAuth.createUserProfile(
-            userId,
-            newMember.name,
-            newMember.email,
-            newMember.role,
-          );
-          console.log("✅ User profile created");
-        } catch (adminError: any) {
-          console.error("❌ Admin API error:", adminError);
-
-          // If user already exists in auth, try to get their ID
-          if (adminError.message?.includes("already exists")) {
-            const { data: existingAuth } = await supabase
-              .from("auth.users")
-              .select("id")
-              .eq("email", newMember.email)
-              .single();
-
-            if (existingAuth) {
-              userId = existingAuth.id;
-              isNewUser = false;
-            } else {
-              throw new Error("User exists but could not be found.");
-            }
+        if (profileError) {
+          console.error("❌ Error creating profile:", profileError);
+          
+          // ✅ Fallback: Try without roles
+          if (profileError.message?.includes("roles")) {
+            console.log("🔄 Retrying without roles...");
+            const { error: retryError } = await supabase
+              .from("user_profiles")
+              .insert({
+                id: userId,
+                email: newMember.email,
+                full_name: newMember.name,
+              });
+              
+            if (retryError) throw retryError;
           } else {
-            throw adminError;
+            throw profileError;
           }
         }
-      }
+        console.log("✅ User profile created");
 
-      // 3. CHECK PROJECT MEMBERSHIP
-      const { data: existingMember, error: memberCheckError } = await supabase
+      } catch (adminError: any) {
+        console.error("❌ Error creating user:", adminError);
+        
+        // If user already exists in auth, try to find them
+        if (adminError.message?.includes("already exists") || adminError.status === 409) {
+          const { data: existingUser, error: findError } = await supabase
+            .from("user_profiles")
+            .select("id")
+            .eq("email", newMember.email)
+            .maybeSingle();
+
+          if (findError || !existingUser) {
+            throw new Error("User exists but profile not found.");
+          }
+          userId = existingUser.id;
+          isNewUser = false;
+        } else {
+          throw adminError;
+        }
+      }
+    }
+
+    // 3. CHECK PROJECT MEMBERSHIP
+    const { data: existingMember, error: memberCheckError } = await supabase
+      .from("team_members")
+      .select("id, role")
+      .eq("project_id", currentProject.id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (memberCheckError && memberCheckError.code !== "PGRST116") {
+      console.error("Error checking membership:", memberCheckError);
+      alert("Error checking membership. Please try again.");
+      return;
+    }
+
+    // 4. VALIDATE ROLE
+    const validRoles = ["Supervisor", "Developer", "Admin"];
+    const roleMap: Record<string, string> = {
+      developer: "Developer",
+      supervisor: "Supervisor",
+      admin: "Admin",
+    };
+
+    const finalRole = roleMap[newMember.role.toLowerCase()] || "Developer";
+
+    if (!validRoles.includes(finalRole)) {
+      alert(`Invalid role. Please use one of: ${validRoles.join(", ")}`);
+      return;
+    }
+
+    // 5. ADD TO TEAM_MEMBERS
+    if (existingMember) {
+      // Update existing membership
+      const { error: updateError } = await supabase
         .from("team_members")
-        .select("id, role")
-        .eq("project_id", currentProject.id)
-        .eq("user_id", userId)
-        .maybeSingle();
+        .update({
+          role: finalRole,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingMember.id);
 
-      if (memberCheckError && memberCheckError.code !== "PGRST116") {
-        console.error("Error checking membership:", memberCheckError);
-        alert("Error checking membership. Please try again.");
+      if (updateError) {
+        console.error("Error updating member role:", updateError);
+        alert("Failed to update member role. Please try again.");
         return;
       }
-
-      // 4. VALIDATE ROLE
-      const validRoles = ["Supervisor", "Developer", "Admin"];
-      const roleMap: Record<string, string> = {
-        developer: "Developer",
-        supervisor: "Supervisor",
-        admin: "Admin",
-      };
-
-      const finalRole = roleMap[newMember.role.toLowerCase()] || "Developer";
-
-      if (!validRoles.includes(finalRole)) {
-        alert(`Invalid role. Please use one of: ${validRoles.join(", ")}`);
-        return;
-      }
-
-      if (existingMember) {
-        // Update role
-        const { error: updateError } = await supabase
-          .from("team_members")
-          .update({
-            role: finalRole,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", existingMember.id);
-
-        if (updateError) {
-          console.error("Error updating member role:", updateError);
-          alert("Failed to update member role. Please try again.");
-          return;
-        }
-
-        // Update local state
-        const updatedProject = {
-          ...currentProject,
-          teamMembers: currentProject.teamMembers.map((m) =>
-            m.id === userId ? { ...m, role: finalRole } : m,
-          ),
-        };
-
-        const updatedProjects = projectsData.map((p) =>
-          p.id === currentProject.id ? updatedProject : p,
-        );
-
-        if (onProjectsUpdate) {
-          onProjectsUpdate(updatedProjects);
-        }
-
-        setNewMember({ name: "", email: "", role: "Developer" });
-        setShowAddMember(false);
-        alert(
-          `${newMember.name}'s role has been updated to "${finalRole}" in ${currentProject.name}!`,
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      // 5. ADD NEW TEAM MEMBER
+    } else {
+      // Add new team member
       const { error: teamError } = await supabase.from("team_members").insert({
         project_id: currentProject.id,
         user_id: userId,
@@ -737,44 +777,66 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         alert(`Failed to add member: ${teamError.message}`);
         return;
       }
-
-      // Update local state
-      const updatedProject = {
-        ...currentProject,
-        teamMembers: [
-          ...currentProject.teamMembers,
-          {
-            id: userId,
-            name: newMember.name,
-            role: finalRole,
-            joined: new Date().toLocaleDateString("en-GB"),
-          },
-        ],
-      };
-
-      const updatedProjects = projectsData.map((p) =>
-        p.id === currentProject.id ? updatedProject : p,
-      );
-
-      if (onProjectsUpdate) {
-        onProjectsUpdate(updatedProjects);
-      }
-
-      setNewMember({ name: "", email: "", role: "Developer" });
-      setShowAddMember(false);
-
-      const successMessage = isNewUser
-        ? `${newMember.name} has been created and added to ${currentProject.name}!`
-        : `${newMember.name} has been added to ${currentProject.name}!`;
-
-      alert(successMessage);
-    } catch (error: any) {
-      console.error("Unexpected error:", error);
-      alert(error.message || "An unexpected error occurred. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
-  };
+
+    // 6. UPDATE LOCAL STATE
+    const updatedProject = {
+      ...currentProject,
+      teamMembers: [
+        ...currentProject.teamMembers.filter(m => m.id !== userId),
+        {
+          id: userId,
+          name: newMember.name,
+          role: finalRole,
+          joined: new Date().toLocaleDateString("en-GB"),
+        },
+      ],
+    };
+
+    const updatedProjects = projectsData.map((p) =>
+      p.id === currentProject.id ? updatedProject : p,
+    );
+
+    if (onProjectsUpdate) {
+      onProjectsUpdate(updatedProjects);
+    }
+
+    // 7. SEND INVITATION EMAIL (if new user)
+    if (isNewUser) {
+      try {
+        const { mailerSendService } = await import('../lib/mailerSend');
+        await mailerSendService.sendInvitation({
+          email: newMember.email,
+          full_name: newMember.name,
+          token: crypto.randomUUID(),
+          invited_by: "Admin",
+          role: finalRole,
+          project_name: currentProject.name,
+          project_id: currentProject.id,
+        });
+        console.log("✅ Invitation email sent");
+      } catch (emailError) {
+        console.warn("⚠️ Invitation email failed:", emailError);
+      }
+    }
+
+    setNewMember({ name: "", email: "", role: "Developer" });
+    setShowAddMember(false);
+    setIsLoading(false);
+
+    const successMessage = isNewUser
+      ? `✅ ${newMember.name} has been created and added to ${currentProject.name}!`
+      : `✅ ${newMember.name} has been added to ${currentProject.name}!`;
+
+    alert(successMessage);
+
+  } catch (error: any) {
+    console.error("❌ Unexpected error:", error);
+    alert(error.message || "An unexpected error occurred. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleProjectNameClick = (projectName: string) => {
     if (onProjectSelect) {

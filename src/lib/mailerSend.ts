@@ -1,8 +1,9 @@
 //My project has "Confirm email" turned on, 
-// so every new signup needs to click a Supabase confirmation link before they can sign in. 
-// Since your app already verifies people through the invitation token,
-//  you don't need Supabase's confirmation on top of that.
+// so every new signup needs to click a Supabase's confirmation link before they can sign in. 
+// Since the app already verifies people through the invitation token,
+//  i don't need Supabase's confirmation on top of that.
 //After that they should be able to sign in immediately with the same password.
+
 //One thing worth noting for later: since your adminAuth.createUser in supabase.ts already passes email_confirm: true when creating users via the service-role client, 
 // once you move handleCreateUser fully onto the invitation flow (as we discussed) and that invitation acceptance creates the account through an Edge Function using supabaseAdmin,
 //  this "email not confirmed" problem won't come up again for invited users — it only bit you here because this account got created through the old auth.signUp frontend path

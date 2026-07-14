@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard' as PageType, label: 'Admin Dashboard', icon: LayoutDashboard },
     { id: 'users' as PageType, label: 'Manage Users', icon: Users },
     { id: 'settings' as PageType, label: 'Project Settings', icon: Settings },
-    { id: 'tasks' as PageType, label: 'LoggedTasks', icon: ListTodo },
+    { id: 'tasks' as PageType, label: 'Logged Tasks', icon: ListTodo },
   ];
 
   const supervisorLinks = [
