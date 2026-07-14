@@ -14,9 +14,7 @@ interface AllTasksProps {
 
 const AllTasks: React.FC<AllTasksProps> = ({ 
   project, 
-  projectsData, 
-  usersData, 
-  taskLogs 
+  taskLogs = [] 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
@@ -25,36 +23,25 @@ const AllTasks: React.FC<AllTasksProps> = ({
   );
   const [selectedUser, setSelectedUser] = useState<string>('All Users');
 
-  useEffect(() => {
-    if (project === 'All Projects') {
-      setSelectedProject('All Projects');
-    } else {
-      setSelectedProject(project);
-    }
-    const filtered = taskLogs.filter(log => 
-      selectedProject === 'All Projects' || log.project === selectedProject
-    );
-    setFilteredLogs(filtered);
-  }, [project, taskLogs]);
-
+  // Get unique users from actual data
   const getUniqueUsers = () => {
-    if (usersData && usersData.length > 0) {
-      return ['All Users', ...usersData.map(u => u.name)];
-    }
-    const users = new Set<string>();
-    taskLogs.forEach(log => users.add(log.submittedBy));
-    return ['All Users', ...Array.from(users)];
+    const userSet = new Set<string>();
+    taskLogs.forEach(log => {
+      if (log.submittedBy) userSet.add(log.submittedBy);
+    });
+    return ['All Users', ...Array.from(userSet)];
   };
 
+  // Get unique projects from actual data
   const getUniqueProjects = () => {
-    if (projectsData && projectsData.length > 0) {
-      return ['All Projects', ...projectsData.map(p => p.name)];
-    }
-    const projects = new Set<string>();
-    taskLogs.forEach(log => projects.add(log.project));
-    return ['All Projects', ...Array.from(projects)];
+    const projectSet = new Set<string>();
+    taskLogs.forEach(log => {
+      if (log.project) projectSet.add(log.project);
+    });
+    return ['All Projects', ...Array.from(projectSet)];
   };
 
+  // Update filtered logs when filters change
   useEffect(() => {
     let filtered = taskLogs;
 
@@ -69,17 +56,26 @@ const AllTasks: React.FC<AllTasksProps> = ({
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase().trim();
       filtered = filtered.filter(log => 
-        log.tasks.some(task => task.description.toLowerCase().includes(term)) ||
-        log.project.toLowerCase().includes(term) ||
-        log.submittedBy.toLowerCase().includes(term)
+        log.tasks?.some(task => task.description?.toLowerCase().includes(term)) ||
+        log.project?.toLowerCase().includes(term) ||
+        log.submittedBy?.toLowerCase().includes(term)
       );
     }
 
     setFilteredLogs(filtered);
   }, [searchTerm, selectedProject, selectedUser, taskLogs]);
 
-  const totalTasks = filteredLogs.reduce((sum, log) => sum + log.tasks.length, 0);
-  const totalHours = filteredLogs.reduce((sum, log) => sum + log.hoursWorked, 0);
+  // Reset selected project when prop changes
+  useEffect(() => {
+    if (project === 'All Projects') {
+      setSelectedProject('All Projects');
+    } else {
+      setSelectedProject(project);
+    }
+  }, [project]);
+
+  const totalTasks = filteredLogs.reduce((sum, log) => sum + (log.tasks?.length || 0), 0);
+  const totalHours = filteredLogs.reduce((sum, log) => sum + (log.hoursWorked || 0), 0);
   const totalEntries = filteredLogs.length;
 
   const getStatusBadgeClass = (status: string) => {
@@ -96,7 +92,7 @@ const AllTasks: React.FC<AllTasksProps> = ({
   };
 
   const getStatusLabel = (status: string) => {
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
   };
 
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -183,24 +179,24 @@ const AllTasks: React.FC<AllTasksProps> = ({
                 <div className="log-header">
                   <div className="log-user-info">
                     <div className="log-user-avatar">
-                      {log.submittedBy.charAt(0).toUpperCase()}
+                      {log.submittedBy?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                     <div className="log-user-details">
-                      <span className="log-user-name">{log.submittedBy}</span>
-                      <span className="log-project-name">{log.project}</span>
+                      <span className="log-user-name">{log.submittedBy || 'Unknown'}</span>
+                      <span className="log-project-name">{log.project || 'No Project'}</span>
                     </div>
                   </div>
                   <div className="log-meta">
                     <span className={`log-status ${getStatusBadgeClass(log.status)}`}>
                       {getStatusLabel(log.status)}
                     </span>
-                    <span className="log-hours">{log.hoursWorked}h</span>
+                    <span className="log-hours">{log.hoursWorked || 0}h</span>
                     <span className="log-date">{formatDate(log.date)}</span>
                   </div>
                 </div>
 
                 <div className="log-body">
-                  {log.tasks.length > 0 ? (
+                  {log.tasks && log.tasks.length > 0 ? (
                     <div className="log-tasks">
                       {log.tasks.map((task) => (
                         <span key={task.id} className="log-task-tag">
@@ -228,7 +224,7 @@ const AllTasks: React.FC<AllTasksProps> = ({
 
                 <div className="log-footer">
                   <span className="log-submitted">
-                    Submitted {formatTime(log.submittedAt)}
+                    Submitted {log.submittedAt ? formatTime(log.submittedAt) : 'Unknown'}
                   </span>
                 </div>
               </div>

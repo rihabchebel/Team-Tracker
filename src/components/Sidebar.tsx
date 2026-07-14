@@ -179,7 +179,8 @@ const Sidebar: React.FC<SidebarProps> = ({
         {userHasDeveloper && renderNavSection('Developer', developerLinks)}
         {!userIsAdmin && !userHasSupervisor && !userHasDeveloper && (
           <div className="nav-section">
-            <p className="nav-note">No project role assigned. Contact an admin.</p>
+            <div className="nav-note">No project role assigned..</div>
+            <div className="nav-note">Contact an admin.</div>
           </div>
         )}
 

@@ -27,8 +27,8 @@ interface UserTimelineProps {
 const UserTimeline: React.FC<UserTimelineProps> = ({ 
   view: _view,
   project, 
-  users, 
-  projectsData,
+  users = [], 
+  projectsData = [],
   timelineEvents = []
 }) => {
   const [selectedUser, setSelectedUser] = useState<string>('All users');
@@ -44,119 +44,60 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
     }
   }, [project]);
 
+  // Build project users map from actual data
   const projectUsers: Record<string, string[]> = projectsData.reduce((acc, projectData) => {
-    acc[projectData.name] = projectData.teamMembers.map(member => member.name);
+    acc[projectData.name] = projectData.teamMembers?.map(member => member.name) || [];
     return acc;
   }, {} as Record<string, string[]>);
 
+  // Get all users from actual data
   const allUsers = ['All users', ...Array.from(new Set(users.map(user => user.name)))];
+
+  // Get all projects from actual data
   const allProjects = ['All projects', ...projectsData.map((p) => p.name)];
 
+  // Get timeline events from actual data only
   const getTimelineEvents = (): TimelineEvent[] => {
-    if (timelineEvents.length > 0) {
-      const filtered = timelineEvents.filter((event) => {
-        const matchesProject =
-          selectedProject === 'All projects' ||
-          event.project_name === selectedProject ||
-          projectsData.find((p) => p.id === event.project_id)?.name === selectedProject;
-        const matchesUser = selectedUser === 'All users' || event.user_name === selectedUser;
-        return matchesProject && matchesUser;
-      });
-
-      return filtered.map((event) => ({
-        id: event.id,
-        project: event.project_name || projectsData.find((p) => p.id === event.project_id)?.name || 'Unknown',
-        user: event.user_name || 'System',
-        date: formatDate(event.created_at),
-        hours: 0,
-        type: event.event_type.includes('created') || event.event_type.includes('updated') ? 'milestone' : 'work',
-        description: event.description,
-        subProject: event.metadata?.sub_project_name,
-      }));
+    if (timelineEvents.length === 0) {
+      return [];
     }
 
-    const events: TimelineEvent[] = [];
-    const months = ['Mar 26', 'Apr 26', 'May 26', 'Jun 26'];
-    const types: ('work' | 'leave' | 'milestone')[] = ['work', 'work', 'work', 'leave', 'milestone'];
-    const descriptions = [
-      'Completed sprint tasks',
-      'Code review',
-      'Meeting with team',
-      'Bug fixes',
-      'Feature development',
-      'Documentation',
-      'Testing',
-      'Deployment',
-      'Client meeting',
-      'Design review'
-    ];
-
-    let usersList: string[] = [];
-    if (selectedProject === 'All projects') {
-      Object.values(projectUsers).forEach((projectUserList) => {
-        projectUserList.forEach((user) => {
-          if (!usersList.includes(user)) {
-            usersList.push(user);
-          }
-        });
-      });
-    } else if (projectUsers[selectedProject]) {
-      usersList = projectUsers[selectedProject];
-    }
-
-    if (selectedUser !== 'All users') {
-      usersList = usersList.filter(u => u === selectedUser);
-    }
-
-    usersList.forEach((user) => {
-      const numEvents = 3 + Math.floor(Math.random() * 4);
-      for (let i = 0; i < numEvents; i++) {
-        const monthIndex = Math.floor(Math.random() * months.length);
-        const day = 1 + Math.floor(Math.random() * 28);
-        const type = types[Math.floor(Math.random() * types.length)];
-        const description = descriptions[Math.floor(Math.random() * descriptions.length)];
-        
-        let eventProject = selectedProject;
-        if (selectedProject === 'All projects') {
-          const userProjects = Object.keys(projectUsers).filter(p => 
-            projectUsers[p].includes(user)
-          );
-          eventProject = userProjects.length > 0 
-            ? userProjects[Math.floor(Math.random() * userProjects.length)]
-            : 'Project Beta';
-        }
-
-        events.push({
-          id: `${user}-${i}-${Date.now()}-${Math.random()}`,
-          project: eventProject,
-          subProject: ['Design', 'Development', 'Testing', 'UI/UX', 'Backend', 'Frontend'][Math.floor(Math.random() * 6)],
-          user: user,
-          date: `${months[monthIndex]} ${day}`,
-          hours: 1 + Math.floor(Math.random() * 8),
-          type: type,
-          description: description
-        });
-      }
+    const filtered = timelineEvents.filter((event) => {
+      const matchesProject =
+        selectedProject === 'All projects' ||
+        event.project_name === selectedProject ||
+        projectsData.find((p) => p.id === event.project_id)?.name === selectedProject;
+      
+      const matchesUser = selectedUser === 'All users' || event.user_name === selectedUser;
+      
+      return matchesProject && matchesUser;
     });
 
-    events.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
-      return dateA.getTime() - dateB.getTime();
-    });
-
-    return events;
+    return filtered.map((event) => ({
+      id: event.id,
+      project: event.project_name || projectsData.find((p) => p.id === event.project_id)?.name || 'Unknown',
+      user: event.user_name || 'System',
+      date: formatDate(event.created_at),
+      hours: 0,
+      type: event.event_type?.includes('created') || event.event_type?.includes('updated') ? 'milestone' : 'work',
+      description: event.description || 'No description',
+      subProject: event.metadata?.sub_project_name,
+    }));
   };
 
   const resolvedTimelineEvents = getTimelineEvents();
 
+  // Group events by month
   const groupedEvents: Record<string, TimelineEvent[]> = {};
   resolvedTimelineEvents.forEach(event => {
-    const month = event.date.split(' ')[0] + ' ' + event.date.split(' ')[1];
-    if (!groupedEvents[month]) {
-      groupedEvents[month] = [];
+    if (event.date) {
+      const parts = event.date.split(' ');
+      const month = parts.length >= 2 ? parts[0] + ' ' + parts[1] : event.date;
+      if (!groupedEvents[month]) {
+        groupedEvents[month] = [];
+      }
+      groupedEvents[month].push(event);
     }
-    groupedEvents[month].push(event);
   });
 
   const getAvailableUsers = () => {
@@ -171,7 +112,7 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
       return allProjects;
     }
     const userProjects = Object.keys(projectUsers).filter(p => 
-      projectUsers[p].includes(selectedUser)
+      projectUsers[p]?.includes(selectedUser)
     );
     return ['All projects', ...userProjects];
   };
@@ -221,10 +162,7 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
           <div>
             <h2>{project}</h2>
             <span className="project-description">
-              {project === 'All projects' ? 'All projects overview' : 
-               project === 'Project Alpha' ? 'Main product development sprint' :
-               project === 'Project Beta' ? 'Client portal redesign' :
-               project === 'Service VAS' ? 'Test description' : 'Project overview'}
+              {project === 'All projects' ? 'All projects overview' : 'Project timeline view'}
             </span>
           </div>
         </div>
@@ -268,7 +206,7 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
         <div className="timeline-container">
           {Object.keys(groupedEvents).length === 0 ? (
             <div className="no-events">
-              <p>No timeline events found for the selected filters.</p>
+              <p>No timeline events found. Events will appear here when team members log their activities.</p>
             </div>
           ) : (
             Object.keys(groupedEvents).map((month) => (
@@ -299,7 +237,9 @@ const UserTimeline: React.FC<UserTimelineProps> = ({
                               <span className="event-subproject">→ {event.subProject}</span>
                             )}
                           </div>
-                          <span className="event-hours">{event.hours}h</span>
+                          {event.hours > 0 && (
+                            <span className="event-hours">{event.hours}h</span>
+                          )}
                         </div>
                       </div>
                     </div>

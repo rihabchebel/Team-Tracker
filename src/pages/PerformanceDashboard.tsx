@@ -1,6 +1,7 @@
 // pages/PerformanceDashboard.tsx - Matches UserManagement styling
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import {
   Search,
   ChevronDown,
@@ -12,7 +13,6 @@ import {
   Clock,
   Calendar,
 } from "lucide-react";
-import { supabase } from "../lib/dataService";
 import "./PerformanceDashboard.css";
 import {
   ViewMode,
@@ -128,6 +128,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     role: "Developer",
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [, setUserHasSupervisorRole] = useState(false);
 
   const isAll = project === "All Projects";
 
@@ -188,6 +189,35 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     const variation = Math.floor(randFromSeed(seed) * 18);
     return base + variation;
   };
+  
+// Add this useEffect to check the user's actual roles
+useEffect(() => {
+  const checkUserRoles = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from("user_profiles")
+          .select("roles")
+          .eq("id", user.id)
+          .single();
+          
+        if (!error && profile) {
+          const roles = profile.roles || [];
+          // Check if user has supervisor role
+          const hasSupervisor = roles.some((r: any) => 
+            r === 'supervisor' || r === 'Supervisor'
+          );
+          setUserHasSupervisorRole(hasSupervisor);
+        }
+      }
+    } catch (error) {
+      console.error("Error checking user roles:", error);
+    }
+  };
+  
+  checkUserRoles();
+}, []);
 
   // ✅ FIXED: Role priority function - handles JSONB arrays
   const rolePriority = (role: any): number => {
@@ -562,281 +592,285 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   };
 
   // Add Member Handler
- const handleAddMember = async () => {
-  if (!isAdmin) {
-    alert("You do not have permission to add members.");
-    return;
-  }
-  if (!newMember.name.trim() || !newMember.email.trim()) {
-    alert("Please fill in all fields");
-    return;
-  }
-
-  setIsLoading(true);
-  try {
-    const currentProject = projectsData.find((p) => p.name === project);
-    if (!currentProject) {
-      alert("Project not found");
+  const handleAddMember = async () => {
+    if (!isAdmin) {
+      alert("You do not have permission to add members.");
+      return;
+    }
+    if (!newMember.name.trim() || !newMember.email.trim()) {
+      alert("Please fill in all fields");
       return;
     }
 
-    let userId: string;
-    let isNewUser = false;
-
-    // 1. CHECK IF USER EXISTS IN user_profiles
-    const { data: existingProfile, error: profileCheckError } = await supabase
-      .from("user_profiles")
-      .select("id, full_name, email, roles")
-      .eq("email", newMember.email)
-      .maybeSingle();
-
-    if (profileCheckError && profileCheckError.code !== "PGRST116") {
-      console.error("Error checking existing profile:", profileCheckError);
-      alert("Error checking user. Please try again.");
-      return;
-    }
-
-    if (existingProfile) {
-      userId = existingProfile.id;
-      isNewUser = false;
-      console.log("✅ User already exists:", existingProfile);
-      
-      // ✅ For JSONB - get the roles array properly
-      let currentRoles: string[] = [];
-      
-      // Handle JSONB roles - could be array or object
-      if (existingProfile.roles) {
-        if (Array.isArray(existingProfile.roles)) {
-          currentRoles = existingProfile.roles;
-        } else if (typeof existingProfile.roles === 'string') {
-          try {
-            currentRoles = JSON.parse(existingProfile.roles);
-          } catch {
-            currentRoles = [];
-          }
-        } else if (typeof existingProfile.roles === 'object') {
-          currentRoles = Object.values(existingProfile.roles);
-        }
+    setIsLoading(true);
+    try {
+      const currentProject = projectsData.find((p) => p.name === project);
+      if (!currentProject) {
+        alert("Project not found");
+        return;
       }
-      
-      const roleToAdd = newMember.role.toLowerCase();
-      
-      // ✅ Update roles as JSONB array
-      if (!currentRoles.includes(roleToAdd)) {
-        const updatedRoles = [...currentRoles, roleToAdd];
-        
-        // ✅ Store as JSONB array
-        const { error: updateRolesError } = await supabase
-          .from("user_profiles")
-          .update({ 
-            roles: updatedRoles // Supabase will convert to JSONB
-          })
-          .eq("id", userId);
-          
-        if (updateRolesError) {
-          console.warn("Could not update roles:", updateRolesError);
-        } else {
-          console.log("✅ Roles updated:", updatedRoles);
-        }
+
+      let userId: string;
+      let isNewUser = false;
+
+      // 1. CHECK IF USER EXISTS IN user_profiles
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from("user_profiles")
+        .select("id, full_name, email, roles")
+        .eq("email", newMember.email)
+        .maybeSingle();
+
+      if (profileCheckError && profileCheckError.code !== "PGRST116") {
+        console.error("Error checking existing profile:", profileCheckError);
+        alert("Error checking user. Please try again.");
+        return;
       }
-    } else {
-      // 2. CREATE NEW USER
-      console.log("📝 Creating new user...");
-      const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
 
-      try {
-        // Create auth user
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: newMember.email,
-          password: tempPassword,
-          email_confirm: true,
-          user_metadata: {
-            full_name: newMember.name,
-          },
-        });
+      if (existingProfile) {
+        userId = existingProfile.id;
+        isNewUser = false;
+        console.log("✅ User already exists:", existingProfile);
 
-        if (authError) throw authError;
-        
-        userId = authData.user.id;
-        isNewUser = true;
-        console.log("✅ Auth user created:", userId);
+        // ✅ For JSONB - get the roles array properly
+        let currentRoles: string[] = [];
 
-        // ✅ Create user profile with JSONB roles
-        const profileData = {
-          id: userId,
-          email: newMember.email,
-          full_name: newMember.name,
-          roles: [newMember.role.toLowerCase()] // ✅ JSONB array
-        };
-        
-        console.log("📤 Creating profile with roles:", profileData.roles);
-
-        const { error: profileError } = await supabase
-          .from("user_profiles")
-          .insert(profileData);
-
-        if (profileError) {
-          console.error("❌ Error creating profile:", profileError);
-          
-          // ✅ Fallback: Try without roles
-          if (profileError.message?.includes("roles")) {
-            console.log("🔄 Retrying without roles...");
-            const { error: retryError } = await supabase
-              .from("user_profiles")
-              .insert({
-                id: userId,
-                email: newMember.email,
-                full_name: newMember.name,
-              });
-              
-            if (retryError) throw retryError;
-          } else {
-            throw profileError;
+        // Handle JSONB roles - could be array or object
+        if (existingProfile.roles) {
+          if (Array.isArray(existingProfile.roles)) {
+            currentRoles = existingProfile.roles;
+          } else if (typeof existingProfile.roles === "string") {
+            try {
+              currentRoles = JSON.parse(existingProfile.roles);
+            } catch {
+              currentRoles = [];
+            }
+          } else if (typeof existingProfile.roles === "object") {
+            currentRoles = Object.values(existingProfile.roles);
           }
         }
-        console.log("✅ User profile created");
 
-      } catch (adminError: any) {
-        console.error("❌ Error creating user:", adminError);
-        
-        // If user already exists in auth, try to find them
-        if (adminError.message?.includes("already exists") || adminError.status === 409) {
-          const { data: existingUser, error: findError } = await supabase
+        const roleToAdd = newMember.role.toLowerCase();
+
+        // ✅ Update roles as JSONB array
+        if (!currentRoles.includes(roleToAdd)) {
+          const updatedRoles = [...currentRoles, roleToAdd];
+
+          // ✅ Store as JSONB array
+          const { error: updateRolesError } = await supabase
             .from("user_profiles")
-            .select("id")
-            .eq("email", newMember.email)
-            .maybeSingle();
+            .update({
+              roles: updatedRoles, // Supabase will convert to JSONB
+            })
+            .eq("id", userId);
 
-          if (findError || !existingUser) {
-            throw new Error("User exists but profile not found.");
+          if (updateRolesError) {
+            console.warn("Could not update roles:", updateRolesError);
+          } else {
+            console.log("✅ Roles updated:", updatedRoles);
           }
-          userId = existingUser.id;
-          isNewUser = false;
-        } else {
-          throw adminError;
+        }
+      } else {
+        // 2. CREATE NEW USER
+        console.log("📝 Creating new user...");
+        const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
+
+        try {
+          // Create auth user
+          const { data: authData, error: authError } =
+            await supabase.auth.admin.createUser({
+              email: newMember.email,
+              password: tempPassword,
+              email_confirm: true,
+              user_metadata: {
+                full_name: newMember.name,
+              },
+            });
+
+          if (authError) throw authError;
+
+          userId = authData.user.id;
+          isNewUser = true;
+          console.log("✅ Auth user created:", userId);
+
+          // ✅ Create user profile with JSONB roles
+          const profileData = {
+            id: userId,
+            email: newMember.email,
+            full_name: newMember.name,
+            roles: [newMember.role.toLowerCase()], // ✅ JSONB array
+          };
+
+          console.log("📤 Creating profile with roles:", profileData.roles);
+
+          const { error: profileError } = await supabase
+            .from("user_profiles")
+            .insert(profileData);
+
+          if (profileError) {
+            console.error("❌ Error creating profile:", profileError);
+
+            // ✅ Fallback: Try without roles
+            if (profileError.message?.includes("roles")) {
+              console.log("🔄 Retrying without roles...");
+              const { error: retryError } = await supabase
+                .from("user_profiles")
+                .insert({
+                  id: userId,
+                  email: newMember.email,
+                  full_name: newMember.name,
+                });
+
+              if (retryError) throw retryError;
+            } else {
+              throw profileError;
+            }
+          }
+          console.log("✅ User profile created");
+        } catch (adminError: any) {
+          console.error("❌ Error creating user:", adminError);
+
+          // If user already exists in auth, try to find them
+          if (
+            adminError.message?.includes("already exists") ||
+            adminError.status === 409
+          ) {
+            const { data: existingUser, error: findError } = await supabase
+              .from("user_profiles")
+              .select("id")
+              .eq("email", newMember.email)
+              .maybeSingle();
+
+            if (findError || !existingUser) {
+              throw new Error("User exists but profile not found.");
+            }
+            userId = existingUser.id;
+            isNewUser = false;
+          } else {
+            throw adminError;
+          }
         }
       }
-    }
 
-    // 3. CHECK PROJECT MEMBERSHIP
-    const { data: existingMember, error: memberCheckError } = await supabase
-      .from("team_members")
-      .select("id, role")
-      .eq("project_id", currentProject.id)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (memberCheckError && memberCheckError.code !== "PGRST116") {
-      console.error("Error checking membership:", memberCheckError);
-      alert("Error checking membership. Please try again.");
-      return;
-    }
-
-    // 4. VALIDATE ROLE
-    const validRoles = ["Supervisor", "Developer", "Admin"];
-    const roleMap: Record<string, string> = {
-      developer: "Developer",
-      supervisor: "Supervisor",
-      admin: "Admin",
-    };
-
-    const finalRole = roleMap[newMember.role.toLowerCase()] || "Developer";
-
-    if (!validRoles.includes(finalRole)) {
-      alert(`Invalid role. Please use one of: ${validRoles.join(", ")}`);
-      return;
-    }
-
-    // 5. ADD TO TEAM_MEMBERS
-    if (existingMember) {
-      // Update existing membership
-      const { error: updateError } = await supabase
+      // 3. CHECK PROJECT MEMBERSHIP
+      const { data: existingMember, error: memberCheckError } = await supabase
         .from("team_members")
-        .update({
-          role: finalRole,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingMember.id);
+        .select("id, role")
+        .eq("project_id", currentProject.id)
+        .eq("user_id", userId)
+        .maybeSingle();
 
-      if (updateError) {
-        console.error("Error updating member role:", updateError);
-        alert("Failed to update member role. Please try again.");
+      if (memberCheckError && memberCheckError.code !== "PGRST116") {
+        console.error("Error checking membership:", memberCheckError);
+        alert("Error checking membership. Please try again.");
         return;
       }
-    } else {
-      // Add new team member
-      const { error: teamError } = await supabase.from("team_members").insert({
-        project_id: currentProject.id,
-        user_id: userId,
-        role: finalRole,
-        joined_at: new Date().toISOString(),
-      });
 
-      if (teamError) {
-        console.error("Error adding team member:", teamError);
-        alert(`Failed to add member: ${teamError.message}`);
+      // 4. VALIDATE ROLE
+      const validRoles = ["Supervisor", "Developer", "Admin"];
+      const roleMap: Record<string, string> = {
+        developer: "Developer",
+        supervisor: "Supervisor",
+        admin: "Admin",
+      };
+
+      const finalRole = roleMap[newMember.role.toLowerCase()] || "Developer";
+
+      if (!validRoles.includes(finalRole)) {
+        alert(`Invalid role. Please use one of: ${validRoles.join(", ")}`);
         return;
       }
-    }
 
-    // 6. UPDATE LOCAL STATE
-    const updatedProject = {
-      ...currentProject,
-      teamMembers: [
-        ...currentProject.teamMembers.filter(m => m.id !== userId),
-        {
-          id: userId,
-          name: newMember.name,
-          role: finalRole,
-          joined: new Date().toLocaleDateString("en-GB"),
-        },
-      ],
-    };
+      // 5. ADD TO TEAM_MEMBERS
+      if (existingMember) {
+        // Update existing membership
+        const { error: updateError } = await supabase
+          .from("team_members")
+          .update({
+            role: finalRole,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingMember.id);
 
-    const updatedProjects = projectsData.map((p) =>
-      p.id === currentProject.id ? updatedProject : p,
-    );
+        if (updateError) {
+          console.error("Error updating member role:", updateError);
+          alert("Failed to update member role. Please try again.");
+          return;
+        }
+      } else {
+        // Add new team member
+        const { error: teamError } = await supabase
+          .from("team_members")
+          .insert({
+            project_id: currentProject.id,
+            user_id: userId,
+            role: finalRole,
+            joined_at: new Date().toISOString(),
+          });
 
-    if (onProjectsUpdate) {
-      onProjectsUpdate(updatedProjects);
-    }
-
-    // 7. SEND INVITATION EMAIL (if new user)
-    if (isNewUser) {
-      try {
-        const { mailerSendService } = await import('../lib/mailerSend');
-        await mailerSendService.sendInvitation({
-          email: newMember.email,
-          full_name: newMember.name,
-          token: crypto.randomUUID(),
-          invited_by: "Admin",
-          role: finalRole,
-          project_name: currentProject.name,
-          project_id: currentProject.id,
-        });
-        console.log("✅ Invitation email sent");
-      } catch (emailError) {
-        console.warn("⚠️ Invitation email failed:", emailError);
+        if (teamError) {
+          console.error("Error adding team member:", teamError);
+          alert(`Failed to add member: ${teamError.message}`);
+          return;
+        }
       }
+
+      // 6. UPDATE LOCAL STATE
+      const updatedProject = {
+        ...currentProject,
+        teamMembers: [
+          ...currentProject.teamMembers.filter((m) => m.id !== userId),
+          {
+            id: userId,
+            name: newMember.name,
+            role: finalRole,
+            joined: new Date().toLocaleDateString("en-GB"),
+          },
+        ],
+      };
+
+      const updatedProjects = projectsData.map((p) =>
+        p.id === currentProject.id ? updatedProject : p,
+      );
+
+      if (onProjectsUpdate) {
+        onProjectsUpdate(updatedProjects);
+      }
+
+      // 7. SEND INVITATION EMAIL (if new user)
+      if (isNewUser) {
+        try {
+          const { mailerSendService } = await import("../lib/mailerSend");
+          await mailerSendService.sendInvitation({
+            email: newMember.email,
+            full_name: newMember.name,
+            token: crypto.randomUUID(),
+            invited_by: "Admin",
+            role: finalRole,
+            project_name: currentProject.name,
+            project_id: currentProject.id,
+          });
+          console.log("✅ Invitation email sent");
+        } catch (emailError) {
+          console.warn("⚠️ Invitation email failed:", emailError);
+        }
+      }
+
+      setNewMember({ name: "", email: "", role: "Developer" });
+      setShowAddMember(false);
+      setIsLoading(false);
+
+      const successMessage = isNewUser
+        ? `✅ ${newMember.name} has been created and added to ${currentProject.name}!`
+        : `✅ ${newMember.name} has been added to ${currentProject.name}!`;
+
+      alert(successMessage);
+    } catch (error: any) {
+      console.error("❌ Unexpected error:", error);
+      alert(error.message || "An unexpected error occurred. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    setNewMember({ name: "", email: "", role: "Developer" });
-    setShowAddMember(false);
-    setIsLoading(false);
-
-    const successMessage = isNewUser
-      ? `✅ ${newMember.name} has been created and added to ${currentProject.name}!`
-      : `✅ ${newMember.name} has been added to ${currentProject.name}!`;
-
-    alert(successMessage);
-
-  } catch (error: any) {
-    console.error("❌ Unexpected error:", error);
-    alert(error.message || "An unexpected error occurred. Please try again.");
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleProjectNameClick = (projectName: string) => {
     if (onProjectSelect) {
@@ -877,6 +911,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               {project}
             </h2>
           </div>
+          {/* ✅ Add Member - Only Admin */}
           {isAdmin && !isAll && (
             <button
               className="add-member-btn"
@@ -892,8 +927,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       <div className="dashboard-content">
         <div className="dashboard-header">
           <h3>Performance Dashboard</h3>
+
           {!isAll && (
             <div className="dashboard-tabs">
+              {/* ✅ Team Roster - Everyone */}
               <button
                 className={`tab-btn ${activeTab === "roster" ? "active" : ""}`}
                 onClick={() => setActiveTab("roster")}
@@ -901,231 +938,257 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 <Users size={14} />
                 Team Roster
               </button>
-              <button
-                className={`tab-btn ${activeTab === "heatmap" ? "active" : ""}`}
-                onClick={() => setActiveTab("heatmap")}
-              >
-                <Calendar size={14} />
-                Heatmap
-              </button>
-              <button
-                className={`tab-btn ${activeTab === "analytics" ? "active" : ""}`}
-                onClick={() => setActiveTab("analytics")}
-              >
-                <BarChart3 size={14} />
-                Analytics
-              </button>
+
+              {/* ✅ Heatmap - Admin or Supervisor only */}
+              {(isAdmin || view === "supervisor") && (
+                <button
+                  className={`tab-btn ${activeTab === "heatmap" ? "active" : ""}`}
+                  onClick={() => setActiveTab("heatmap")}
+                >
+                  <Calendar size={14} />
+                  Heatmap
+                </button>
+              )}
+
+              {/* ✅ Analytics - Admin or Supervisor only */}
+              {(isAdmin || view === "supervisor") && (
+                <button
+                  className={`tab-btn ${activeTab === "analytics" ? "active" : ""}`}
+                  onClick={() => setActiveTab("analytics")}
+                >
+                  <BarChart3 size={14} />
+                  Analytics
+                </button>
+              )}
             </div>
           )}
         </div>
 
         {activeTab === "roster" && (
-  <div className="roster-section">
-    <div className="timeline-filters">
-      <div className="filter-group">
-        <label>User</label>
-        <select
-          value={selectedUser}
-          onChange={(e) => setSelectedUser(e.target.value)}
-          className="filter-select"
-        >
-          {getAvailableUsers().map((user) => (
-            <option key={user} value={user}>
-              {user}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="filter-group">
-        <label>Project</label>
-        <select
-          value={selectedProjectFilter}
-          onChange={(e) => setSelectedProjectFilter(e.target.value)}
-          className="filter-select"
-        >
-          {getAvailableProjects().map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="filter-group">
-        <label>Role</label>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="All">All Roles</option>
-          <option value="Supervisor">Supervisor</option>
-          <option value="Developer">Developer</option>
-          <option value="Admin">Admin</option>
-        </select>
-      </div>
-      <div className="filter-group">
-        <label>Status</label>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="filter-select"
-        >
-          <option value="All">All Status</option>
-          <option value="Active">Active</option>
-          <option value="Left">Left</option>
-          <option value="On Leave">On Leave</option>
-        </select>
-      </div>
-      <div className="filter-group">
-        <label>Search</label>
-        <div className="search-box">
-          <Search size={16} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search members..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-    </div>
+          <div className="roster-section">
+            <div className="timeline-filters">
+              <div className="filter-group">
+                <label>User</label>
+                <select
+                  value={selectedUser}
+                  onChange={(e) => setSelectedUser(e.target.value)}
+                  className="filter-select"
+                >
+                  {getAvailableUsers().map((user) => (
+                    <option key={user} value={user}>
+                      {user}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Project</label>
+                <select
+                  value={selectedProjectFilter}
+                  onChange={(e) => setSelectedProjectFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  {getAvailableProjects().map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Role</label>
+                <select
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="All">All Roles</option>
+                  <option value="Supervisor">Supervisor</option>
+                  <option value="Developer">Developer</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="filter-select"
+                >
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Left">Left</option>
+                  <option value="On Leave">On Leave</option>
+                </select>
+              </div>
+              <div className="filter-group">
+                <label>Search</label>
+                <div className="search-box">
+                  <Search size={16} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search members..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
 
-    <div className="table-container">
-      <table className="roster-table">
-        <thead>
-          <tr>
-            <th
-              onClick={() => handleSort("name")}
-              className="sortable-header"
-            >
-              Name {getSortIcon("name")}
-            </th>
-            <th
-              onClick={() => handleSort("email")}
-              className="sortable-header"
-            >
-              Email {getSortIcon("email")}
-            </th>
-            <th>Role / Projects</th>
-            <th
-              onClick={() => handleSort("memberSince")}
-              className="sortable-header"
-            >
-              Member Since {getSortIcon("memberSince")}
-            </th>
-            <th
-              onClick={() => handleSort("activeHours")}
-              className="sortable-header"
-            >
-              Active Hours {getSortIcon("activeHours")}
-            </th>
-            <th
-              onClick={() => handleSort("status")}
-              className="sortable-header"
-            >
-              Status {getSortIcon("status")}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {filteredMembers.map((member) => {
-            const hasMultiple = hasMultipleRoles(member.role);
-            const allRoles = getAllRoles(member.role);
-            const primaryRole = getPrimaryRole(member.role);
-            
-            return (
-              <tr key={member.id}>
-                <td className="member-cell">
-                  <div className="member-avatar">
-                    {getInitials(member.name)}
-                  </div>
-                  <div>
-                    <div>{member.name}</div>
-                    {/* ✅ Green indicator for multiple roles - matching UserManagement */}
-                    {hasMultiple && (
-                      <div className="multiple-roles-indicator">
-                        <span className="green-dot"></span>
-                        <span className="roles-text">
-                          {allRoles.map(r => formatRoleDisplay(r)).join(' + ')}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </td>
-                <td>{member.email}</td>
-                <td>
-                  {isAll && member.memberships ? (
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {member.memberships.map((m) => (
-                        <span
-                          key={`${member.id}-${m.projectName}`}
-                          className={`role-badge ${getRoleBadgeClass(m.role)}`}
-                        >
-                          {formatRoleDisplay(m.role)} · {m.projectName}
-                        </span>
-                      ))}
-                      {/* ✅ Show "Also:" with all roles for All Projects view */}
-                      {hasMultiple && (
-                        <div className="global-roles" style={{ marginTop: '4px', width: '100%' }}>
-                          <span className="global-roles-label">Also:</span>
-                          {allRoles
-                            .filter((r: string) => r !== primaryRole)
-                            .map((role: string, idx: number) => (
+            <div className="table-container">
+              <table className="roster-table">
+                <thead>
+                  <tr>
+                    <th
+                      onClick={() => handleSort("name")}
+                      className="sortable-header"
+                    >
+                      Name {getSortIcon("name")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("email")}
+                      className="sortable-header"
+                    >
+                      Email {getSortIcon("email")}
+                    </th>
+                    <th>Role / Projects</th>
+                    <th
+                      onClick={() => handleSort("memberSince")}
+                      className="sortable-header"
+                    >
+                      Member Since {getSortIcon("memberSince")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("activeHours")}
+                      className="sortable-header"
+                    >
+                      Active Hours {getSortIcon("activeHours")}
+                    </th>
+                    <th
+                      onClick={() => handleSort("status")}
+                      className="sortable-header"
+                    >
+                      Status {getSortIcon("status")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map((member) => {
+                    const hasMultiple = hasMultipleRoles(member.role);
+                    const allRoles = getAllRoles(member.role);
+                    const primaryRole = getPrimaryRole(member.role);
+
+                    return (
+                      <tr key={member.id}>
+                        <td className="member-cell">
+                          <div className="member-avatar">
+                            {getInitials(member.name)}
+                          </div>
+                          <div>
+                            <div>{member.name}</div>
+                            {/* ✅ Green indicator for multiple roles - matching UserManagement */}
+                            {hasMultiple && (
+                              <div className="multiple-roles-indicator">
+                                <span className="green-dot"></span>
+                                <span className="roles-text">
+                                  {allRoles
+                                    .map((r) => formatRoleDisplay(r))
+                                    .join(" + ")}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td>{member.email}</td>
+                        <td>
+                          {isAll && member.memberships ? (
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 8,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {member.memberships.map((m) => (
+                                <span
+                                  key={`${member.id}-${m.projectName}`}
+                                  className={`role-badge ${getRoleBadgeClass(m.role)}`}
+                                >
+                                  {formatRoleDisplay(m.role)} · {m.projectName}
+                                </span>
+                              ))}
+                              {/* ✅ Show "Also:" with all roles for All Projects view */}
+                              {hasMultiple && (
+                                <div
+                                  className="global-roles"
+                                  style={{ marginTop: "4px", width: "100%" }}
+                                >
+                                  <span className="global-roles-label">
+                                    Also:
+                                  </span>
+                                  {allRoles
+                                    .filter((r: string) => r !== primaryRole)
+                                    .map((role: string, idx: number) => (
+                                      <span
+                                        key={idx}
+                                        className={`role-badge-small ${getRoleBadgeClass(role)}`}
+                                      >
+                                        {formatRoleDisplay(role)}
+                                      </span>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div>
+                              {/* ✅ Show primary role with project */}
                               <span
-                                key={idx}
-                                className={`role-badge-small ${getRoleBadgeClass(role)}`}
+                                className={`role-badge ${getRoleBadgeClass(member.role)}`}
                               >
-                                {formatRoleDisplay(role)}
+                                {formatRoleDisplay(member.role)}
                               </span>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div>
-                      {/* ✅ Show primary role with project */}
-                      <span
-                        className={`role-badge ${getRoleBadgeClass(member.role)}`}
-                      >
-                        {formatRoleDisplay(member.role)}
-                      </span>
-                      
-                      {/* ✅ Show "Also:" with additional roles - matching UserManagement */}
-                      {hasMultiple && (
-                        <div className="global-roles" style={{ marginTop: '4px' }}>
-                          <span className="global-roles-label">Also:</span>
-                          {allRoles
-                            .filter((r: string) => r !== primaryRole)
-                            .map((role: string, idx: number) => (
-                              <span
-                                key={idx}
-                                className={`role-badge-small ${getRoleBadgeClass(role)}`}
-                              >
-                                {formatRoleDisplay(role)}
-                              </span>
-                            ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </td>
-                <td>{formatDate(member.memberSince)}</td>
-                <td>{member.activeHours}h</td>
-                <td>
-                  <span
-                    className={`status-badge ${getStatusBadgeClass(member.status)}`}
-                  >
-                    {member.status}
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  </div>
-)}
+
+                              {/* ✅ Show "Also:" with additional roles - matching UserManagement */}
+                              {hasMultiple && (
+                                <div
+                                  className="global-roles"
+                                  style={{ marginTop: "4px" }}
+                                >
+                                  <span className="global-roles-label">
+                                    Also:
+                                  </span>
+                                  {allRoles
+                                    .filter((r: string) => r !== primaryRole)
+                                    .map((role: string, idx: number) => (
+                                      <span
+                                        key={idx}
+                                        className={`role-badge-small ${getRoleBadgeClass(role)}`}
+                                      >
+                                        {formatRoleDisplay(role)}
+                                      </span>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </td>
+                        <td>{formatDate(member.memberSince)}</td>
+                        <td>{member.activeHours}h</td>
+                        <td>
+                          <span
+                            className={`status-badge ${getStatusBadgeClass(member.status)}`}
+                          >
+                            {member.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {!isAll && activeTab === "heatmap" && (
           <div className="heatmap-section">
@@ -1141,7 +1204,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                           <span className="member-status-left"> (left)</span>
                         )}
                       </span>
-                      {hasRole(member.role, 'supervisor') && (
+                      {hasRole(member.role, "supervisor") && (
                         <span className="member-role-badge supervisor-badge">
                           Supervisor
                         </span>
