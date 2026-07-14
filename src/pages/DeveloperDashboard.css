@@ -488,4 +488,353 @@
     font-size: 16px;
     min-width: 40px;
   }
+  /* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+
+/* Tablet and small laptops */
+@media (max-width: 1024px) {
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .status-buttons {
+    flex-wrap: wrap;
+  }
+
+  .status-btn {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 80px;
+  }
+}
+
+/* Mobile devices (tablets and large phones) */
+@media (max-width: 768px) {
+  /* Page layout */
+  .developer-dashboard {
+    padding: 16px;
+  }
+
+  .page-header {
+    padding: 16px 20px;
+    border-radius: 6px;
+  }
+
+  .page-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .page-header h2 {
+    font-size: 20px;
+  }
+
+  .user-info {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .user-name {
+    font-size: 14px;
+  }
+
+  .user-role {
+    font-size: 12px;
+  }
+
+  /* Dashboard content */
+  .dashboard-content {
+    padding: 20px;
+    border-radius: 8px;
+  }
+
+  .availability-section h3 {
+    font-size: 18px;
+    margin-bottom: 16px;
+  }
+
+  /* Form layout */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Status buttons */
+  .status-buttons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .status-btn {
+    flex: 1 1 calc(50% - 4px);
+    padding: 10px 12px;
+    font-size: 13px;
+    min-width: 70px;
+  }
+
+  /* Hours section */
+  .hours-input-container {
+    flex-direction: row;
+    gap: 12px;
+  }
+
+  .hours-input {
+    font-size: 15px;
+    padding: 8px 10px;
+  }
+
+  .hours-value {
+    font-size: 18px;
+    min-width: 45px;
+  }
+
+  .hours-slider {
+    height: 5px;
+  }
+
+  .hours-slider::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Reason input */
+  .reason-group {
+    margin-top: 4px;
+  }
+
+  .reason-input {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  /* Tasks section */
+  .tasks-section {
+    margin-top: 4px;
+    padding-top: 16px;
+  }
+
+  .tasks-section h4 {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+
+  .task-item {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+
+  .task-description {
+    font-size: 13px;
+  }
+
+  .add-task-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .task-input {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .add-task-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 16px;
+    font-size: 13px;
+  }
+
+  /* Save button */
+  .save-log-btn {
+    padding: 12px;
+    font-size: 15px;
+    margin-top: 16px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .developer-dashboard {
+    padding: 12px;
+  }
+
+  .page-header {
+    padding: 12px 16px;
+  }
+
+  .page-header h2 {
+    font-size: 18px;
+  }
+
+  .dashboard-content {
+    padding: 16px;
+  }
+
+  .availability-section h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  /* Status buttons - stack vertically */
+  .status-buttons {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .status-btn {
+    flex: 1 1 auto;
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+    justify-content: center;
+  }
+
+  /* Hours section */
+  .hours-input-container {
+    flex-direction: row;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .hours-input {
+    font-size: 14px;
+    padding: 8px 10px;
+    min-width: 60px;
+  }
+
+  .hours-value {
+    font-size: 16px;
+    min-width: 40px;
+  }
+
+  .hours-slider-labels {
+    font-size: 10px;
+    padding: 0 2px;
+  }
+
+  .hours-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Tasks */
+  .task-list {
+    gap: 6px;
+    min-height: 40px;
+  }
+
+  .task-item {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .task-description {
+    font-size: 12px;
+  }
+
+  .delete-task-btn {
+    padding: 2px;
+  }
+
+  .add-task-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .empty-tasks-message {
+    font-size: 12px;
+    padding: 16px;
+  }
+
+  /* Save button */
+  .save-log-btn {
+    padding: 10px;
+    font-size: 14px;
+    margin-top: 12px;
+    border-radius: 6px;
+  }
+}
+
+/* Very small devices (landscape phones, small screens) */
+@media (max-width: 360px) {
+  .page-header h2 {
+    font-size: 16px;
+  }
+
+  .form-group label {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+
+  .date-input,
+  .reason-input,
+  .task-input {
+    font-size: 12px;
+    padding: 6px 8px;
+  }
+
+  .status-btn {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .hours-value {
+    font-size: 14px;
+    min-width: 35px;
+  }
+
+  .dashboard-content {
+    padding: 12px;
+  }
+
+  .save-log-btn {
+    font-size: 13px;
+    padding: 8px;
+  }
+}
+
+/* Tablet landscape and iPad specific */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+  .form-row {
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+
+  .status-buttons {
+    flex-wrap: nowrap;
+  }
+
+  .status-btn {
+    flex: 1;
+  }
+}
+
+/* Print styles (optional) */
+@media print {
+  .developer-dashboard {
+    padding: 0;
+    background: white;
+  }
+
+  .page-header {
+    box-shadow: none;
+    border: 1px solid #e0e0e0;
+  }
+
+  .save-log-btn {
+    display: none;
+  }
+
+  .status-btn {
+    border: 1px solid #d0d3e0;
+    background: #f8f9fc;
+  }
+
+  .status-btn.active {
+    border-color: #4f72e8;
+    background: #e8edfe;
+  }
+}
 }

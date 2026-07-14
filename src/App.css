@@ -63,3 +63,302 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #a0a3b0;
 }
+/* ============================================
+   RESPONSIVE STYLES - APP
+   ============================================ */
+
+/* Tablets and smaller laptops */
+@media (max-width: 1024px) {
+  .main-content {
+    padding: 20px 24px;
+  }
+
+  .main-layout {
+    min-height: calc(100vh - 55px);
+    min-height: calc(100dvh - 55px);
+  }
+}
+
+/* Mobile devices (tablets and large phones) */
+@media (max-width: 768px) {
+  .app-container {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .main-layout {
+    flex-direction: column;
+    min-height: calc(100vh - 50px);
+    min-height: calc(100dvh - 50px);
+  }
+
+  .main-content {
+    padding: 16px 20px;
+    overflow-y: visible;
+    flex: 1;
+  }
+
+  .lovable-credit {
+    margin-top: 30px;
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  /* Scrollbar adjustments for mobile */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #c0c3d0;
+    border-radius: 3px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .main-layout {
+    min-height: calc(100vh - 45px);
+    min-height: calc(100dvh - 45px);
+  }
+
+  .main-content {
+    padding: 12px 16px;
+  }
+
+  .lovable-credit {
+    margin-top: 20px;
+    padding: 8px;
+    font-size: 11px;
+    border-top: 1px solid #e8e8f0;
+  }
+
+  /* Smaller scrollbar for mobile */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #e8e8f0;
+    border-radius: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #c0c3d0;
+    border-radius: 2px;
+  }
+}
+
+/* Very small devices */
+@media (max-width: 360px) {
+  .main-content {
+    padding: 10px 12px;
+  }
+
+  .lovable-credit {
+    margin-top: 16px;
+    padding: 6px;
+    font-size: 10px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+}
+
+/* Landscape orientation for mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .main-layout {
+    min-height: calc(100vh - 45px);
+    min-height: calc(100dvh - 45px);
+  }
+
+  .main-content {
+    padding: 12px 20px;
+  }
+
+  .lovable-credit {
+    margin-top: 16px;
+    padding: 6px;
+    font-size: 11px;
+  }
+}
+
+/* Large screens (desktops) */
+@media (min-width: 1400px) {
+  .main-content {
+    padding: 32px 48px;
+  }
+
+  .lovable-credit {
+    margin-top: 50px;
+    font-size: 14px;
+    padding: 16px;
+  }
+
+  .main-layout {
+    min-height: calc(100vh - 70px);
+    min-height: calc(100dvh - 70px);
+  }
+}
+
+/* Extra large screens */
+@media (min-width: 1920px) {
+  .main-content {
+    padding: 40px 60px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a2e;
+    color: #e0e0e8;
+  }
+
+  .app-container {
+    background: #1a1a2e;
+  }
+
+  .main-content {
+    background: #1a1a2e;
+  }
+
+  .lovable-credit {
+    color: #666688;
+    border-top-color: rgba(255, 255, 255, 0.06);
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #2a2a3e;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #4a4a5e;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5a5a6e;
+  }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .app-container {
+    background: #ffffff;
+  }
+
+  .main-content {
+    background: #ffffff;
+  }
+
+  .lovable-credit {
+    color: #000000;
+    border-top-color: #000000;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #e0e0e0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #666666;
+  }
+}
+
+/* Print styles */
+@media print {
+  .app-container {
+    background: white;
+  }
+
+  .main-layout {
+    display: block;
+    min-height: auto;
+  }
+
+  .main-content {
+    padding: 20px;
+    background: white;
+    overflow-y: visible;
+  }
+
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .main-content {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
+/* Support for safe area insets (notched phones) */
+@supports (padding: max(0px)) {
+  .main-content {
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
+  }
+
+  @media (max-width: 768px) {
+    .main-content {
+      padding-left: max(16px, env(safe-area-inset-left));
+      padding-right: max(16px, env(safe-area-inset-right));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .main-content {
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+  }
+}
+
+/* Container query support (modern browsers) */
+@container (max-width: 600px) {
+  .main-content {
+    padding: 12px;
+  }
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid #4f72e8;
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background: #4f72e8;
+  color: white;
+}
+
+::-moz-selection {
+  background: #4f72e8;
+  color: white;
+}
