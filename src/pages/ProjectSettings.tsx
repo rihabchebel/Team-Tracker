@@ -128,15 +128,51 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
           </button>
         </div>
         <div className="modal-body">
-          <div className="edit-member-info">
-            <div className="member-avatar-large">
+          {/* Member Info - matches Add Member modal style */}
+          <div className="edit-member-info" style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px', 
+            marginBottom: '20px',
+            padding: '12px 16px',
+            background: 'var(--bg-filter, #f8f9fc)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-primary, #eef0f5)'
+          }}>
+            <div className="member-avatar-large" style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #4f72e8, #6c5ce7)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 600,
+              fontSize: '18px',
+              textTransform: 'uppercase',
+              flexShrink: 0
+            }}>
               {member.name?.charAt(0) || '?'}
             </div>
             <div>
-              <div className="member-name-large">{member.name}</div>
-              <div className="member-email-large">{member.email || 'No email'}</div>
+              <div className="member-name-large" style={{ 
+                fontWeight: 600, 
+                fontSize: '16px', 
+                color: 'var(--text-primary, #1a1a2e)' 
+              }}>
+                {member.name}
+              </div>
+              <div className="member-email-large" style={{ 
+                fontSize: '14px', 
+                color: 'var(--text-muted, #8888aa)' 
+              }}>
+                {member.email || 'No email'}
+              </div>
             </div>
           </div>
+
+          {/* Role selection - matches Add Member modal style */}
           <div className="form-group">
             <label>
               Role <span className="required">*</span>
@@ -145,30 +181,36 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
               value={selectedRole}
               onChange={(e) => setSelectedRole(e.target.value)}
               disabled={isLoading}
+              className="role-select"
             >
               <option value="Developer">Developer</option>
               <option value="Supervisor">Supervisor</option>
               <option value="Admin">Admin</option>
-              <option value="Project Manager">Project Manager</option>
-              <option value="Team Lead">Team Lead</option>
-              <option value="Designer">Designer</option>
-              <option value="QA">QA</option>
-              <option value="DevOps">DevOps</option>
-              <option value="Analyst">Analyst</option>
-              <option value="Intern">Intern</option>
-              <option value="Consultant">Consultant</option>
-              <option value="Contractor">Contractor</option>
             </select>
           </div>
-          <div className="current-role-display">
-            <span className="current-role-label">Current Role:</span>
+
+          {/* Current role display - matches role badge style */}
+          <div className="current-role-display" style={{ 
+            marginTop: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            flexWrap: 'wrap'
+          }}>
+            <span className="current-role-label" style={{ 
+              fontSize: '13px', 
+              color: 'var(--text-muted, #8888aa)',
+              fontWeight: 500
+            }}>
+              Current Role:
+            </span>
             {(() => {
               const roles = getAllRoles(member.role);
               return roles.map((role, idx) => (
                 <span 
                   key={idx}
                   className={`role-badge ${getRoleBadgeClass(role)}`}
-                  style={{ marginLeft: '4px' }}
+                  style={{ marginRight: '4px' }}
                 >
                   {getRoleDisplayName(role)}
                 </span>
@@ -177,7 +219,11 @@ const EditMemberModal: React.FC<EditMemberModalProps> = ({
           </div>
         </div>
         <div className="modal-footer">
-          <button className="cancel-btn" onClick={onClose} disabled={isLoading}>
+          <button 
+            className="cancel-btn" 
+            onClick={onClose} 
+            disabled={isLoading}
+          >
             Cancel
           </button>
           <button 

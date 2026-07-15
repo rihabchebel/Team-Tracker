@@ -1418,5 +1418,125 @@
 [data-theme="dark"] .current-role-label {
   color: #8888aa;
 }
+/* ============================================
+   EDIT MEMBER MODAL
+   ============================================ */
+.edit-modal .edit-member-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--bg-filter, #f8f9fc);
+  border-radius: 8px;
+  border: 1px solid var(--border-primary, #eef0f5);
+  transition: all 0.3s ease;
+}
 
+.edit-modal .member-avatar-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f72e8, #6c5ce7);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  transition: background 0.3s ease;
+}
+
+.edit-modal .member-name-large {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary, #1a1a2e);
+  transition: color 0.3s ease;
+}
+
+.edit-modal .member-email-large {
+  font-size: 14px;
+  color: var(--text-muted, #8888aa);
+  transition: color 0.3s ease;
+}
+
+.edit-modal .current-role-display {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.edit-modal .current-role-label {
+  font-size: 13px;
+  color: var(--text-muted, #8888aa);
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.edit-modal .role-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-secondary, #d0d3e0);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--bg-input, white);
+  color: var(--text-primary, #1a1a2e);
+  font-family: inherit;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888aa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.edit-modal .role-select:focus {
+  outline: none;
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.1);
+}
+
+.edit-modal .role-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dark mode for edit modal */
+[data-theme="dark"] .edit-modal .edit-member-info {
+  background: #2a2a3e;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .edit-modal .member-name-large {
+  color: #e8e8f0;
+}
+
+[data-theme="dark"] .edit-modal .member-email-large {
+  color: #8888aa;
+}
+
+[data-theme="dark"] .edit-modal .current-role-label {
+  color: #8888aa;
+}
+
+[data-theme="dark"] .edit-modal .role-select {
+  background-color: #1a1a2e;
+  color: #e8e8f0;
+  border-color: #3a3a4e;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888aa' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+}
+
+[data-theme="dark"] .edit-modal .role-select:focus {
+  border-color: #4f72e8;
+  box-shadow: 0 0 0 3px rgba(79, 114, 232, 0.2);
+}
+
+[data-theme="dark"] .edit-modal .member-avatar-large {
+  background: linear-gradient(135deg, #3a5cd8, #5a4ce7);
+}
 }
