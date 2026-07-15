@@ -1,4 +1,4 @@
-// src/App.tsx
+// src/App.tsx - Fixed TypeScript errors
 import React, { useEffect, useState, useMemo } from "react";
 import {
   BrowserRouter,
@@ -23,6 +23,9 @@ import { AdminSignUp } from "./pages/AdminSignUp";
 import { AcceptInvitation } from "./pages/AcceptInvitation";
 import { ProtectedRoute } from "./guards/ProtectedRoute";
 import { SetupGuard } from "./guards/SetupGuard";
+// ✅ Import supabase ONCE from supabase.ts
+import { supabase } from "./lib/supabase";
+// ✅ Import types ONCE from models
 import {
   ViewMode,
   User,
@@ -35,7 +38,6 @@ import { dataService } from "./lib/dataService";
 import { useAuth } from "./context/AuthContext";
 import { AuthGuard } from "./guards/AuthGuard";
 
-// ✅ Use the same PageType from Sidebar
 type PageType = SidebarPageType;
 
 interface AppState {
@@ -210,28 +212,83 @@ const DashboardShell: React.FC = () => {
     ).length;
   }, [projectsData, user?.id]);
 
-  // ✅ FIXED: Properly typed handleAddTaskLog that matches DeveloperDashboard expectations
+  // ✅ FIXED: Properly maps DeveloperDashboard log data to database schema
   const handleAddTaskLog = async (
-    log: Omit<LogEntry, "id" | "submittedAt"> & { projectName?: string },
+    log: Omit<LogEntry, "id" | "submittedAt">,
   ): Promise<void> => {
     try {
-      const logWithProjectName = {
-        ...log,
-        projectName:
-          log.projectName ||
-          (log as LogEntry & { project?: string }).project ||
-          "",
-        submittedById: user?.id || "1",
-        submittedBy: currentUserName,
+      // Find the project to get the project_id
+      const projectObj = projectsData.find((p) => p.name === log.project);
+
+      if (!projectObj) {
+        console.error("❌ Project not found:", log.project);
+        throw new Error(`Project "${log.project}" not found`);
+      }
+
+      // ✅ Get the first sub-project ID if available
+      const subProjectId =
+        projectObj.subProjects && projectObj.subProjects.length > 0
+          ? projectObj.subProjects[0].id
+          : null;
+
+      // ✅ Build the log data matching the database schema
+      const logData = {
+        project_id: projectObj.id,
+        user_id: user?.id || null,
+        sub_project_id: subProjectId,
+        date: log.date,
+        status: log.status,
+        hours_worked: log.hoursWorked,
+        tasks: log.tasks || [],
+        partial_reason: log.partialReason || null,
+        unavailable_reason: log.unavailableReason || null,
+        submitted_by: currentUserName,
+        is_approved: false,
       };
 
-      const newLog = await dataService.createLog(logWithProjectName);
-      setTaskLogs((prevLogs) => [newLog, ...prevLogs]);
+      console.log("📤 Creating log with data:", logData);
 
+      const { data: newLog, error } = await supabase
+        .from("task_logs")
+        .insert([logData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error("❌ Supabase error:", error);
+        throw new Error(error.message);
+      }
+
+      // ✅ Update local state with the new log
+      setTaskLogs((prevLogs) => [
+        {
+          id: newLog.id,
+          project: log.project,
+          projectName: log.project,
+          date: newLog.date,
+          status: newLog.status,
+          hoursWorked: newLog.hours_worked,
+          tasks: newLog.tasks || [],
+          partialReason: newLog.partial_reason || undefined,
+          unavailableReason: newLog.unavailable_reason || undefined,
+          submittedBy: newLog.submitted_by || currentUserName,
+          submittedAt: newLog.submitted_at,
+          submittedById: newLog.user_id,
+          projectId: newLog.project_id,
+          subProjectId: newLog.sub_project_id,
+          isApproved: newLog.is_approved,
+        },
+        ...prevLogs,
+      ]);
+
+      // ✅ Refresh projects to update used hours
       const refreshedProjects = await dataService.getAllProjects();
       setProjectsData(refreshedProjects);
+      forceRefresh();
+
+      console.log("✅ Log created successfully:", newLog);
     } catch (taskLogError) {
-      console.error("Error adding task log:", taskLogError);
+      console.error("❌ Error adding task log:", taskLogError);
       alert("Failed to add task log. Please try again.");
       throw taskLogError;
     }
@@ -363,6 +420,8 @@ const DashboardShell: React.FC = () => {
           }
           timelineEvents={timelineEvents}
           onAddTaskLog={handleAddTaskLog}
+          onProjectsUpdate={handleProjectsUpdate}
+          onTaskComplete={forceRefresh}
         />
       );
     }

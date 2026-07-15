@@ -1416,19 +1416,16 @@ const ProjectSettings: React.FC<ProjectSettingsProps> = ({
                 </tbody>
               </table>
             ) : (
-            
-                  <div style={{ textAlign: 'center', padding: '20px' }}>
-                    <div ><User size={48} /></div>
-                    <div style={{ fontSize: '16px', fontWeight: 500, color: '#1a1a2e', marginBottom: '4px' }}>
-                      No project role assigned.
-                    </div>
-                    <div style={{ fontSize: '14px', color: '#8888aa' }}>
-                      Contact an admin to be added to a project.
-                    </div>
-                  </div>
-                
-              
-            
+              /* ✅ Only show "No project role assigned" when there are NO team members */
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <div><User size={48} /></div>
+                <div style={{ fontSize: '16px', fontWeight: 500, color: '#1a1a2e', marginBottom: '4px' }}>
+                  No project role assigned.
+                </div>
+                <div style={{ fontSize: '14px', color: '#8888aa' }}>
+                  Contact an admin to be added to a project.
+                </div>
+              </div>
             )}
           </div>
         </div>

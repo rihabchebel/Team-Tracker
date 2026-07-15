@@ -10,6 +10,7 @@
     "start": "vite"
   },
   "dependencies": {
+    "@github/copilot": "^1.0.70",
     "@headlessui/react": "^2.2.10",
     "@supabase/supabase-js": "^2.109.0",
     "@tanstack/react-table": "^8.21.3",

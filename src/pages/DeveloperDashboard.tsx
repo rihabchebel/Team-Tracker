@@ -1,15 +1,17 @@
-// pages/DeveloperDashboard.tsx
-import React, { useState } from "react";
+// pages/DeveloperDashboard.tsx - All TypeScript errors fixed
+
+import React, { useState, useEffect } from "react";
 import "./DeveloperDashboard.css";
 import { Plus, Trash2, CheckCircle, AlertCircle, XCircle } from "lucide-react";
-import { Project, ProjectTimelineEvent, LogEntry } from "../types/models"; // ✅ Import LogEntry from models
+import { Project, ProjectTimelineEvent, LogEntry } from "../types/models";
+import { supabase } from "../lib/supabase"; // ✅ Fixed: using supabase.ts (not supabaseClient)
 
 export type ViewMode = "supervisor" | "developer";
 
-// ✅ Task interface
 export interface Task {
   id: string;
   description: string;
+  completed?: boolean;
 }
 
 interface DeveloperDashboardProps {
@@ -18,16 +20,20 @@ interface DeveloperDashboardProps {
   currentUser: string;
   projectData?: Project | null;
   timelineEvents?: ProjectTimelineEvent[];
-  // ✅ Use the imported LogEntry type
   onAddTaskLog: (
     log: Omit<LogEntry, "id" | "submittedAt">
   ) => void | Promise<void>;
+  onProjectsUpdate?: (projects: Project[]) => void;
+  onTaskComplete?: () => void;
 }
 
 const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
   project,
   currentUser,
+  projectData,
   onAddTaskLog,
+  onProjectsUpdate,
+  onTaskComplete,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(
     new Date().toISOString().split("T")[0],
@@ -41,12 +47,46 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [supervisorNotes, setSupervisorNotes] = useState<any[]>([]);
+  const [, setIsLoadingNotes] = useState(false);
+
+  // ✅ Check if project has isCompleted property (using type assertion with proper checking)
+  const projectIsCompleted = (projectData as any)?.is_completed || false;
+  // ✅ Removed unused projectCompletedAt variable
+
+  // ✅ Load supervisor notes
+  useEffect(() => {
+    if (projectData?.id) {
+      loadSupervisorNotes();
+    }
+  }, [projectData]);
+
+  const loadSupervisorNotes = async () => {
+    if (!projectData?.id) return;
+    setIsLoadingNotes(true);
+    try {
+      const { data, error } = await supabase
+        .from('supervisor_notes')
+        .select('*')
+        .eq('project_id', projectData.id)
+        .eq('is_archived', false)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setSupervisorNotes(data || []);
+    } catch (error) {
+      console.error('Error loading supervisor notes:', error);
+    } finally {
+      setIsLoadingNotes(false);
+    }
+  };
 
   const handleAddTask = () => {
     const taskDescription = newTask.trim() || "Describe task...";
-    const newTaskObj = {
+    const newTaskObj: Task = {
       id: Date.now().toString(),
       description: taskDescription,
+      completed: false,
     };
     setTasks((prevTasks) => [...prevTasks, newTaskObj]);
     setNewTask("");
@@ -54,6 +94,16 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
   const handleDeleteTask = (taskId: string) => {
     setTasks(tasks.filter((task) => task.id !== taskId));
+  };
+
+  const handleToggleTaskComplete = (taskId: string) => {
+    setTasks(prevTasks => 
+      prevTasks.map(task => 
+        task.id === taskId 
+          ? { ...task, completed: !task.completed }
+          : task
+      )
+    );
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -92,25 +142,31 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
     setIsSubmitting(true);
 
-    // ✅ Use the imported LogEntry type
+    const completedTasks = tasks.filter(t => t.completed);
+    const totalTasks = tasks.length;
+
     const logData: Omit<LogEntry, "id" | "submittedAt"> = {
       project: project,
-      projectName: project, // ✅ Required by the model
+      projectName: project,
       date: selectedDate,
       status: status,
       hoursWorked: status === "unavailable" ? 0 : hoursWorked,
-      tasks: status === "unavailable" ? [] : tasks,
+      tasks: tasks,
       partialReason: status === "partial" ? partialReason : undefined,
       unavailableReason:
         status === "unavailable" ? unavailableReason : undefined,
       submittedBy: currentUser,
-      // ✅ Add any other required fields from the model
-      submittedById: "", // Will be filled by App.tsx
-      projectId: "", // Will be filled by App.tsx or dataService
+      submittedById: "",
+      projectId: projectData?.id || "",
     };
 
     try {
       await onAddTaskLog(logData);
+
+      // ✅ If all tasks are completed, mark project as completed
+      if (totalTasks > 0 && completedTasks.length === totalTasks) {
+        await handleProjectComplete();
+      }
 
       // Reset form
       setTasks([]);
@@ -129,6 +185,42 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
       alert("Failed to save log. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleProjectComplete = async () => {
+    if (!projectData?.id) return;
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({
+          is_completed: true,
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', projectData.id);
+
+      if (error) throw error;
+
+      // Update local state
+      if (onProjectsUpdate) {
+        const { data: refreshedProjects } = await supabase
+          .from('projects')
+          .select('*')
+          .order('created_at', { ascending: true });
+        
+        if (refreshedProjects) {
+          onProjectsUpdate(refreshedProjects);
+        }
+      }
+
+      if (onTaskComplete) {
+        onTaskComplete();
+      }
+
+      alert("🎉 All tasks completed! Project marked as complete.");
+    } catch (error) {
+      console.error('Error completing project:', error);
     }
   };
 
@@ -151,6 +243,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
         <div className="page-header-content">
           <div>
             <h2>{project}</h2>
+            {projectIsCompleted && (
+              <span className="project-completed-badge">✅ Completed</span>
+            )}
           </div>
           <div className="user-info">
             <span className="user-name">{currentUser}</span>
@@ -165,7 +260,6 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
           <div className="form-group">
             <label>Date</label>
-
             <div className="date-input-wrapper">
               <input
                 type="date"
@@ -309,7 +403,18 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   </div>
                 ) : (
                   tasks.map((task) => (
-                    <div key={task.id} className="task-item">
+                    <div key={task.id} className={`task-item ${task.completed ? 'completed' : ''}`}>
+                      <button
+                        type="button"
+                        className="task-checkbox"
+                        onClick={() => handleToggleTaskComplete(task.id)}
+                      >
+                        {task.completed ? (
+                          <CheckCircle size={16} className="checked" />
+                        ) : (
+                          <div className="checkbox-empty" />
+                        )}
+                      </button>
                       <span className="task-description">
                         {task.description}
                       </span>
@@ -344,6 +449,40 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
                   Add Task
                 </button>
               </div>
+
+              {tasks.length > 0 && (
+                <div className="task-progress">
+                  <span>
+                    Progress: {tasks.filter(t => t.completed).length}/{tasks.length} tasks completed
+                  </span>
+                  <div className="task-progress-bar">
+                    <div 
+                      className="task-progress-fill"
+                      style={{ 
+                        width: `${(tasks.filter(t => t.completed).length / tasks.length) * 100}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Supervisor Notes */}
+          {supervisorNotes.length > 0 && (
+            <div className="supervisor-notes-section">
+              <h4>Supervisor Notes</h4>
+              {supervisorNotes.map((note) => (
+                <div key={note.id} className="supervisor-note-item">
+                  <div className="note-header">
+                    <span className="note-type">{note.note_type}</span>
+                    <span className="note-date">
+                      {new Date(note.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="note-text">{note.note_text}</p>
+                </div>
+              ))}
             </div>
           )}
 
@@ -351,9 +490,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
             type="button"
             className="save-log-btn"
             onClick={handleSaveLog}
-            disabled={isSubmitting}
+            disabled={isSubmitting || projectIsCompleted}
           >
-            {isSubmitting ? "Saving..." : "Save Log"}
+            {isSubmitting ? "Saving..." : projectIsCompleted ? "Project Complete" : "Save Log"}
           </button>
         </div>
       </div>

@@ -1,6 +1,6 @@
-// pages/PerformanceDashboard.tsx - Complete with Dark Theme Support
+// pages/PerformanceDashboard.tsx - Updated with CSS fixes
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import {
   Search,
@@ -12,9 +12,10 @@ import {
   UserPlus,
   Clock,
   Calendar,
-  User as UserIcon,
   Moon,
   Sun,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import "./PerformanceDashboard.css";
 import {
@@ -25,7 +26,11 @@ import {
   UserActivity,
   ProjectTimelineEvent,
 } from "../types/models";
-import { formatDate, formatDateLong, formatShortDate } from "../utils/dateUtils";
+import {
+  formatDate,
+  formatDateLong,
+  formatShortDate,
+} from "../utils/dateUtils";
 // ✅ Import role utilities
 import {
   getPrimaryRole,
@@ -59,6 +64,8 @@ interface ProjectData {
   budget: number;
   hoursSpent: number;
   teamMembers: DashboardMember[];
+  isCompleted?: boolean;
+  completedAt?: string;
 }
 
 interface PerformanceDashboardProps {
@@ -113,6 +120,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return saved ? saved === "dark" : false;
   });
 
+  // ✅ Heatmap year state
+  const [heatmapYear, setHeatmapYear] = useState<number>(
+    new Date().getFullYear(),
+  );
+  const heatmapContainerRef = useRef<HTMLDivElement>(null);
+
   const [activeTab, setActiveTab] = useState<
     "heatmap" | "roster" | "analytics"
   >("roster");
@@ -147,14 +160,49 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     localStorage.setItem("theme", newTheme ? "dark" : "light");
-    document.documentElement.setAttribute("data-theme", newTheme ? "dark" : "light");
+    document.documentElement.setAttribute(
+      "data-theme",
+      newTheme ? "dark" : "light",
+    );
   };
 
   // ✅ Apply theme on mount
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
+    document.documentElement.setAttribute(
+      "data-theme",
+      isDarkMode ? "dark" : "light",
+    );
   }, []);
-  
+
+  // ✅ Check user's actual roles
+  useEffect(() => {
+    const checkUserRoles = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile, error } = await supabase
+            .from("user_profiles")
+            .select("roles")
+            .eq("id", user.id)
+            .single();
+
+          if (!error && profile) {
+            const roles = profile.roles || [];
+            const hasSupervisor = roles.some(
+              (r: any) => r === "supervisor" || r === "Supervisor",
+            );
+            setUserHasSupervisorRole(hasSupervisor);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking user roles:", error);
+      }
+    };
+
+    checkUserRoles();
+  }, []);
 
   // Helper functions
   const hashString = (s: string) => {
@@ -213,36 +261,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     const variation = Math.floor(randFromSeed(seed) * 18);
     return base + variation;
   };
-  
-  // ✅ Check user's actual roles
-  useEffect(() => {
-    const checkUserRoles = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profile, error } = await supabase
-            .from("user_profiles")
-            .select("roles")
-            .eq("id", user.id)
-            .single();
-            
-          if (!error && profile) {
-            const roles = profile.roles || [];
-            const hasSupervisor = roles.some((r: any) => 
-              r === 'supervisor' || r === 'Supervisor'
-            );
-            setUserHasSupervisorRole(hasSupervisor);
-          }
-        }
-      } catch (error) {
-        console.error("Error checking user roles:", error);
-      }
-    };
-    
-    checkUserRoles();
-  }, []);
 
-  // ✅ FIXED: Role priority function - handles JSONB arrays
+  // ✅ Role priority function - handles JSONB arrays
   const rolePriority = (role: any): number => {
     return getRolePriority(role);
   };
@@ -264,6 +284,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     budget: currentProjectData?.totalHours || 0,
     hoursSpent: currentProjectData?.usedHours || 0,
     teamMembers: [],
+    isCompleted: (currentProjectData as any)?.is_completed || false,
+    completedAt: (currentProjectData as any)?.completed_at || null,
   };
 
   if (isAll) {
@@ -327,6 +349,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       budget: projectsData.reduce((sum, p) => sum + p.totalHours, 0),
       hoursSpent: projectsData.reduce((sum, p) => sum + p.usedHours, 0),
       teamMembers: dashboardTeamMembers,
+      isCompleted: false,
     };
   } else {
     dashboardTeamMembers = (currentProjectData?.teamMembers || []).map(
@@ -354,6 +377,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       budget: currentProjectData?.totalHours || 0,
       hoursSpent: currentProjectData?.usedHours || 0,
       teamMembers: dashboardTeamMembers,
+      isCompleted: (currentProjectData as any)?.is_completed || false,
+      completedAt: (currentProjectData as any)?.completed_at || null,
     };
   }
 
@@ -375,11 +400,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       : event.project_name === project ||
         event.project_id === currentProjectData?.id,
   );
-  const heatmapDates = Array.from({ length: 30 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (29 - index));
-    return date.toISOString().split("T")[0];
-  });
 
   const getAvailableUsers = () => {
     const userSet = new Set(teamMembers.map((m) => m.name));
@@ -496,85 +516,69 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     })
     .sort((a, b) => b.hours - a.hours);
 
-  // Heatmap functions
-  const getCellStatus = (
+  // ✅ FULL YEAR HEATMAP FUNCTIONS
+
+  const getCellStatusForDate = (
     member: DashboardMember,
-    dayIndex: number,
+    date: Date,
   ): "full" | "partial" | "unavailable" | "no-log" => {
     if (member.activeHours === 0 || member.status === "Left") {
       return "no-log";
     }
-    const targetDate = heatmapDates[dayIndex];
+    const dateStr = date.toISOString().split("T")[0];
     const log = projectTaskLogs.find(
-      (entry) => entry.submittedById === member.id && entry.date === targetDate,
+      (entry) => entry.submittedById === member.id && entry.date === dateStr,
     );
     if (!log) return "no-log";
     return log.status;
   };
 
-  const getHoursForStatus = (
-    member: DashboardMember,
-    dayIndex: number,
-  ): number => {
-    const targetDate = heatmapDates[dayIndex];
+  const getHoursForDate = (member: DashboardMember, date: Date): number => {
+    const dateStr = date.toISOString().split("T")[0];
     const log = projectTaskLogs.find(
-      (entry) => entry.submittedById === member.id && entry.date === targetDate,
+      (entry) => entry.submittedById === member.id && entry.date === dateStr,
     );
     return log?.hoursWorked || 0;
   };
 
-  const getTasksForStatus = (
-    member: DashboardMember,
-    dayIndex: number,
-  ): string[] => {
-    const targetDate = heatmapDates[dayIndex];
+  const getTasksForDate = (member: DashboardMember, date: Date): string[] => {
+    const dateStr = date.toISOString().split("T")[0];
     const log = projectTaskLogs.find(
-      (entry) => entry.submittedById === member.id && entry.date === targetDate,
+      (entry) => entry.submittedById === member.id && entry.date === dateStr,
     );
     return (log?.tasks || []).map((task) => task.description);
   };
 
-  const getSupervisorNotes = (
-    status: string,
+  const getSupervisorNotesForDate = (
     member: DashboardMember,
-    dayIndex: number,
+    date: Date,
   ): string => {
-    const targetDate = heatmapDates[dayIndex];
+    const dateStr = date.toISOString().split("T")[0];
     const note = projectTimeline.find((event) => {
       const created = event.created_at.split("T")[0];
       const matchesUser = event.user_id ? event.user_id === member.id : true;
-      return created === targetDate && matchesUser;
+      return created === dateStr && matchesUser;
     });
 
     if (note) return note.description;
-
-    if (status === "no-log") return "No logs available for this day.";
-    if (status === "partial") return "Partial availability logged.";
-    if (status === "unavailable") return "Unavailable for this day.";
-    return "Logged activity recorded.";
+    return "No notes for this day.";
   };
 
-  const handleCellClick = (
+  const handleFullYearCellClick = (
     member: DashboardMember,
-    dayIndex: number,
+    date: Date,
     status: "full" | "partial" | "unavailable" | "no-log",
   ) => {
-    const hoursWorked = getHoursForStatus(member, dayIndex);
-    const tasksCompleted = getTasksForStatus(member, dayIndex);
-    const noteKey = `${project}|${member.id}|${dayIndex}`;
-    const supervisorNotes = getSupervisorNotes(status, member, dayIndex);
+    const hoursWorked = getHoursForDate(member, date);
+    const tasksCompleted = getTasksForDate(member, date);
+    const noteKey = `${project}|${member.id}|${date.toISOString()}`;
+    const supervisorNotes = getSupervisorNotesForDate(member, date);
     const addedSupervisorNotes = addedSupervisorNotesByCell[noteKey] ?? [];
-
-    const today = new Date();
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() - (29 - dayIndex));
-
-    const formattedDate = formatDateLong(targetDate.toISOString());
 
     const detailData: HeatmapDetailData = {
       noteKey,
       memberName: member.name,
-      date: formattedDate,
+      date: formatDateLong(date.toISOString()),
       hoursWorked,
       tasksCompleted,
       supervisorNotes,
@@ -586,6 +590,29 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
     setSelectedCell(detailData);
     setIsModalOpen(true);
+  };
+
+  const handleYearChange = (direction: number) => {
+    setHeatmapYear((prev) => prev + direction);
+  };
+
+  const goToToday = () => {
+    setHeatmapYear(new Date().getFullYear());
+  };
+
+  // Get day of week labels
+  const getDayLabels = () => {
+    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  };
+
+  const dayLabels = getDayLabels();
+
+  const handleCellClick = (
+    member: DashboardMember,
+    date: Date,
+    status: "full" | "partial" | "unavailable" | "no-log",
+  ) => {
+    handleFullYearCellClick(member, date, status);
   };
 
   const closeModal = () => {
@@ -614,7 +641,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     }));
   };
 
-  // Add Member Handler (unchanged - already has all fixes)
+  // Add Member Handler
   const handleAddMember = async () => {
     if (!isAdmin) {
       alert("You do not have permission to add members.");
@@ -636,7 +663,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       let userId: string;
       let isNewUser = false;
 
-      // 1. CHECK IF USER EXISTS IN user_profiles
       const { data: existingProfile, error: profileCheckError } = await supabase
         .from("user_profiles")
         .select("id, full_name, email, roles")
@@ -654,10 +680,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         isNewUser = false;
         console.log("✅ User already exists:", existingProfile);
 
-        // ✅ For JSONB - get the roles array properly
         let currentRoles: string[] = [];
-
-        // Handle JSONB roles - could be array or object
         if (existingProfile.roles) {
           if (Array.isArray(existingProfile.roles)) {
             currentRoles = existingProfile.roles;
@@ -674,15 +697,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
         const roleToAdd = newMember.role.toLowerCase();
 
-        // ✅ Update roles as JSONB array
         if (!currentRoles.includes(roleToAdd)) {
           const updatedRoles = [...currentRoles, roleToAdd];
-
-          // ✅ Store as JSONB array
           const { error: updateRolesError } = await supabase
             .from("user_profiles")
             .update({
-              roles: updatedRoles, // Supabase will convert to JSONB
+              roles: updatedRoles,
             })
             .eq("id", userId);
 
@@ -693,12 +713,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           }
         }
       } else {
-        // 2. CREATE NEW USER
         console.log("📝 Creating new user...");
         const tempPassword = Math.random().toString(36).slice(-8) + "A1!";
 
         try {
-          // Create auth user
           const { data: authData, error: authError } =
             await supabase.auth.admin.createUser({
               email: newMember.email,
@@ -715,15 +733,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           isNewUser = true;
           console.log("✅ Auth user created:", userId);
 
-          // ✅ Create user profile with JSONB roles
           const profileData = {
             id: userId,
             email: newMember.email,
             full_name: newMember.name,
-            roles: [newMember.role.toLowerCase()], // ✅ JSONB array
+            roles: [newMember.role.toLowerCase()],
           };
-
-          console.log("📤 Creating profile with roles:", profileData.roles);
 
           const { error: profileError } = await supabase
             .from("user_profiles")
@@ -731,8 +746,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
           if (profileError) {
             console.error("❌ Error creating profile:", profileError);
-
-            // ✅ Fallback: Try without roles
             if (profileError.message?.includes("roles")) {
               console.log("🔄 Retrying without roles...");
               const { error: retryError } = await supabase
@@ -752,7 +765,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         } catch (adminError: any) {
           console.error("❌ Error creating user:", adminError);
 
-          // If user already exists in auth, try to find them
           if (
             adminError.message?.includes("already exists") ||
             adminError.status === 409
@@ -774,7 +786,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         }
       }
 
-      // 3. CHECK PROJECT MEMBERSHIP
       const { data: existingMember, error: memberCheckError } = await supabase
         .from("team_members")
         .select("id, role")
@@ -788,7 +799,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         return;
       }
 
-      // 4. VALIDATE ROLE
       const validRoles = ["Supervisor", "Developer", "Admin"];
       const roleMap: Record<string, string> = {
         developer: "Developer",
@@ -803,9 +813,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         return;
       }
 
-      // 5. ADD TO TEAM_MEMBERS
       if (existingMember) {
-        // Update existing membership
         const { error: updateError } = await supabase
           .from("team_members")
           .update({
@@ -820,7 +828,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           return;
         }
       } else {
-        // Add new team member
         const { error: teamError } = await supabase
           .from("team_members")
           .insert({
@@ -837,7 +844,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         }
       }
 
-      // 6. UPDATE LOCAL STATE
       const updatedProject = {
         ...currentProject,
         teamMembers: [
@@ -859,7 +865,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         onProjectsUpdate(updatedProjects);
       }
 
-      // 7. SEND INVITATION EMAIL (if new user)
       if (isNewUser) {
         try {
           const { mailerSendService } = await import("../lib/mailerSend");
@@ -935,14 +940,22 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               }}
             >
               {project}
+              {projectData.isCompleted && (
+                <span className="project-completed-badge-header">
+                  {" "}
+                  ✅ Completed
+                </span>
+              )}
             </h2>
           </div>
           <div className="header-actions">
-            {/* ✅ Theme Toggle */}
-            <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle theme">
+            <button
+              className="theme-toggle-btn"
+              onClick={toggleTheme}
+              title="Toggle theme"
+            >
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            {/* ✅ Add Member - Only Admin */}
             {isAdmin && !isAll && (
               <button
                 className="add-member-btn"
@@ -962,7 +975,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
           {!isAll && (
             <div className="dashboard-tabs">
-              {/* ✅ Team Roster - Everyone */}
               <button
                 className={`tab-btn ${activeTab === "roster" ? "active" : ""}`}
                 onClick={() => setActiveTab("roster")}
@@ -971,7 +983,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 Team Roster
               </button>
 
-              {/* ✅ Heatmap - Admin or Supervisor only */}
               {(isAdmin || view === "supervisor") && (
                 <button
                   className={`tab-btn ${activeTab === "heatmap" ? "active" : ""}`}
@@ -982,7 +993,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 </button>
               )}
 
-              {/* ✅ Analytics - Admin or Supervisor only */}
               {(isAdmin || view === "supervisor") && (
                 <button
                   className={`tab-btn ${activeTab === "analytics" ? "active" : ""}`}
@@ -1220,135 +1230,292 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         {!isAll && activeTab === "heatmap" && (
           <div className="heatmap-section">
             <div className="heatmap-header-wrapper">
-              <h4>Availability Heatmap (Last 30 Days)</h4>
-              {teamMembers.some(m => m.joined) && (
-                <div className="heatmap-join-info">
-                  <UserIcon size={14} />
-                  <span>Join dates shown</span>
+              <h4>Availability Heatmap ({heatmapYear})</h4>
+              <div className="heatmap-controls">
+                <button
+                  className="heatmap-year-btn"
+                  onClick={() => handleYearChange(-1)}
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <span className="heatmap-year-display">{heatmapYear}</span>
+                <button
+                  className="heatmap-year-btn"
+                  onClick={() => handleYearChange(1)}
+                >
+                  <ChevronRight size={14} />
+                </button>
+                <button
+                  className="heatmap-year-btn today-btn"
+                  onClick={goToToday}
+                >
+                  Today
+                </button>
+              </div>
+              {projectData.isCompleted && (
+                <div className="heatmap-completed-badge">
+                  ✅ Project Completed on{" "}
+                  {projectData.completedAt &&
+                    formatDate(projectData.completedAt)}
                 </div>
               )}
             </div>
-            
-            <div className="heatmap-container">
-              <div className="heatmap-dates-header">
-                <div className="heatmap-member-label">Member</div>
-                {Array.from({ length: 30 }, (_, i) => {
-                  const date = new Date();
-                  date.setDate(date.getDate() - (29 - i));
-                  const dateStr = date.toISOString().split('T')[0];
-                  const dayNum = date.getDate();
-                  const isToday = new Date().toDateString() === date.toDateString();
-                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-                  
-                  return (
-                    <div 
-                      key={i} 
-                      className={`heatmap-date-header ${isToday ? 'today' : ''} ${isWeekend ? 'weekend' : ''}`}
-                      title={formatDateLong(dateStr)}
-                    >
-                      <span className="heatmap-day-number">{dayNum}</span>
-                      <span className="heatmap-day-name">
-                        {date.toLocaleDateString('en-US', { weekday: 'short' }).charAt(0)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
 
-              <div className="heatmap-members">
-                {teamMembers.slice(0, 8).map((member) => {
-                  let joinedDate: Date | null = null;
-                  if (member.joined) {
-                    try {
-                      if (member.joined.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                        const parts = member.joined.split('/');
-                        joinedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
-                      } else {
-                        joinedDate = new Date(member.joined);
+            <div className="heatmap-scroll-container" ref={heatmapContainerRef}>
+              <div className="heatmap-container">
+                {/* Weekday headers */}
+                <div className="heatmap-weekday-headers">
+                  <div className="heatmap-member-label">Member</div>
+                  {dayLabels.map((day, index) => (
+                    <div key={index} className="heatmap-weekday-header">
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Member rows with heatmap cells */}
+                <div className="heatmap-members">
+                  {teamMembers.slice(0, 15).map((member) => {
+                    let joinedDate: Date | null = null;
+                    if (member.joined) {
+                      try {
+                        if (member.joined.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                          const parts = member.joined.split("/");
+                          joinedDate = new Date(
+                            parseInt(parts[2]),
+                            parseInt(parts[1]) - 1,
+                            parseInt(parts[0]),
+                          );
+                        } else {
+                          joinedDate = new Date(member.joined);
+                        }
+                        if (isNaN(joinedDate.getTime())) joinedDate = null;
+                      } catch {
+                        joinedDate = null;
                       }
-                      if (isNaN(joinedDate.getTime())) joinedDate = null;
-                    } catch {
-                      joinedDate = null;
                     }
-                  }
-                  
-                  return (
-                    <div key={member.id} className="heatmap-member">
-                      <span className="member-name">
-                        <span className="member-name-text">
-                          {member.name}
-                          {member.status === "Left" && (
-                            <span className="member-status-left"> (left)</span>
+
+                    // Calculate cells for each week
+                    const weeks = [];
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const recentThreshold = new Date(today);
+                    recentThreshold.setDate(recentThreshold.getDate() - 6);
+                    const startDate = new Date(heatmapYear, 0, 1);
+                    // Find first Monday
+                    while (startDate.getDay() !== 1) {
+                      startDate.setDate(startDate.getDate() - 1);
+                    }
+
+                    const endDate = new Date(heatmapYear, 11, 31);
+                    while (endDate.getDay() !== 0) {
+                      endDate.setDate(endDate.getDate() + 1);
+                    }
+
+                    const currentDate = new Date(startDate);
+
+                    while (currentDate <= endDate) {
+                      const week = [];
+                      for (let d = 0; d < 7; d++) {
+                        const date = new Date(currentDate);
+                        const isInYear = date.getFullYear() === heatmapYear;
+                        const dayOfWeek = date.getDay();
+                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+                        let isBeforeStart = false;
+                        if (joinedDate && isInYear) {
+                          const compareDate = new Date(date);
+                          compareDate.setHours(0, 0, 0, 0);
+                          const join = new Date(joinedDate);
+                          join.setHours(0, 0, 0, 0);
+                          isBeforeStart = compareDate < join;
+                        }
+
+                        const isFuture = date > today && isInYear;
+                        const isToday =
+                          date.toDateString() === today.toDateString();
+                        const isRecent =
+                          isInYear && !isFuture && date >= recentThreshold;
+
+                        let status:
+                          | "full"
+                          | "partial"
+                          | "unavailable"
+                          | "no-log" = "no-log";
+                        let hours = 0;
+
+                        if (
+                          isInYear &&
+                          !isBeforeStart &&
+                          !isFuture &&
+                          !isWeekend
+                        ) {
+                          status = getCellStatusForDate(member, date);
+                          hours = getHoursForDate(member, date);
+                        }
+
+                        const isCompleted =
+                          projectData.isCompleted &&
+                          isInYear &&
+                          date <= new Date(projectData.completedAt || "");
+
+                        week.push({
+                          date,
+                          isInYear,
+                          isWeekend,
+                          isBeforeStart,
+                          isFuture,
+                          isToday,
+                          isRecent,
+                          status,
+                          hours,
+                          isCompleted,
+                        });
+                        currentDate.setDate(currentDate.getDate() + 1);
+                      }
+                      weeks.push(week);
+                    }
+
+                    return (
+                      <div key={member.id} className="heatmap-member">
+                        <span className="member-name">
+                          <span className="member-name-text">
+                            {member.name}
+                            {member.status === "Left" && (
+                              <span className="member-status-left">
+                                {" "}
+                                (left)
+                              </span>
+                            )}
+                          </span>
+                          {hasRole(member.role, "supervisor") && (
+                            <span className="member-role-badge supervisor-badge">
+                              Supervisor
+                            </span>
+                          )}
+                          {joinedDate && (
+                            <span
+                              className="member-join-badge"
+                              title={`Joined: ${formatDateLong(member.joined)}`}
+                            >
+                              <Calendar size={10} />
+                              <span>{formatShortDate(member.joined)}</span>
+                            </span>
                           )}
                         </span>
-                        {hasRole(member.role, "supervisor") && (
-                          <span className="member-role-badge supervisor-badge">
-                            Supervisor
-                          </span>
-                        )}
-                        {joinedDate && (
-                          <span className="member-join-badge" title={`Joined: ${formatDateLong(member.joined)}`}>
-                            <Calendar size={10} />
-                            <span>{formatShortDate(member.joined)}</span>
-                          </span>
-                        )}
-                      </span>
-                      
-                      <div className="heatmap-row">
-                        {Array.from({ length: 30 }, (_, i) => {
-                          const date = new Date();
-                          date.setDate(date.getDate() - (29 - i));
-                          
-                          let isBeforeStart = false;
-                          if (joinedDate) {
-                            const compareDate = new Date(date);
-                            compareDate.setHours(0, 0, 0, 0);
-                            const join = new Date(joinedDate);
-                            join.setHours(0, 0, 0, 0);
-                            isBeforeStart = compareDate < join;
-                          }
-                          
-                          const status = isBeforeStart ? 'before-start' : getCellStatus(member, i);
-                          const hours = isBeforeStart ? 0 : getHoursForStatus(member, i);
-                          
-                          return (
-                            <div
-                              key={i}
-                              className={`heatmap-cell ${status}`}
-                              onClick={() => {
-                                if (!isBeforeStart) {
-                                  handleCellClick(member, i, status as any);
+
+                        <div className="heatmap-row">
+                          {weeks.map((week, weekIdx) => (
+                            <div key={weekIdx} className="heatmap-week">
+                              {week.map((day, dayIdx) => {
+                                if (!day.isInYear) {
+                                  return (
+                                    <div
+                                      key={dayIdx}
+                                      className="heatmap-cell empty"
+                                    />
+                                  );
                                 }
-                              }}
-                              title={
-                                isBeforeStart 
-                                  ? `Before join date (${joinedDate ? formatDateLong(member.joined) : 'N/A'})` 
-                                  : `${member.name} - ${status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}${hours > 0 ? ` - ${hours}h` : ''}`
-                              }
-                              style={{ 
-                                cursor: isBeforeStart ? 'default' : 'pointer',
-                                opacity: isBeforeStart ? 0.3 : 1
-                              }}
-                            >
-                              {isBeforeStart && (
-                                <span className="heatmap-before-start-indicator">—</span>
-                              )}
+
+                                const cellClasses = [
+                                  "heatmap-cell",
+                                  day.status,
+                                  day.isWeekend ? "weekend" : "",
+                                  day.isFuture ? "future" : "",
+                                  day.isBeforeStart ? "before-start" : "",
+                                  day.isToday ? "today" : "",
+                                  day.isRecent ? "recent-day" : "",
+                                  day.isCompleted ? "project-completed" : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ");
+
+                                return (
+                                  <div
+                                    key={dayIdx}
+                                    className={cellClasses}
+                                    onClick={() => {
+                                      if (
+                                        !day.isBeforeStart &&
+                                        !day.isFuture &&
+                                        !day.isWeekend &&
+                                        day.isInYear
+                                      ) {
+                                        handleCellClick(
+                                          member,
+                                          day.date,
+                                          day.status,
+                                        );
+                                      }
+                                    }}
+                                    title={
+                                      day.isBeforeStart
+                                        ? `Before join date (${joinedDate ? formatDateLong(member.joined) : "N/A"})`
+                                        : day.isFuture
+                                          ? "Future date"
+                                          : day.isWeekend
+                                            ? "Weekend"
+                                            : day.isCompleted
+                                              ? "Project Completed"
+                                              : `${member.name} - ${day.status.charAt(0).toUpperCase() + day.status.slice(1).replace("-", " ")}${day.hours > 0 ? ` - ${day.hours}h` : ""}`
+                                    }
+                                    style={{
+                                      cursor:
+                                        day.isBeforeStart ||
+                                        day.isFuture ||
+                                        day.isWeekend ||
+                                        !day.isInYear
+                                          ? "default"
+                                          : "pointer",
+                                      opacity:
+                                        day.isBeforeStart || day.isFuture
+                                          ? 0.3
+                                          : 1,
+                                    }}
+                                  >
+                                    {day.isWeekend && (
+                                      <span className="heatmap-weekend-indicator">
+                                        •
+                                      </span>
+                                    )}
+                                    {day.isBeforeStart && (
+                                      <span className="heatmap-before-start-indicator">
+                                        —
+                                      </span>
+                                    )}
+                                    {day.isFuture && (
+                                      <span className="heatmap-future-indicator">
+                                        ·
+                                      </span>
+                                    )}
+                                    {day.isCompleted && (
+                                      <span className="heatmap-completed-indicator">
+                                        ✓
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              <div className="heatmap-legend">
-                <span className="legend-label">Legend:</span>
-                <span className="legend-item full">● Full</span>
-                <span className="legend-item partial">● Partial</span>
-                <span className="legend-item unavailable">● Unavailable</span>
-                <span className="legend-item no-log">○ No Log</span>
-                <span className="legend-item before-start">— Before Join</span>
+                    );
+                  })}
+                </div>
+
+                <div className="heatmap-legend">
+                  <span className="legend-label">Legend:</span>
+                  <span className="legend-item full">● Full</span>
+                  <span className="legend-item partial">● Partial</span>
+                  <span className="legend-item unavailable">● Unavailable</span>
+                  <span className="legend-item no-log">○ No Log</span>
+                  <span className="legend-item weekend">● Weekend</span>
+                  <span className="legend-item before-start">
+                    — Before Join
+                  </span>
+                  <span className="legend-item completed">✓ Completed</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1415,6 +1582,26 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   </div>
                 </div>
               </div>
+              {projectData.isCompleted && (
+                <div className="stat-card completed-card">
+                  <div className="stat-card-header">
+                    <div className="stat-info">
+                      <span className="stat-name">Project Status</span>
+                    </div>
+                  </div>
+                  <div className="stat-details">
+                    <div className="stat-item">
+                      <span className="stat-value" style={{ color: "#00b894" }}>
+                        ✅ Completed
+                      </span>
+                      <span style={{ fontSize: "12px", color: "#8888aa" }}>
+                        {projectData.completedAt &&
+                          formatDate(projectData.completedAt)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <h4>Developer Stats</h4>
@@ -1468,9 +1655,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         )}
       </div>
 
-      {/* Heatmap Detail Modal - with dark theme support */}
+      {/* Heatmap Detail Modal */}
       {isModalOpen && selectedCell && (
-        <div className={`modal-overlay ${isDarkMode ? "dark" : ""}`} onClick={closeModal}>
+        <div
+          className={`modal-overlay ${isDarkMode ? "dark" : ""}`}
+          onClick={closeModal}
+        >
           <div
             className={`modal heatmap-detail-modal ${isDarkMode ? "dark" : ""}`}
             onClick={(e) => e.stopPropagation()}
@@ -1564,13 +1754,16 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         </div>
       )}
 
-      {/* Add Member Modal - with dark theme support */}
+      {/* Add Member Modal */}
       {showAddMember && (
         <div
           className={`modal-overlay-centered ${isDarkMode ? "dark" : ""}`}
           onClick={() => setShowAddMember(false)}
         >
-          <div className={`modal-centered ${isDarkMode ? "dark" : ""}`} onClick={(e) => e.stopPropagation()}>
+          <div
+            className={`modal-centered ${isDarkMode ? "dark" : ""}`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3>Add Member to {project}</h3>
               <button
