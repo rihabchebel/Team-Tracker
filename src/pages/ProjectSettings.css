@@ -1325,4 +1325,98 @@
     height: 24px;
     font-size: 12px;
   }
+  /* Add these rules to your ProjectSettings.css */
+
+/* Theme toggle button */
+.theme-toggle-btn {
+  padding: 8px 12px;
+  border: 1px solid #d0d3e0;
+  border-radius: 6px;
+  background: #f8f9fc;
+  color: #1a1a2e;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  transition: all 0.3s ease;
+}
+
+.theme-toggle-btn:hover {
+  background: #eef0f5;
+}
+
+/* Dark mode theme toggle */
+[data-theme="dark"] .theme-toggle-btn {
+  border-color: #3a3a4e;
+  background: #2a2a3e;
+  color: #e8e8f0;
+}
+
+[data-theme="dark"] .theme-toggle-btn:hover {
+  background: #3a3a4e;
+}
+
+/* Edit Member Modal styles */
+.edit-member-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.member-avatar-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f72e8, #6c5ce7);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  transition: background 0.3s ease;
+}
+
+.member-name-large {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary, #1a1a2e);
+}
+
+.member-email-large {
+  font-size: 14px;
+  color: var(--text-muted, #8888aa);
+}
+
+.current-role-display {
+  margin-top: 8px;
+}
+
+.current-role-label {
+  font-size: 13px;
+  color: var(--text-muted, #8888aa);
+  margin-right: 8px;
+}
+
+/* Dark mode for edit member modal */
+[data-theme="dark"] .member-avatar-large {
+  background: linear-gradient(135deg, #3a5cd8, #5a4ce7);
+}
+
+[data-theme="dark"] .member-name-large {
+  color: #e8e8f0;
+}
+
+[data-theme="dark"] .member-email-large {
+  color: #8888aa;
+}
+
+[data-theme="dark"] .current-role-label {
+  color: #8888aa;
+}
+
 }

@@ -759,4 +759,118 @@
     transform: none;
   }
 }
+/* Add these styles to Sidebar.css */
+
+/* ============================================
+   NO ROLE MESSAGE
+   ============================================ */
+.no-role-section {
+  padding: 20px 16px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.no-role-message {
+  text-align: center;
+  padding: 20px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  width: 100%;
+}
+
+.no-role-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.no-role-icon {
+  color: #fdcb6e;
+  opacity: 0.8;
+}
+
+.no-role-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e8e8f0;
+  margin-bottom: 6px;
+}
+
+.no-role-subtitle {
+  font-size: 13px;
+  color: #8888aa;
+  line-height: 1.4;
+}
+
+/* Dark mode */
+[data-theme="dark"] .no-role-message {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+[data-theme="dark"] .no-role-title {
+  color: #e8e8f0;
+}
+
+[data-theme="dark"] .no-role-subtitle {
+  color: #8888aa;
+}
+
+[data-theme="dark"] .no-role-icon {
+  color: #fdcb6e;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .no-role-section {
+    padding: 16px 12px;
+    min-height: 150px;
+  }
+
+  .no-role-message {
+    padding: 16px 12px;
+  }
+
+  .no-role-title {
+    font-size: 14px;
+  }
+
+  .no-role-subtitle {
+    font-size: 12px;
+  }
+
+  .no-role-icon {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .no-role-section {
+    padding: 12px 10px;
+    min-height: 120px;
+  }
+
+  .no-role-message {
+    padding: 12px 10px;
+  }
+
+  .no-role-title {
+    font-size: 13px;
+  }
+
+  .no-role-subtitle {
+    font-size: 11px;
+  }
+
+  .no-role-icon {
+    width: 24px;
+    height: 24px;
+  }
+}
 }

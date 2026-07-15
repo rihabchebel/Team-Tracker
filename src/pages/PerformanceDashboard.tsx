@@ -1,4 +1,4 @@
-// pages/PerformanceDashboard.tsx - Complete with Heatmap Start Date Support
+// pages/PerformanceDashboard.tsx - Complete with Dark Theme Support
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
@@ -12,7 +12,9 @@ import {
   UserPlus,
   Clock,
   Calendar,
-  User as UserIcon
+  User as UserIcon,
+  Moon,
+  Sun,
 } from "lucide-react";
 import "./PerformanceDashboard.css";
 import {
@@ -88,6 +90,7 @@ interface HeatmapDetailData {
 // ============================================
 // HELPER: Format role display
 // ============================================
+
 const formatRoleDisplay = (role: string): string => {
   return getRoleDisplayName(role);
 };
@@ -104,6 +107,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   onProjectSelect,
   isAdmin = false,
 }) => {
+  // ✅ Dark theme state
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    return saved ? saved === "dark" : false;
+  });
+
   const [activeTab, setActiveTab] = useState<
     "heatmap" | "roster" | "analytics"
   >("roster");
@@ -132,6 +141,20 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   const [, setUserHasSupervisorRole] = useState(false);
 
   const isAll = project === "All Projects";
+
+  // ✅ Toggle dark theme
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    localStorage.setItem("theme", newTheme ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", newTheme ? "dark" : "light");
+  };
+
+  // ✅ Apply theme on mount
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
+  }, []);
+  
 
   // Helper functions
   const hashString = (s: string) => {
@@ -191,7 +214,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return base + variation;
   };
   
-  // Add this useEffect to check the user's actual roles
+  // ✅ Check user's actual roles
   useEffect(() => {
     const checkUserRoles = async () => {
       try {
@@ -205,7 +228,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             
           if (!error && profile) {
             const roles = profile.roles || [];
-            // Check if user has supervisor role
             const hasSupervisor = roles.some((r: any) => 
               r === 'supervisor' || r === 'Supervisor'
             );
@@ -547,7 +569,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() - (29 - dayIndex));
 
-    // Use formatDateLong from date utils
     const formattedDate = formatDateLong(targetDate.toISOString());
 
     const detailData: HeatmapDetailData = {
@@ -593,7 +614,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     }));
   };
 
-  // Add Member Handler
+  // Add Member Handler (unchanged - already has all fixes)
   const handleAddMember = async () => {
     if (!isAdmin) {
       alert("You do not have permission to add members.");
@@ -882,12 +903,15 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   if (!currentProjectData && !isAll) {
     return (
-      <div className="performance-dashboard">
+      <div className={`performance-dashboard ${isDarkMode ? "dark" : ""}`}>
         <div className="page-header">
           <div className="page-header-content">
             <div>
               <h2>{project}</h2>
             </div>
+            <button className="theme-toggle-btn" onClick={toggleTheme}>
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
           </div>
         </div>
         <div className="dashboard-content">
@@ -898,7 +922,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   }
 
   return (
-    <div className="performance-dashboard">
+    <div className={`performance-dashboard ${isDarkMode ? "dark" : ""}`}>
       <div className="page-header">
         <div className="page-header-content">
           <div>
@@ -913,16 +937,22 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               {project}
             </h2>
           </div>
-          {/* ✅ Add Member - Only Admin */}
-          {isAdmin && !isAll && (
-            <button
-              className="add-member-btn"
-              onClick={() => setShowAddMember(true)}
-            >
-              <UserPlus size={16} />
-              Add Member
+          <div className="header-actions">
+            {/* ✅ Theme Toggle */}
+            <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle theme">
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-          )}
+            {/* ✅ Add Member - Only Admin */}
+            {isAdmin && !isAll && (
+              <button
+                className="add-member-btn"
+                onClick={() => setShowAddMember(true)}
+              >
+                <UserPlus size={16} />
+                Add Member
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1088,7 +1118,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                           </div>
                           <div>
                             <div>{member.name}</div>
-                            {/* ✅ Green indicator for multiple roles - matching UserManagement */}
                             {hasMultiple && (
                               <div className="multiple-roles-indicator">
                                 <span className="green-dot"></span>
@@ -1119,7 +1148,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                                   {formatRoleDisplay(m.role)} · {m.projectName}
                                 </span>
                               ))}
-                              {/* ✅ Show "Also:" with all roles for All Projects view */}
                               {hasMultiple && (
                                 <div
                                   className="global-roles"
@@ -1143,14 +1171,11 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                             </div>
                           ) : (
                             <div>
-                              {/* ✅ Show primary role with project */}
                               <span
                                 className={`role-badge ${getRoleBadgeClass(member.role)}`}
                               >
                                 {formatRoleDisplay(member.role)}
                               </span>
-
-                              {/* ✅ Show "Also:" with additional roles - matching UserManagement */}
                               {hasMultiple && (
                                 <div
                                   className="global-roles"
@@ -1204,9 +1229,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
               )}
             </div>
             
-            {/* Heatmap with date headers */}
             <div className="heatmap-container">
-              {/* Date header row with day numbers and dates */}
               <div className="heatmap-dates-header">
                 <div className="heatmap-member-label">Member</div>
                 {Array.from({ length: 30 }, (_, i) => {
@@ -1232,14 +1255,11 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                 })}
               </div>
 
-              {/* Member rows with heatmap cells */}
               <div className="heatmap-members">
                 {teamMembers.slice(0, 8).map((member) => {
-                  // Parse join date using date utilities
                   let joinedDate: Date | null = null;
                   if (member.joined) {
                     try {
-                      // Check if it's in DD/MM/YYYY format
                       if (member.joined.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
                         const parts = member.joined.split('/');
                         joinedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
@@ -1266,7 +1286,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                             Supervisor
                           </span>
                         )}
-                        {/* Show join date badge using formatShortDate */}
                         {joinedDate && (
                           <span className="member-join-badge" title={`Joined: ${formatDateLong(member.joined)}`}>
                             <Calendar size={10} />
@@ -1280,7 +1299,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                           const date = new Date();
                           date.setDate(date.getDate() - (29 - i));
                           
-                          // Check if date is before join date
                           let isBeforeStart = false;
                           if (joinedDate) {
                             const compareDate = new Date(date);
@@ -1450,11 +1468,11 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         )}
       </div>
 
-      {/* Heatmap Detail Modal */}
+      {/* Heatmap Detail Modal - with dark theme support */}
       {isModalOpen && selectedCell && (
-        <div className="modal-overlay" onClick={closeModal}>
+        <div className={`modal-overlay ${isDarkMode ? "dark" : ""}`} onClick={closeModal}>
           <div
-            className="modal heatmap-detail-modal"
+            className={`modal heatmap-detail-modal ${isDarkMode ? "dark" : ""}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
@@ -1546,13 +1564,13 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         </div>
       )}
 
-      {/* Add Member Modal */}
+      {/* Add Member Modal - with dark theme support */}
       {showAddMember && (
         <div
-          className="modal-overlay-centered"
+          className={`modal-overlay-centered ${isDarkMode ? "dark" : ""}`}
           onClick={() => setShowAddMember(false)}
         >
-          <div className="modal-centered" onClick={(e) => e.stopPropagation()}>
+          <div className={`modal-centered ${isDarkMode ? "dark" : ""}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Member to {project}</h3>
               <button

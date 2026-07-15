@@ -2,9 +2,15 @@
 import React, { useState } from "react";
 import "./DeveloperDashboard.css";
 import { Plus, Trash2, CheckCircle, AlertCircle, XCircle } from "lucide-react";
-import { Project, ProjectTimelineEvent } from "../types/models";
+import { Project, ProjectTimelineEvent, LogEntry } from "../types/models"; // ✅ Import LogEntry from models
 
 export type ViewMode = "supervisor" | "developer";
+
+// ✅ Task interface
+export interface Task {
+  id: string;
+  description: string;
+}
 
 interface DeveloperDashboardProps {
   view: ViewMode;
@@ -12,25 +18,10 @@ interface DeveloperDashboardProps {
   currentUser: string;
   projectData?: Project | null;
   timelineEvents?: ProjectTimelineEvent[];
-  onAddTaskLog: (log: Omit<LogEntry, "id" | "submittedAt">) => void;
-}
-
-interface Task {
-  id: string;
-  description: string;
-}
-
-interface LogEntry {
-  id: string;
-  project: string;
-  date: string;
-  status: "full" | "partial" | "unavailable";
-  hoursWorked: number;
-  tasks: Task[];
-  partialReason?: string;
-  unavailableReason?: string;
-  submittedBy: string;
-  submittedAt: string;
+  // ✅ Use the imported LogEntry type
+  onAddTaskLog: (
+    log: Omit<LogEntry, "id" | "submittedAt">
+  ) => void | Promise<void>;
 }
 
 const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
@@ -101,8 +92,10 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
 
     setIsSubmitting(true);
 
+    // ✅ Use the imported LogEntry type
     const logData: Omit<LogEntry, "id" | "submittedAt"> = {
       project: project,
+      projectName: project, // ✅ Required by the model
       date: selectedDate,
       status: status,
       hoursWorked: status === "unavailable" ? 0 : hoursWorked,
@@ -111,6 +104,9 @@ const DeveloperDashboard: React.FC<DeveloperDashboardProps> = ({
       unavailableReason:
         status === "unavailable" ? unavailableReason : undefined,
       submittedBy: currentUser,
+      // ✅ Add any other required fields from the model
+      submittedById: "", // Will be filled by App.tsx
+      projectId: "", // Will be filled by App.tsx or dataService
     };
 
     try {

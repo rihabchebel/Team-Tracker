@@ -1,16 +1,9 @@
-//My project has "Confirm email" turned on, 
-// so every new signup needs to click a Supabase's confirmation link before they can sign in. 
-// Since the app already verifies people through the invitation token,
-//  i don't need Supabase's confirmation on top of that.
-//After that they should be able to sign in immediately with the same password.
+// lib/mailerSend.ts - Frontend utility (no Deno imports)
 
-//One thing worth noting for later: since your adminAuth.createUser in supabase.ts already passes email_confirm: true when creating users via the service-role client, 
-// once you move handleCreateUser fully onto the invitation flow (as we discussed) and that invitation acceptance creates the account through an Edge Function using supabaseAdmin,
-//  this "email not confirmed" problem won't come up again for invited users — it only bit you here because this account got created through the old auth.signUp frontend path
 import { supabase } from "./supabase";
 
 export const mailerSendService = {
-  // ✅ Send invitation email using your existing invitations table
+  // ✅ Send invitation email using Supabase Edge Function
   sendInvitation: async (data: {
     email: string;
     full_name: string;
@@ -20,6 +13,20 @@ export const mailerSendService = {
     project_name?: string;
     project_id?: string;
   }) => {
+    // Validate required fields
+    if (!data.email) {
+      throw new Error("Email is required for invitation");
+    }
+    if (!data.full_name) {
+      throw new Error("Full name is required for invitation");
+    }
+    if (!data.token) {
+      throw new Error("Token is required for invitation");
+    }
+
+    console.log("📧 Sending invitation to:", data.email);
+    console.log("🔑 Token:", data.token);
+
     const { data: response, error } = await supabase.functions.invoke(
       "send-invitation",
       {
@@ -37,8 +44,8 @@ export const mailerSendService = {
 
     return response;
   },
-  
-  // ✅ Resend invitation (reuse existing token or generate new one)
+
+  // ✅ Resend invitation
   resendInvitation: async (invitationId: string) => {
     // Get the existing invitation
     const { data: invitation, error: fetchError } = await supabase
@@ -60,9 +67,9 @@ export const mailerSendService = {
       throw new Error("Invitation has been rejected");
     }
 
-    // Generate new token if expired
+    // Generate new token if expired or missing
     let token = invitation.token;
-    if (new Date(invitation.expires_at) < new Date()) {
+    if (!token || new Date(invitation.expires_at) < new Date()) {
       token = crypto.randomUUID();
       // Update invitation with new token and expiry
       const { error: updateError } = await supabase
@@ -104,8 +111,21 @@ export const mailerSendService = {
   },
 
   // ✅ Accept invitation
-  acceptInvitation: async (token: string): Promise<{ success: boolean; email?: string; invitation?: any; error?: string }> => {
+  acceptInvitation: async (token: string): Promise<{ 
+    success: boolean; 
+    email?: string; 
+    invitation?: any; 
+    error?: string;
+    needsAccount?: boolean;
+  }> => {
     try {
+      if (!token) {
+        return { 
+          success: false, 
+          error: "No invitation token provided" 
+        };
+      }
+
       // Find the invitation
       const { data: invitation, error: findError } = await supabase
         .from('invitations')
@@ -116,7 +136,7 @@ export const mailerSendService = {
       if (findError || !invitation) {
         return { 
           success: false, 
-          error: "Invalid invitation token" 
+          error: "Invalid invitation token. Please request a new invitation." 
         };
       }
 
@@ -153,29 +173,58 @@ export const mailerSendService = {
         };
       }
 
-      // Update invitation status to accepted
-      const { error: updateError } = await supabase
-        .from('invitations')
-        .update({
-          status: 'accepted',
-          accepted_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', invitation.id);
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email')
+        .eq('email', invitation.email)
+        .single();
 
-      if (updateError) {
-        console.error("Error updating invitation:", updateError);
-        return { 
-          success: false, 
-          error: "Failed to accept invitation" 
-        };
+      let needsAccount = false;
+      let userId = existingUser?.id;
+
+      if (!existingUser) {
+        // User doesn't exist yet - they need to create an account
+        needsAccount = true;
+      } else {
+        // User exists - add them to the project
+        userId = existingUser.id;
+        
+        // Add user to project team_members
+        const { error: teamError } = await supabase
+          .from('team_members')
+          .insert({
+            project_id: invitation.project_id,
+            user_id: userId,
+            role: invitation.role || 'developer',
+            joined_at: new Date().toISOString(),
+          });
+
+        if (teamError) {
+          console.error("Error adding to team_members:", teamError);
+          return { 
+            success: false, 
+            error: "Failed to add you to the project" 
+          };
+        }
+
+        // Update invitation status
+        await supabase
+          .from('invitations')
+          .update({
+            status: 'accepted',
+            accepted_at: new Date().toISOString(),
+            user_id: userId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', invitation.id);
       }
 
-      // Return the invitation data for further processing
       return { 
         success: true, 
         email: invitation.email,
         invitation: invitation,
+        needsAccount: needsAccount,
       };
     } catch (error) {
       console.error("Error accepting invitation:", error);
@@ -189,6 +238,13 @@ export const mailerSendService = {
   // ✅ Reject invitation
   rejectInvitation: async (token: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      if (!token) {
+        return { 
+          success: false, 
+          error: "No invitation token provided" 
+        };
+      }
+
       const { data: invitation, error: findError } = await supabase
         .from('invitations')
         .select('*')
@@ -235,8 +291,15 @@ export const mailerSendService = {
     }
   },
 
-  // ✅ FIX ADDED: Send welcome email method (resolves ts(2339))
+  // ✅ Send welcome email
   sendWelcome: async (data: { email: string; full_name: string }) => {
+    if (!data.email) {
+      throw new Error("Email is required for welcome email");
+    }
+    if (!data.full_name) {
+      throw new Error("Full name is required for welcome email");
+    }
+
     const { data: response, error } = await supabase.functions.invoke(
       "send-welcome",
       {
@@ -255,4 +318,151 @@ export const mailerSendService = {
 
     return response;
   },
+
+  // ✅ Complete invitation flow - creates account if needed
+  completeInvitation: async (token: string, password: string): Promise<{ 
+    success: boolean; 
+    error?: string;
+    user?: any;
+  }> => {
+    try {
+      if (!token) {
+        return { success: false, error: "No invitation token provided" };
+      }
+      if (!password || password.length < 6) {
+        return { success: false, error: "Password must be at least 6 characters" };
+      }
+
+      // First, accept the invitation
+      const acceptResult = await mailerSendService.acceptInvitation(token);
+      
+      if (!acceptResult.success) {
+        return { success: false, error: acceptResult.error };
+      }
+
+      // If user already exists, just return success
+      if (!acceptResult.needsAccount) {
+        return { 
+          success: true, 
+          user: { email: acceptResult.email },
+          error: undefined 
+        };
+      }
+
+      // User needs an account - create one using admin API
+      const invitation = acceptResult.invitation;
+      
+      // Import supabaseAdmin from supabase.ts
+      const { supabaseAdmin } = await import('./supabase');
+      
+      if (!supabaseAdmin) {
+        return { 
+          success: false, 
+          error: "Service role not configured. Please contact support." 
+        };
+      }
+
+      // Create user with email_confirmed: true (bypasses confirmation email)
+      const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: invitation.email,
+        password: password,
+        email_confirm: true, // ✅ Bypasses Supabase's confirmation email
+        user_metadata: {
+          full_name: invitation.full_name,
+        },
+      });
+
+      if (createError) {
+        console.error("Error creating user:", createError);
+        return { 
+          success: false, 
+          error: "Failed to create account. Please try again." 
+        };
+      }
+
+      const userId = userData.user.id;
+
+      // Create user profile with roles
+      const { error: profileError } = await supabaseAdmin
+        .from('user_profiles')
+        .insert({
+          id: userId,
+          full_name: invitation.full_name,
+          email: invitation.email,
+          role: [invitation.role || 'developer'],
+          roles: [invitation.role || 'developer'],
+          status: 'active',
+          created: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        // Try to clean up the user
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return { 
+          success: false, 
+          error: "Failed to create profile. Please try again." 
+        };
+      }
+
+      // Add user to project team_members
+      const { error: teamError } = await supabaseAdmin
+        .from('team_members')
+        .insert({
+          project_id: invitation.project_id,
+          user_id: userId,
+          role: invitation.role || 'developer',
+          joined_at: new Date().toISOString(),
+        });
+
+      if (teamError) {
+        console.error("Error adding to team_members:", teamError);
+        // Don't fail completely, but log it
+      }
+
+      // Update invitation status
+      await supabaseAdmin
+        .from('invitations')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+          user_id: userId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', invitation.id);
+
+      // Send welcome email
+      try {
+        await mailerSendService.sendWelcome({
+          email: invitation.email,
+          full_name: invitation.full_name,
+        });
+      } catch (emailError) {
+        console.warn("Welcome email failed:", emailError);
+        // Don't fail the whole process
+      }
+
+      // Sign the user in
+      const { auth } = await import('./supabase');
+      await auth.signIn(invitation.email, password);
+
+      return { 
+        success: true, 
+        user: { email: invitation.email, id: userId },
+        error: undefined 
+      };
+    } catch (error: any) {
+      console.error("Error completing invitation:", error);
+      return { 
+        success: false, 
+        error: error.message || "Failed to complete invitation" 
+      };
+    }
+  },
+};
+
+// Helper function to generate an invitation token
+export const generateInvitationToken = (): string => {
+  return crypto.randomUUID();
 };

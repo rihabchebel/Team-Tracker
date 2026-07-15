@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -11,7 +11,7 @@ import {
 } from "react-router-dom";
 import "./App.css";
 import Header from "./components/Header";
-import Sidebar from "./components/Sidebar";
+import Sidebar, { PageType as SidebarPageType } from "./components/Sidebar";
 import UserManagement from "./pages/UserManagement";
 import ProjectSettings from "./pages/ProjectSettings";
 import UserTimeline from "./pages/UserTimeline";
@@ -25,7 +25,6 @@ import { ProtectedRoute } from "./guards/ProtectedRoute";
 import { SetupGuard } from "./guards/SetupGuard";
 import {
   ViewMode,
-  PageType,
   User,
   Project,
   LogEntry,
@@ -35,6 +34,9 @@ import {
 import { dataService } from "./lib/dataService";
 import { useAuth } from "./context/AuthContext";
 import { AuthGuard } from "./guards/AuthGuard";
+
+// ✅ Use the same PageType from Sidebar
+type PageType = SidebarPageType;
 
 interface AppState {
   view: ViewMode;
@@ -47,6 +49,7 @@ const PAGE_PATHS: Record<PageType, string> = {
   timeline: "/dashboard/timeline",
   settings: "/dashboard/settings",
   tasks: "/dashboard/tasks",
+  performance: "/dashboard/performance",
 };
 
 const pageFromPathname = (pathname: string): PageType => {
@@ -71,7 +74,7 @@ const DashboardShell: React.FC = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const currentPage = pageFromPathname(location.pathname);
 
@@ -95,7 +98,9 @@ const DashboardShell: React.FC = () => {
   const [projectsData, setProjectsData] = useState<Project[]>([]);
   const [usersData, setUsersData] = useState<User[]>([]);
   const [taskLogs, setTaskLogs] = useState<LogEntry[]>([]);
-  const [timelineEvents, setTimelineEvents] = useState<ProjectTimelineEvent[]>([]);
+  const [timelineEvents, setTimelineEvents] = useState<ProjectTimelineEvent[]>(
+    [],
+  );
   const [userActivity, setUserActivity] = useState<UserActivity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -113,7 +118,8 @@ const DashboardShell: React.FC = () => {
         setError(null);
         console.log("🔄 Loading data from Supabase...");
 
-        const { users, projects, logs, timeline, activity } = await dataService.getAllData();
+        const { users, projects, logs, timeline, activity } =
+          await dataService.getAllData();
 
         console.log("✅ Data loaded:", {
           users: users.length,
@@ -139,21 +145,19 @@ const DashboardShell: React.FC = () => {
     loadData();
   }, [user]);
 
-  // ✅ FIX: Subscribe to Realtime changes and force React to remount the page
   useEffect(() => {
     if (!user) return;
 
     const unsubscribe = dataService.subscribeToDataChanges(() => {
       void (async () => {
-        const { users, projects, logs, timeline, activity } = await dataService.getAllData();
+        const { users, projects, logs, timeline, activity } =
+          await dataService.getAllData();
         setUsersData(users);
         setProjectsData(projects);
         setTaskLogs(logs);
         setTimelineEvents(timeline);
         setUserActivity(activity);
-        
-        // ⚡ Force the key on <div key={refreshTrigger}> to increment
-        forceRefresh(); 
+        forceRefresh();
       })();
     });
 
@@ -166,15 +170,14 @@ const DashboardShell: React.FC = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const { users, projects, logs, timeline, activity } = await dataService.refreshData();
+      const { users, projects, logs, timeline, activity } =
+        await dataService.refreshData();
       setUsersData(users);
       setProjectsData(projects);
       setTaskLogs(logs);
       setTimelineEvents(timeline);
       setUserActivity(activity);
-      
-      // ⚡ Force React to remount the page after a manual refresh
-      forceRefresh(); 
+      forceRefresh();
       console.log("✅ Data refreshed successfully");
     } catch (refreshError) {
       console.error("❌ Error refreshing data:", refreshError);
@@ -197,22 +200,36 @@ const DashboardShell: React.FC = () => {
     };
   };
 
-  const { name: currentUserName, email: currentUserEmail } = deriveCurrentUser();
+  const { name: currentUserName, email: currentUserEmail } =
+    deriveCurrentUser();
 
-  const handleAddTaskLog = async (log: Omit<LogEntry, "id" | "submittedAt">) => {
+  const userProjectCount = useMemo(() => {
+    if (!user?.id) return 0;
+    return projectsData.filter((project) =>
+      project.teamMembers.some((member) => member.id === user.id),
+    ).length;
+  }, [projectsData, user?.id]);
+
+  // ✅ FIXED: Properly typed handleAddTaskLog that matches DeveloperDashboard expectations
+  const handleAddTaskLog = async (
+    log: Omit<LogEntry, "id" | "submittedAt"> & { projectName?: string },
+  ): Promise<void> => {
     try {
-      const newLog = await dataService.createLog({
+      const logWithProjectName = {
         ...log,
+        projectName:
+          log.projectName ||
+          (log as LogEntry & { project?: string }).project ||
+          "",
         submittedById: user?.id || "1",
         submittedBy: currentUserName,
-      });
+      };
 
+      const newLog = await dataService.createLog(logWithProjectName);
       setTaskLogs((prevLogs) => [newLog, ...prevLogs]);
 
       const refreshedProjects = await dataService.getAllProjects();
       setProjectsData(refreshedProjects);
-
-      return newLog;
     } catch (taskLogError) {
       console.error("Error adding task log:", taskLogError);
       alert("Failed to add task log. Please try again.");
@@ -232,7 +249,8 @@ const DashboardShell: React.FC = () => {
   };
 
   const handleProjectSelect = (project: string) => {
-    const shouldStayOnPage = currentPage === "settings";
+    const shouldStayOnPage =
+      currentPage === "settings" || currentPage === "performance";
 
     setState({ ...state, selectedProject: project });
 
@@ -288,11 +306,26 @@ const DashboardShell: React.FC = () => {
       setUsersData([]);
       setTaskLogs([]);
       setError(null);
-      window.location.href = '/login';
+      window.location.href = "/login";
     } catch (logoutError) {
       console.error("Logout error:", logoutError);
     }
   };
+
+  const hasProjects = userProjectCount > 0;
+
+  const NoAccessPage = () => (
+    <div className="no-access-page">
+      <div className="no-access-container">
+        <div className="no-access-icon">🔒</div>
+        <h3>No Access</h3>
+        <p>You don't have access to any projects.</p>
+        <p className="no-access-sub">
+          Please contact an administrator to be added to a project.
+        </p>
+      </div>
+    </div>
+  );
 
   const renderPage = () => {
     if (isLoading) {
@@ -310,6 +343,10 @@ const DashboardShell: React.FC = () => {
       );
     }
 
+    if (currentPage === "performance" && !hasProjects) {
+      return <NoAccessPage />;
+    }
+
     if (state.view === "developer" && currentPage === "dashboard") {
       const effectiveProject =
         state.selectedProject === "All Projects"
@@ -321,7 +358,9 @@ const DashboardShell: React.FC = () => {
           view={state.view}
           project={effectiveProject}
           currentUser={currentUserName}
-          projectData={projectsData.find((item) => item.name === effectiveProject) || null}
+          projectData={
+            projectsData.find((item) => item.name === effectiveProject) || null
+          }
           timelineEvents={timelineEvents}
           onAddTaskLog={handleAddTaskLog}
         />
@@ -330,6 +369,21 @@ const DashboardShell: React.FC = () => {
 
     switch (currentPage) {
       case "dashboard":
+        return (
+          <PerformanceDashboard
+            view={state.view}
+            project={state.selectedProject}
+            users={usersData}
+            projectsData={projectsData}
+            taskLogs={taskLogs}
+            userActivity={userActivity}
+            timelineEvents={timelineEvents}
+            onProjectsUpdate={handleProjectsUpdate}
+            onProjectSelect={handleProjectSelect}
+            isAdmin={!!isAdmin}
+          />
+        );
+      case "performance":
         return (
           <PerformanceDashboard
             view={state.view}
@@ -439,7 +493,11 @@ const DashboardShell: React.FC = () => {
 
   return (
     <div className="app-container">
-      <Header user={currentUserName} email={currentUserEmail} onLogout={handleLogout} />
+      <Header
+        user={currentUserName}
+        email={currentUserEmail}
+        onLogout={handleLogout}
+      />
       <div className="main-layout">
         <Sidebar
           view={state.view}
@@ -454,10 +512,11 @@ const DashboardShell: React.FC = () => {
           isAdmin={!!isAdmin}
           hasSupervisor={!!isAdmin || (supervisorProjects || []).length > 0}
           hasDeveloper={!!isAdmin || (developerProjects || []).length > 0}
+          userProjectCount={userProjectCount}
+          currentUserRole={profile?.role}
         />
         <main className="main-content">
           {roleSwitchBanner}
-          {/* ✅ The key forces the entire page to reset whenever refreshTrigger increments */}
           <div key={refreshTrigger}>{renderPage()}</div>
         </main>
       </div>
@@ -471,12 +530,13 @@ function App() {
       <SetupGuard>
         <AuthGuard>
           <Routes>
-            {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/admin-signup" element={<AdminSignUp />} />
-            <Route path="/accept-invitation/:token" element={<AcceptInvitation />} />
-            
-            {/* Protected routes */}
+            <Route
+              path="/accept-invitation/:token"
+              element={<AcceptInvitation />}
+            />
+
             <Route
               path="/"
               element={
@@ -525,8 +585,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/dashboard/performance"
+              element={
+                <ProtectedRoute>
+                  <DashboardShell />
+                </ProtectedRoute>
+              }
+            />
 
-            {/* Catch all */}
             <Route
               path="*"
               element={
