@@ -1,4 +1,4 @@
-// pages/PerformanceDashboard.tsx - Updated with CSS fixes
+// pages/PerformanceDashboard.tsx - Friday as working day with improved CSS
 
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
@@ -12,6 +12,7 @@ import {
   UserPlus,
   Clock,
   Calendar,
+  User as UserIcon,
   Moon,
   Sun,
   ChevronLeft,
@@ -26,12 +27,7 @@ import {
   UserActivity,
   ProjectTimelineEvent,
 } from "../types/models";
-import {
-  formatDate,
-  formatDateLong,
-  formatShortDate,
-} from "../utils/dateUtils";
-// ✅ Import role utilities
+import { formatDate, formatDateLong, formatShortDate } from "../utils/dateUtils";
 import {
   getPrimaryRole,
   getAllRoles,
@@ -94,10 +90,6 @@ interface HeatmapDetailData {
   role: string;
 }
 
-// ============================================
-// HELPER: Format role display
-// ============================================
-
 const formatRoleDisplay = (role: string): string => {
   return getRoleDisplayName(role);
 };
@@ -121,9 +113,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
   });
 
   // ✅ Heatmap year state
-  const [heatmapYear, setHeatmapYear] = useState<number>(
-    new Date().getFullYear(),
-  );
+  const [heatmapYear, setHeatmapYear] = useState<number>(new Date().getFullYear());
   const heatmapContainerRef = useRef<HTMLDivElement>(null);
 
   const [activeTab, setActiveTab] = useState<
@@ -160,38 +150,30 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     const newTheme = !isDarkMode;
     setIsDarkMode(newTheme);
     localStorage.setItem("theme", newTheme ? "dark" : "light");
-    document.documentElement.setAttribute(
-      "data-theme",
-      newTheme ? "dark" : "light",
-    );
+    document.documentElement.setAttribute("data-theme", newTheme ? "dark" : "light");
   };
 
   // ✅ Apply theme on mount
   useEffect(() => {
-    document.documentElement.setAttribute(
-      "data-theme",
-      isDarkMode ? "dark" : "light",
-    );
+    document.documentElement.setAttribute("data-theme", isDarkMode ? "dark" : "light");
   }, []);
 
   // ✅ Check user's actual roles
   useEffect(() => {
     const checkUserRoles = async () => {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const { data: profile, error } = await supabase
             .from("user_profiles")
             .select("roles")
             .eq("id", user.id)
             .single();
-
+            
           if (!error && profile) {
             const roles = profile.roles || [];
-            const hasSupervisor = roles.some(
-              (r: any) => r === "supervisor" || r === "Supervisor",
+            const hasSupervisor = roles.some((r: any) => 
+              r === 'supervisor' || r === 'Supervisor'
             );
             setUserHasSupervisorRole(hasSupervisor);
           }
@@ -200,7 +182,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
         console.error("Error checking user roles:", error);
       }
     };
-
+    
     checkUserRoles();
   }, []);
 
@@ -262,7 +244,6 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return base + variation;
   };
 
-  // ✅ Role priority function - handles JSONB arrays
   const rolePriority = (role: any): number => {
     return getRolePriority(role);
   };
@@ -284,8 +265,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     budget: currentProjectData?.totalHours || 0,
     hoursSpent: currentProjectData?.usedHours || 0,
     teamMembers: [],
-    isCompleted: (currentProjectData as any)?.is_completed || false,
-    completedAt: (currentProjectData as any)?.completed_at || null,
+    isCompleted: (currentProjectData as any)?.isCompleted || false,
+    completedAt: (currentProjectData as any)?.completedAt || null,
   };
 
   if (isAll) {
@@ -377,8 +358,8 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
       budget: currentProjectData?.totalHours || 0,
       hoursSpent: currentProjectData?.usedHours || 0,
       teamMembers: dashboardTeamMembers,
-      isCompleted: (currentProjectData as any)?.is_completed || false,
-      completedAt: (currentProjectData as any)?.completed_at || null,
+      isCompleted: (currentProjectData as any)?.isCompleted || false,
+      completedAt: (currentProjectData as any)?.completedAt || null,
     };
   }
 
@@ -518,22 +499,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
   // ✅ FULL YEAR HEATMAP FUNCTIONS
 
-  const getCellStatusForDate = (
+  const getHoursForDate = (
     member: DashboardMember,
     date: Date,
-  ): "full" | "partial" | "unavailable" | "no-log" => {
-    if (member.activeHours === 0 || member.status === "Left") {
-      return "no-log";
-    }
-    const dateStr = date.toISOString().split("T")[0];
-    const log = projectTaskLogs.find(
-      (entry) => entry.submittedById === member.id && entry.date === dateStr,
-    );
-    if (!log) return "no-log";
-    return log.status;
-  };
-
-  const getHoursForDate = (member: DashboardMember, date: Date): number => {
+  ): number => {
     const dateStr = date.toISOString().split("T")[0];
     const log = projectTaskLogs.find(
       (entry) => entry.submittedById === member.id && entry.date === dateStr,
@@ -541,7 +510,10 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     return log?.hoursWorked || 0;
   };
 
-  const getTasksForDate = (member: DashboardMember, date: Date): string[] => {
+  const getTasksForDate = (
+    member: DashboardMember,
+    date: Date,
+  ): string[] => {
     const dateStr = date.toISOString().split("T")[0];
     const log = projectTaskLogs.find(
       (entry) => entry.submittedById === member.id && entry.date === dateStr,
@@ -592,28 +564,43 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     setIsModalOpen(true);
   };
 
+  // ✅ Year navigation with today button
   const handleYearChange = (direction: number) => {
-    setHeatmapYear((prev) => prev + direction);
+    const newYear = heatmapYear + direction;
+    setHeatmapYear(newYear);
   };
 
   const goToToday = () => {
-    setHeatmapYear(new Date().getFullYear());
+    const today = new Date();
+    setHeatmapYear(today.getFullYear());
+    setTimeout(() => {
+      if (heatmapContainerRef.current) {
+        const todayDate = new Date();
+        const dayOfYear = Math.floor((todayDate.getTime() - new Date(todayDate.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+        const cellWidth = 14;
+        const scrollPosition = dayOfYear * cellWidth - 100;
+        heatmapContainerRef.current.scrollLeft = Math.max(0, scrollPosition);
+      }
+    }, 100);
   };
 
-  // Get day of week labels
-  const getDayLabels = () => {
-    return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  // Get month names for headers
+  const getMonthHeaders = () => {
+    const months = [];
+    for (let m = 0; m < 12; m++) {
+      const date = new Date(heatmapYear, m, 1);
+      const daysInMonth = new Date(heatmapYear, m + 1, 0).getDate();
+      months.push({
+        name: date.toLocaleDateString('en-US', { month: 'short' }),
+        days: daysInMonth,
+      });
+    }
+    return months;
   };
 
-  const dayLabels = getDayLabels();
+  const monthHeaders = getMonthHeaders();
 
-  const handleCellClick = (
-    member: DashboardMember,
-    date: Date,
-    status: "full" | "partial" | "unavailable" | "no-log",
-  ) => {
-    handleFullYearCellClick(member, date, status);
-  };
+  // ✅ Handle cell click for 30-day heatmap
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -641,7 +628,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
     }));
   };
 
-  // Add Member Handler
+  // Add Member Handler (unchanged)
   const handleAddMember = async () => {
     if (!isAdmin) {
       alert("You do not have permission to add members.");
@@ -941,19 +928,12 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             >
               {project}
               {projectData.isCompleted && (
-                <span className="project-completed-badge-header">
-                  {" "}
-                  ✅ Completed
-                </span>
+                <span className="project-completed-badge-header"> ✅ Completed</span>
               )}
             </h2>
           </div>
           <div className="header-actions">
-            <button
-              className="theme-toggle-btn"
-              onClick={toggleTheme}
-              title="Toggle theme"
-            >
+            <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle theme">
               {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
             {isAdmin && !isAll && (
@@ -1232,60 +1212,69 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
             <div className="heatmap-header-wrapper">
               <h4>Availability Heatmap ({heatmapYear})</h4>
               <div className="heatmap-controls">
-                <button
+                <button 
                   className="heatmap-year-btn"
                   onClick={() => handleYearChange(-1)}
+                  title="Previous Year"
                 >
                   <ChevronLeft size={14} />
                 </button>
                 <span className="heatmap-year-display">{heatmapYear}</span>
-                <button
+                <button 
                   className="heatmap-year-btn"
                   onClick={() => handleYearChange(1)}
+                  title="Next Year"
                 >
                   <ChevronRight size={14} />
                 </button>
-                <button
-                  className="heatmap-year-btn today-btn"
+                <button 
+                  className={`heatmap-year-btn today-btn ${heatmapYear === new Date().getFullYear() ? 'active' : ''}`}
                   onClick={goToToday}
+                  title="Jump to current year"
                 >
                   Today
                 </button>
               </div>
+              {teamMembers.some(m => m.joined) && (
+                <div className="heatmap-join-info">
+                  <UserIcon size={14} />
+                  <span>Join dates shown</span>
+                </div>
+              )}
               {projectData.isCompleted && (
                 <div className="heatmap-completed-badge">
-                  ✅ Project Completed on{" "}
-                  {projectData.completedAt &&
-                    formatDate(projectData.completedAt)}
+                  ✅ Project Completed
                 </div>
               )}
             </div>
-
+            
             <div className="heatmap-scroll-container" ref={heatmapContainerRef}>
               <div className="heatmap-container">
-                {/* Weekday headers */}
-                <div className="heatmap-weekday-headers">
+                {/* Month headers */}
+                <div className="heatmap-month-headers">
                   <div className="heatmap-member-label">Member</div>
-                  {dayLabels.map((day, index) => (
-                    <div key={index} className="heatmap-weekday-header">
-                      {day}
+                  {monthHeaders.map((month, index) => (
+                    <div 
+                      key={index} 
+                      className="heatmap-month-header"
+                      style={{ 
+                        gridColumn: `span ${month.days}` 
+                      }}
+                    >
+                      {month.name}
                     </div>
                   ))}
                 </div>
 
                 {/* Member rows with heatmap cells */}
                 <div className="heatmap-members">
-                  {teamMembers.slice(0, 15).map((member) => {
+                  {teamMembers.slice(0, 8).map((member) => {
                     let joinedDate: Date | null = null;
                     if (member.joined) {
                       try {
                         if (member.joined.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                          const parts = member.joined.split("/");
-                          joinedDate = new Date(
-                            parseInt(parts[2]),
-                            parseInt(parts[1]) - 1,
-                            parseInt(parts[0]),
-                          );
+                          const parts = member.joined.split('/');
+                          joinedDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
                         } else {
                           joinedDate = new Date(member.joined);
                         }
@@ -1294,98 +1283,14 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                         joinedDate = null;
                       }
                     }
-
-                    // Calculate cells for each week
-                    const weeks = [];
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const recentThreshold = new Date(today);
-                    recentThreshold.setDate(recentThreshold.getDate() - 6);
-                    const startDate = new Date(heatmapYear, 0, 1);
-                    // Find first Monday
-                    while (startDate.getDay() !== 1) {
-                      startDate.setDate(startDate.getDate() - 1);
-                    }
-
-                    const endDate = new Date(heatmapYear, 11, 31);
-                    while (endDate.getDay() !== 0) {
-                      endDate.setDate(endDate.getDate() + 1);
-                    }
-
-                    const currentDate = new Date(startDate);
-
-                    while (currentDate <= endDate) {
-                      const week = [];
-                      for (let d = 0; d < 7; d++) {
-                        const date = new Date(currentDate);
-                        const isInYear = date.getFullYear() === heatmapYear;
-                        const dayOfWeek = date.getDay();
-                        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-                        let isBeforeStart = false;
-                        if (joinedDate && isInYear) {
-                          const compareDate = new Date(date);
-                          compareDate.setHours(0, 0, 0, 0);
-                          const join = new Date(joinedDate);
-                          join.setHours(0, 0, 0, 0);
-                          isBeforeStart = compareDate < join;
-                        }
-
-                        const isFuture = date > today && isInYear;
-                        const isToday =
-                          date.toDateString() === today.toDateString();
-                        const isRecent =
-                          isInYear && !isFuture && date >= recentThreshold;
-
-                        let status:
-                          | "full"
-                          | "partial"
-                          | "unavailable"
-                          | "no-log" = "no-log";
-                        let hours = 0;
-
-                        if (
-                          isInYear &&
-                          !isBeforeStart &&
-                          !isFuture &&
-                          !isWeekend
-                        ) {
-                          status = getCellStatusForDate(member, date);
-                          hours = getHoursForDate(member, date);
-                        }
-
-                        const isCompleted =
-                          projectData.isCompleted &&
-                          isInYear &&
-                          date <= new Date(projectData.completedAt || "");
-
-                        week.push({
-                          date,
-                          isInYear,
-                          isWeekend,
-                          isBeforeStart,
-                          isFuture,
-                          isToday,
-                          isRecent,
-                          status,
-                          hours,
-                          isCompleted,
-                        });
-                        currentDate.setDate(currentDate.getDate() + 1);
-                      }
-                      weeks.push(week);
-                    }
-
+                    
                     return (
                       <div key={member.id} className="heatmap-member">
                         <span className="member-name">
                           <span className="member-name-text">
                             {member.name}
                             {member.status === "Left" && (
-                              <span className="member-status-left">
-                                {" "}
-                                (left)
-                              </span>
+                              <span className="member-status-left"> (left)</span>
                             )}
                           </span>
                           {hasRole(member.role, "supervisor") && (
@@ -1394,126 +1299,93 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                             </span>
                           )}
                           {joinedDate && (
-                            <span
-                              className="member-join-badge"
-                              title={`Joined: ${formatDateLong(member.joined)}`}
-                            >
+                            <span className="member-join-badge" title={`Joined: ${formatDateLong(member.joined)}`}>
                               <Calendar size={10} />
                               <span>{formatShortDate(member.joined)}</span>
                             </span>
                           )}
                         </span>
-
+                        
                         <div className="heatmap-row">
-                          {weeks.map((week, weekIdx) => (
-                            <div key={weekIdx} className="heatmap-week">
-                              {week.map((day, dayIdx) => {
-                                if (!day.isInYear) {
-                                  return (
-                                    <div
-                                      key={dayIdx}
-                                      className="heatmap-cell empty"
-                                    />
-                                  );
+                          {Array.from({ length: 365 }, (_, dayIndex) => {
+                            const date = new Date(heatmapYear, 0, dayIndex + 1);
+                            const dayOfWeek = date.getDay();
+                            // ✅ Friday (5) is now a working day, only Saturday (6) and Sunday (0) are weekends
+                            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                            
+                            let isBeforeStart = false;
+                            if (joinedDate) {
+                              const compareDate = new Date(date);
+                              compareDate.setHours(0, 0, 0, 0);
+                              const join = new Date(joinedDate);
+                              join.setHours(0, 0, 0, 0);
+                              isBeforeStart = compareDate < join;
+                            }
+                            
+                            const isFuture = date > new Date();
+                            
+                            let status = 'no-log';
+                            let hours = 0;
+                            
+                            if (!isBeforeStart && !isFuture && !isWeekend) {
+                              const dateStr = date.toISOString().split('T')[0];
+                              const log = projectTaskLogs.find(
+                                (entry) => entry.submittedById === member.id && 
+                                entry.date === dateStr
+                              );
+                              if (log) {
+                                status = log.status;
+                                hours = log.hoursWorked || 0;
+                              }
+                            }
+                            
+                            const isCompleted = projectData.isCompleted && 
+                              date <= new Date(projectData.completedAt || '');
+                            
+                            return (
+                              <div
+                                key={dayIndex}
+                                className={`heatmap-cell ${status} ${isWeekend ? 'weekend' : ''} ${isFuture ? 'future' : ''} ${isCompleted ? 'project-completed' : ''}`}
+                                onClick={() => {
+                                  if (!isBeforeStart && !isFuture && !isWeekend) {
+                                    handleFullYearCellClick(member, date, status as any);
+                                  }
+                                }}
+                                title={
+                                  isBeforeStart 
+                                    ? `Before join date (${joinedDate ? formatDateLong(member.joined) : 'N/A'})` 
+                                    : isFuture
+                                    ? 'Future date'
+                                    : isWeekend
+                                    ? 'Weekend'
+                                    : `${member.name} - ${status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}${hours > 0 ? ` - ${hours}h` : ''}`
                                 }
-
-                                const cellClasses = [
-                                  "heatmap-cell",
-                                  day.status,
-                                  day.isWeekend ? "weekend" : "",
-                                  day.isFuture ? "future" : "",
-                                  day.isBeforeStart ? "before-start" : "",
-                                  day.isToday ? "today" : "",
-                                  day.isRecent ? "recent-day" : "",
-                                  day.isCompleted ? "project-completed" : "",
-                                ]
-                                  .filter(Boolean)
-                                  .join(" ");
-
-                                return (
-                                  <div
-                                    key={dayIdx}
-                                    className={cellClasses}
-                                    onClick={() => {
-                                      if (
-                                        !day.isBeforeStart &&
-                                        !day.isFuture &&
-                                        !day.isWeekend &&
-                                        day.isInYear
-                                      ) {
-                                        handleCellClick(
-                                          member,
-                                          day.date,
-                                          day.status,
-                                        );
-                                      }
-                                    }}
-                                    title={
-                                      day.isBeforeStart
-                                        ? `Before join date (${joinedDate ? formatDateLong(member.joined) : "N/A"})`
-                                        : day.isFuture
-                                          ? "Future date"
-                                          : day.isWeekend
-                                            ? "Weekend"
-                                            : day.isCompleted
-                                              ? "Project Completed"
-                                              : `${member.name} - ${day.status.charAt(0).toUpperCase() + day.status.slice(1).replace("-", " ")}${day.hours > 0 ? ` - ${day.hours}h` : ""}`
-                                    }
-                                    style={{
-                                      cursor:
-                                        day.isBeforeStart ||
-                                        day.isFuture ||
-                                        day.isWeekend ||
-                                        !day.isInYear
-                                          ? "default"
-                                          : "pointer",
-                                      opacity:
-                                        day.isBeforeStart || day.isFuture
-                                          ? 0.3
-                                          : 1,
-                                    }}
-                                  >
-                                    {day.isWeekend && (
-                                      <span className="heatmap-weekend-indicator">
-                                        •
-                                      </span>
-                                    )}
-                                    {day.isBeforeStart && (
-                                      <span className="heatmap-before-start-indicator">
-                                        —
-                                      </span>
-                                    )}
-                                    {day.isFuture && (
-                                      <span className="heatmap-future-indicator">
-                                        ·
-                                      </span>
-                                    )}
-                                    {day.isCompleted && (
-                                      <span className="heatmap-completed-indicator">
-                                        ✓
-                                      </span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ))}
+                                style={{ 
+                                  cursor: isBeforeStart || isFuture || isWeekend ? 'default' : 'pointer',
+                                  opacity: isBeforeStart || isFuture ? 0.3 : 1
+                                }}
+                              >
+                                {isWeekend && <span className="heatmap-weekend-indicator">•</span>}
+                                {isBeforeStart && <span className="heatmap-before-start-indicator">—</span>}
+                                {isFuture && <span className="heatmap-future-indicator">·</span>}
+                                {isCompleted && <span className="heatmap-completed-indicator">✓</span>}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
                   })}
                 </div>
-
+                
                 <div className="heatmap-legend">
                   <span className="legend-label">Legend:</span>
                   <span className="legend-item full">● Full</span>
                   <span className="legend-item partial">● Partial</span>
                   <span className="legend-item unavailable">● Unavailable</span>
                   <span className="legend-item no-log">○ No Log</span>
-                  <span className="legend-item weekend">● Weekend</span>
-                  <span className="legend-item before-start">
-                    — Before Join
-                  </span>
+                  <span className="legend-item weekend">● Weekend (Sat/Sun)</span>
+                  <span className="legend-item before-start">— Before Join</span>
                   <span className="legend-item completed">✓ Completed</span>
                 </div>
               </div>
@@ -1591,12 +1463,11 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
                   </div>
                   <div className="stat-details">
                     <div className="stat-item">
-                      <span className="stat-value" style={{ color: "#00b894" }}>
+                      <span className="stat-value" style={{ color: '#00b894' }}>
                         ✅ Completed
                       </span>
-                      <span style={{ fontSize: "12px", color: "#8888aa" }}>
-                        {projectData.completedAt &&
-                          formatDate(projectData.completedAt)}
+                      <span style={{ fontSize: '12px', color: '#8888aa' }}>
+                        {projectData.completedAt && formatDate(projectData.completedAt)}
                       </span>
                     </div>
                   </div>
@@ -1657,10 +1528,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
 
       {/* Heatmap Detail Modal */}
       {isModalOpen && selectedCell && (
-        <div
-          className={`modal-overlay ${isDarkMode ? "dark" : ""}`}
-          onClick={closeModal}
-        >
+        <div className={`modal-overlay ${isDarkMode ? "dark" : ""}`} onClick={closeModal}>
           <div
             className={`modal heatmap-detail-modal ${isDarkMode ? "dark" : ""}`}
             onClick={(e) => e.stopPropagation()}
@@ -1760,10 +1628,7 @@ const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({
           className={`modal-overlay-centered ${isDarkMode ? "dark" : ""}`}
           onClick={() => setShowAddMember(false)}
         >
-          <div
-            className={`modal-centered ${isDarkMode ? "dark" : ""}`}
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className={`modal-centered ${isDarkMode ? "dark" : ""}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Add Member to {project}</h3>
               <button
